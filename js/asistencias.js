@@ -30,7 +30,37 @@ const AsistenciasModulo = {
         .select('id, nombre')
         .eq('trayecto_id', Number(trayectoId));
 
+      // 3. Cargar historial previo de asistencias
+      const { data: historialAsistencias } = await supabase
+        .from('asistencias')
+        .select('*')
+        .eq('trayecto_id', Number(trayectoId))
+        .order('fecha', { ascending: false });
+
       const hoy = new Date().toISOString().split('T')[0];
+
+      // Agrupar historial por fecha y módulo
+      const fechasMap = {};
+      (historialAsistencias || []).forEach(a => {
+        const modObj = (modulos || []).find(m => Number(m.id) === Number(a.modulo_id));
+        const modNombre = modObj ? modObj.nombre : 'General';
+        const key = a.fecha + '___' + modNombre;
+        if (!fechasMap[key]) {
+          fechasMap[key] = { fecha: a.fecha, modulo: modNombre, total: 0, presentes: 0 };
+        }
+        fechasMap[key].total++;
+        if (a.estado === 'presente' || a.estado === 'justificado') {
+          fechasMap[key].presentes++;
+        }
+      });
+
+      const filasHistorialHTML = Object.values(fechasMap).map(f => `
+        <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+          <td style="padding:0.5rem 0.8rem; color:#cbd5e1;">${f.fecha.split('-').reverse().join('/')}</td>
+          <td style="padding:0.5rem 0.8rem; color:#facc15;">${f.modulo}</td>
+          <td style="padding:0.5rem 0.8rem; text-align:center; color:#4ade80; font-weight:600;">${f.presentes} / ${f.total} Presentes</td>
+        </tr>
+      `).join('');
 
       contenedor.innerHTML = `
         <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:1rem;">
@@ -41,7 +71,7 @@ const AsistenciasModulo = {
               <input type="date" id="asistencia-fecha" value="${hoy}" style="width:100%; padding:0.5rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px; font-size:0.85rem;">
             </div>
             <div>
-              <label style="display:block; font-size:0.8rem; color:#cbd5e1; margin-bottom:0.2rem;">Módulo (Opcional)</label>
+              <label style="display:block; font-size:0.8rem; color:#cbd5e1; margin-bottom:0.2rem;">Módulo Asociado</label>
               <select id="asistencia-modulo-id" style="width:100%; padding:0.5rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px; font-size:0.85rem;">
                 <option value="">General (Sin módulo específico)</option>
                 ${(modulos || []).map(m => `<option value="${m.id}">${m.nombre}</option>`).join('')}
@@ -53,7 +83,7 @@ const AsistenciasModulo = {
           </div>
         </div>
 
-        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow-x:auto;">
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:1rem;">
           <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.88rem;">
             <thead>
               <tr style="background:#0f172a; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.1);">
@@ -85,6 +115,24 @@ const AsistenciasModulo = {
             </tbody>
           </table>
         </div>
+
+        ${filasHistorialHTML ? `
+          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem;">
+            <h5 style="margin:0 0 0.6rem 0; color:#cbd5e1; font-size:0.85rem;">📋 Historial de Asistencias Tomadas</h5>
+            <table style="width:100%; border-collapse:collapse; font-size:0.82rem;">
+              <thead>
+                <tr style="background:#0f172a; color:#94a3b8;">
+                  <th style="padding:0.5rem 0.8rem;">Fecha</th>
+                  <th style="padding:0.5rem 0.8rem;">Módulo</th>
+                  <th style="padding:0.5rem 0.8rem; text-align:center;">Presentismo Registrar</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${filasHistorialHTML}
+              </tbody>
+            </table>
+          </div>
+        ` : ''}
       `;
 
     } catch (err) {
@@ -125,6 +173,7 @@ const AsistenciasModulo = {
       if (error) throw error;
 
       alert('✅ Asistencia guardada correctamente para la fecha ' + fecha);
+      await this.renderizarVista(this.trayectoActualId, 'contenedor-vista-asistencias');
 
     } catch (err) {
       console.error('Error al guardar asistencias:', err);
