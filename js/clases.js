@@ -1,17 +1,19 @@
 const ClasesModulo = {
   trayectoActualId: null,
+  claseEditandoId: null,
 
-  // Convierte URLs de texto plano en botones o links cliqueables automáticamente
+  // Convierte URLs de la actividad en un botón amarillo interactivo
   convertirLinks(texto) {
     if (!texto) return '';
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     return texto.replace(urlRegex, (url) => {
-      return `<a href="${url}" target="_blank" rel="noopener" style="display:inline-block; margin-top:0.3rem; color:#facc15; font-weight:600; text-decoration:underline; word-break:break-all;">📝 Abrir Enlace de Actividad / TP</a>`;
+      return `<div style="margin-top:0.4rem;"><a href="${url}" target="_blank" rel="noopener" style="display:inline-block; padding:0.35rem 0.75rem; background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.3); color:#facc15; border-radius:6px; font-size:0.82rem; text-decoration:none; font-weight:600;">📝 Abrir Enlace de Actividad / TP</a></div>`;
     });
   },
 
   async abrirGestor(trayectoId, nombreTrayecto) {
     this.trayectoActualId = trayectoId
+    this.claseEditandoId = null
 
     // Detectar rol actual desde la sesión
     const sesionRaw = localStorage.getItem('usuario_actual') || localStorage.getItem('usuario_logueado') || sessionStorage.getItem('usuario_logueado')
@@ -38,8 +40,8 @@ const ClasesModulo = {
           
           <!-- Formulario exclusivo para Docentes y Admins -->
           ${!esEstudiante ? `
-            <details open style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:1.5rem;">
-              <summary style="cursor:pointer; font-weight:600; color:#38bdf8;">➕ Cargar Nueva Clase y/o Actividad</summary>
+            <details id="details-form-clase" open style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:1.5rem;">
+              <summary id="summary-clase-titulo" style="cursor:pointer; font-weight:600; color:#38bdf8;">➕ Cargar Nueva Clase y/o Actividad</summary>
               
               <form onsubmit="ClasesModulo.guardarClase(event)" style="margin-top:1rem; display:flex; flex-direction:column; gap:0.8rem;">
                 
@@ -65,14 +67,19 @@ const ClasesModulo = {
                   </div>
 
                   <div>
-                    <label style="display:block; font-size:0.82rem; color:#facc15; font-weight:600; margin-bottom:0.3rem;">📅 Fecha Límite de Entrega</label>
+                    <label style="display:block; font-size:0.82rem; color:#facc15; font-weight:600; margin-bottom:0.3rem;">📅 Fecha de Publicación (Programar)</label>
                     <input type="date" id="clase-fecha" class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
                   </div>
                 </div>
 
-                <button type="submit" class="btn btn-gold" style="align-self:flex-end; padding:0.6rem 1.4rem; background:#0284c7; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600; margin-top:0.4rem;">
-                  💾 Publicar Contenido
-                </button>
+                <div style="display:flex; gap:0.5rem; justify-content:flex-end; margin-top:0.4rem;">
+                  <button type="button" id="btn-cancelar-edicion" style="display:none; padding:0.6rem 1rem; background:rgba(255,255,255,0.1); color:#cbd5e1; border:none; border-radius:6px; cursor:pointer;" onclick="ClasesModulo.limpiarFormulario()">
+                    Cancelar Edición
+                  </button>
+                  <button type="submit" id="btn-guardar-clase" class="btn btn-gold" style="padding:0.6rem 1.4rem; background:#0284c7; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600;">
+                    💾 Publicar Contenido
+                  </button>
+                </div>
               </form>
             </details>
           ` : ''}
@@ -112,6 +119,8 @@ const ClasesModulo = {
         return
       }
 
+      window.clasesGuardadasCache = clases;
+
       contenedor.innerHTML = clases.map((c) => {
         const descHTML = this.convertirLinks(c.descripcion || 'Sin descripción');
 
@@ -119,11 +128,19 @@ const ClasesModulo = {
           <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:0.8rem; display:flex; justify-content:space-between; align-items:flex-start;">
             <div style="flex:1; padding-right:1rem;">
               <h4 style="margin:0 0 0.4rem 0; color:#f8fafc; font-size:0.95rem;">📌 ${c.titulo}</h4>
-              <div style="margin:0 0 0.5rem 0; color:#cbd5e1; font-size:0.85rem; white-space:pre-line;">${descHTML}</div>
-              ${c.url_recurso ? `<div style="margin-top:0.5rem;"><a href="${c.url_recurso}" target="_blank" rel="noopener" style="display:inline-block; padding:0.35rem 0.75rem; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; border-radius:6px; font-size:0.82rem; text-decoration:none; font-weight:600;">📚 Abrir Material Teórico de Clase</a></div>` : ''}
+              
+              <!-- 1. PRIMERO MATERIAL TEÓRICO -->
+              ${c.url_recurso ? `<div style="margin-bottom:0.5rem;"><a href="${c.url_recurso}" target="_blank" rel="noopener" style="display:inline-block; padding:0.35rem 0.75rem; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; border-radius:6px; font-size:0.82rem; text-decoration:none; font-weight:600;">📚 Abrir Material Teórico de Clase</a></div>` : ''}
+
+              <!-- 2. DEBAJO ACTIVIDAD / DESCRIPCIÓN Y FECHA -->
+              <div style="margin:0; color:#cbd5e1; font-size:0.85rem; white-space:pre-line;">${descHTML}</div>
             </div>
+
             ${!esEstudiante ? `
-              <button onclick="ClasesModulo.eliminarClase(${c.id})" title="Eliminar" style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#f87171; border-radius:6px; padding:0.3rem 0.6rem; cursor:pointer; font-size:0.8rem;">🗑️</button>
+              <div style="display:flex; gap:0.4rem;">
+                <button onclick="ClasesModulo.editarClase(${c.id})" title="Editar" style="background:rgba(56,189,248,0.2); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; border-radius:6px; padding:0.3rem 0.6rem; cursor:pointer; font-size:0.8rem;">✏️</button>
+                <button onclick="ClasesModulo.eliminarClase(${c.id})" title="Eliminar" style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#f87171; border-radius:6px; padding:0.3rem 0.6rem; cursor:pointer; font-size:0.8rem;">🗑️</button>
+              </div>
             ` : ''}
           </div>
         `
@@ -133,6 +150,71 @@ const ClasesModulo = {
       console.error('Error al cargar clases:', err)
       contenedor.innerHTML = '<p style="color:#f87171; text-align:center;">Error al cargar las clases.</p>'
     }
+  },
+
+  editarClase(idClase) {
+    const clase = (window.clasesGuardadasCache || []).find(c => c.id === idClase);
+    if (!clase) return;
+
+    this.claseEditandoId = idClase;
+
+    document.getElementById('clase-titulo').value = clase.titulo || '';
+    document.getElementById('clase-url-teoria').value = clase.url_recurso || '';
+
+    let rawDesc = clase.descripcion || '';
+    let matchUrlAct = rawDesc.match(/https?:\/\/[^\s]+/);
+    let matchFecha = rawDesc.match(/📅 Fecha de Publicación: (\d{2}\/\d{2}\/\d{4})/);
+
+    if (matchUrlAct) {
+      document.getElementById('clase-url-actividad').value = matchUrlAct[0];
+    } else {
+      document.getElementById('clase-url-actividad').value = '';
+    }
+
+    if (matchFecha) {
+      const partes = matchFecha[1].split('/');
+      document.getElementById('clase-fecha').value = `${partes[2]}-${partes[1]}-${partes[0]}`;
+    } else {
+      document.getElementById('clase-fecha').value = '';
+    }
+
+    // Limpiar lineas que agregamos dinamicamente
+    let descLimpia = rawDesc
+      .replace(/📅 Fecha de Publicación: \d{2}\/\d{2}\/\d{4}\n?/, '')
+      .replace(/📝 Enlace a Actividad \/ TP: https?:\/\/[^\s]+\n?/, '')
+      .trim();
+
+    document.getElementById('clase-descripcion').value = descLimpia;
+
+    const summary = document.getElementById('summary-clase-titulo');
+    if (summary) summary.innerText = '✏️ Editando Clase / Actividad';
+
+    const btnGuardar = document.getElementById('btn-guardar-clase');
+    if (btnGuardar) btnGuardar.innerText = '💾 Actualizar Publicación';
+
+    const btnCancelar = document.getElementById('btn-cancelar-edicion');
+    if (btnCancelar) btnCancelar.style.display = 'inline-block';
+
+    const details = document.getElementById('details-form-clase');
+    if (details) details.open = true;
+  },
+
+  limpiarFormulario() {
+    this.claseEditandoId = null;
+    document.getElementById('clase-titulo').value = '';
+    document.getElementById('clase-descripcion').value = '';
+    document.getElementById('clase-url-teoria').value = '';
+    document.getElementById('clase-url-actividad').value = '';
+    if (document.getElementById('clase-fecha')) document.getElementById('clase-fecha').value = '';
+
+    const summary = document.getElementById('summary-clase-titulo');
+    if (summary) summary.innerText = '➕ Cargar Nueva Clase y/o Actividad';
+
+    const btnGuardar = document.getElementById('btn-guardar-clase');
+    if (btnGuardar) btnGuardar.innerText = '💾 Publicar Contenido';
+
+    const btnCancelar = document.getElementById('btn-cancelar-edicion');
+    if (btnCancelar) btnCancelar.style.display = 'none';
   },
 
   async guardarClase(e) {
@@ -152,7 +234,7 @@ const ClasesModulo = {
     let extras = []
     if (fecha) {
       const fechaFmt = fecha.split('-').reverse().join('/')
-      extras.push(`📅 Fecha Límite de Entrega: ${fechaFmt}`)
+      extras.push(`📅 Fecha de Publicación: ${fechaFmt}`)
     }
     if (urlActividad) {
       extras.push(`📝 Enlace a Actividad / TP: ${urlActividad}`)
@@ -163,25 +245,31 @@ const ClasesModulo = {
     }
 
     try {
-      const { error } = await supabase
-        .from('clases')
-        .insert([{
-          trayecto_id: Number(this.trayectoActualId),
-          titulo: titulo,
-          descripcion: descripcion || null,
-          url_recurso: urlTeoria || null
-        }])
+      const objetoDatos = {
+        trayecto_id: Number(this.trayectoActualId),
+        titulo: titulo,
+        descripcion: descripcion || null,
+        url_recurso: urlTeoria || null
+      }
 
-      if (error) throw error
+      if (this.claseEditandoId) {
+        const { error } = await supabase
+          .from('clases')
+          .update(objetoDatos)
+          .eq('id', this.claseEditandoId)
 
-      alert('✅ Publicación guardada con éxito.')
+        if (error) throw error
+        alert('✅ Publicación actualizada correctamente.')
+      } else {
+        const { error } = await supabase
+          .from('clases')
+          .insert([objetoDatos])
 
-      document.getElementById('clase-titulo').value = ''
-      document.getElementById('clase-descripcion').value = ''
-      document.getElementById('clase-url-teoria').value = ''
-      document.getElementById('clase-url-actividad').value = ''
-      if (document.getElementById('clase-fecha')) document.getElementById('clase-fecha').value = ''
-      
+        if (error) throw error
+        alert('✅ Publicación guardada con éxito.')
+      }
+
+      this.limpiarFormulario()
       await this.cargarListaClases()
 
     } catch (err) {
