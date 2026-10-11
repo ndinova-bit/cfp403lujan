@@ -16,47 +16,44 @@ const ClasesModulo = {
     });
   },
 
-verEnPantalla(url, titulo) {
-  let visor = document.getElementById('modal-visor-recurso');
-  if (!visor) {
-    visor = document.createElement('div');
-    visor.id = 'modal-visor-recurso';
-    visor.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10000; justify-content:center; align-items:center; padding:1rem;';
-    document.body.appendChild(visor);
-  }
+  verEnPantalla(url, titulo) {
+    let visor = document.getElementById('modal-visor-recurso');
+    if (!visor) {
+      visor = document.createElement('div');
+      visor.id = 'modal-visor-recurso';
+      visor.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10000; justify-content:center; align-items:center; padding:1rem;';
+      document.body.appendChild(visor);
+    }
 
-  let embedUrl = url;
+    let embedUrl = url;
 
-  if (url.includes('docs.google.com/spreadsheets')) {
-    // Hojas de Cálculo de Google: Usa el visor HTML directo
-    embedUrl = url.replace(/\/edit.*$/, '/htmlview').replace(/\/view.*$/, '/htmlview');
-  } else if (url.includes('docs.google.com/document') || url.includes('docs.google.com/presentation')) {
-    // Docs y Slides
-    embedUrl = url.replace(/\/edit.*$/, '/preview').replace(/\/view.*$/, '/preview');
-  } else if (url.includes('drive.google.com')) {
-    // Archivos de Google Drive (PDFs, Imágenes, etc.)
-    embedUrl = url.replace(/\/view.*$/, '/preview').replace(/\/edit.*$/, '/preview');
-  } else if (url.includes('youtube.com/watch?v=')) {
-    embedUrl = url.replace('watch?v=', 'embed/');
-  }
+    if (url.includes('docs.google.com/spreadsheets')) {
+      embedUrl = url.replace(/\/edit.*$/, '/htmlview').replace(/\/view.*$/, '/htmlview');
+    } else if (url.includes('docs.google.com/document') || url.includes('docs.google.com/presentation')) {
+      embedUrl = url.replace(/\/edit.*$/, '/preview').replace(/\/view.*$/, '/preview');
+    } else if (url.includes('drive.google.com')) {
+      embedUrl = url.replace(/\/view.*$/, '/preview').replace(/\/edit.*$/, '/preview');
+    } else if (url.includes('youtube.com/watch?v=')) {
+      embedUrl = url.replace('watch?v=', 'embed/');
+    }
 
-  visor.innerHTML = `
-    <div style="background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:12px; width:100%; max-width:950px; height:85vh; display:flex; flex-direction:column; overflow:hidden; color:#f8fafc; box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);">
-      <div style="padding:0.8rem 1.2rem; background:#1e293b; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
-        <strong style="color:#38bdf8; font-size:0.95rem;">📄 Vista Previa: ${titulo}</strong>
-        <div style="display:flex; gap:0.5rem; align-items:center;">
-          <a href="${url}" target="_blank" rel="noopener" style="padding:0.25rem 0.6rem; background:#0284c7; color:#fff; border-radius:4px; font-size:0.8rem; text-decoration:none; font-weight:600;">🔗 Abrir pestaña aparte</a>
-          <button type="button" onclick="document.getElementById('modal-visor-recurso').style.display='none'" style="background:none; border:none; color:#f87171; font-size:1.4rem; cursor:pointer; font-weight:bold; margin-left:0.5rem;">✕</button>
+    visor.innerHTML = `
+      <div style="background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:12px; width:100%; max-width:950px; height:85vh; display:flex; flex-direction:column; overflow:hidden; color:#f8fafc; box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);">
+        <div style="padding:0.8rem 1.2rem; background:#1e293b; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
+          <strong style="color:#38bdf8; font-size:0.95rem;">📄 Vista Previa: ${titulo}</strong>
+          <div style="display:flex; gap:0.5rem; align-items:center;">
+            <a href="${url}" target="_blank" rel="noopener" style="padding:0.25rem 0.6rem; background:#0284c7; color:#fff; border-radius:4px; font-size:0.8rem; text-decoration:none; font-weight:600;">🔗 Abrir pestaña aparte</a>
+            <button type="button" onclick="document.getElementById('modal-visor-recurso').style.display='none'" style="background:none; border:none; color:#f87171; font-size:1.4rem; cursor:pointer; font-weight:bold; margin-left:0.5rem;">✕</button>
+          </div>
+        </div>
+        <div style="flex:1; background:#000; position:relative;">
+          <iframe src="${embedUrl}" style="width:100%; height:100%; border:none;" allow="autoplay"></iframe>
         </div>
       </div>
-      <div style="flex:1; background:#000; position:relative;">
-        <iframe src="${embedUrl}" style="width:100%; height:100%; border:none;" allow="autoplay"></iframe>
-      </div>
-    </div>
-  `;
+    `;
 
-  visor.style.display = 'flex';
-}
+    visor.style.display = 'flex';
+  },
 
   async abrirGestor(trayectoId, nombreTrayecto) {
     this.trayectoActualId = trayectoId;
@@ -248,7 +245,6 @@ verEnPantalla(url, titulo) {
     if (!contenedor) return;
 
     try {
-      // 1. Inscriptos
       const { data: inscripciones, error: errIns } = await supabase
         .from('inscripciones')
         .select('estudiante_user')
@@ -263,20 +259,17 @@ verEnPantalla(url, titulo) {
 
       const listaUsers = inscripciones.map(i => i.estudiante_user);
 
-      // 2. Usuarios
       const { data: alumnos } = await supabase
         .from('usuarios')
         .select('*')
         .in('usuario', listaUsers);
 
-      // 3. Módulos del Trayecto
       const { data: modulos } = await supabase
         .from('modulos')
         .select('id, nombre, codigo')
         .eq('trayecto_id', Number(this.trayectoActualId))
         .order('id', { ascending: true });
 
-      // 4. Clases y Entregas
       const { data: clases } = await supabase
         .from('clases')
         .select('id, modulo_id')
@@ -292,7 +285,6 @@ verEnPantalla(url, titulo) {
         entregas = ent || [];
       }
 
-      // 5. Excepciones habilitadas por docente
       const { data: excepciones } = await supabase
         .from('excepciones_estudiantes')
         .select('*')
@@ -361,7 +353,6 @@ verEnPantalla(url, titulo) {
           }
         }
 
-        // Estado Excepción
         const exEspecial = (excepciones || []).find(x => String(x.estudiante_user) === userKey && x.habilitado);
 
         filasHTML += `
@@ -595,7 +586,6 @@ verEnPantalla(url, titulo) {
 
       window.clasesGuardadasCache = clases;
 
-      // Obtener módulos
       const { data: modulos } = await supabase
         .from('modulos')
         .select('*')
@@ -612,7 +602,6 @@ verEnPantalla(url, titulo) {
         entregasGlobales = ent || [];
       }
 
-      // Excepciones
       let tieneExcepcion = false;
       if (esEstudiante && userEstudiante) {
         const { data: exc } = await supabase
@@ -650,7 +639,6 @@ verEnPantalla(url, titulo) {
 
         let bloqueEntregaEstudiante = '';
         if (esEstudiante && tieneActividad) {
-          // Evaluación de bloqueo secuencial por módulo
           let estaBloqueado = false;
           if (!tieneExcepcion && c.modulo_id && modulos && modulos.length > 1) {
             const idxModActual = modulos.findIndex(m => Number(m.id) === Number(c.modulo_id));
