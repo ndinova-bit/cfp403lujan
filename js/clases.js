@@ -43,7 +43,6 @@ async cargarSabanaEstudiantes() {
         entregas = ent || [];
       }
 
-      // 5. Asistencias del Trayecto
       const { data: asistencias } = await supabase
         .from('asistencias')
         .select('*')
@@ -60,7 +59,7 @@ async cargarSabanaEstudiantes() {
       if (tieneModulos) {
         thModulosHTML = modulos.map(m => `<th style="padding:0.75rem; text-align:center;">${m.nombre}</th>`).join('');
       } else {
-        thModulosHTML = `<th style="padding:0.75rem; text-align:center;">Calificación Final</th>`;
+        thModulosHTML = `<th style="padding:0.75rem; text-align:center;">Promedio General</th>`;
       }
 
       let filasHTML = '';
@@ -72,7 +71,7 @@ async cargarSabanaEstudiantes() {
 
         if (tieneModulos) {
           modulos.forEach(mod => {
-            // A. Nota Actividades del Módulo
+            // 1. Promedio TPs del Módulo
             const clasesDelModulo = (clases || []).filter(c => Number(c.modulo_id) === Number(mod.id)).map(c => c.id);
             const entregasAlumnoMod = entregas.filter(e => clasesDelModulo.includes(Number(e.clase_id)) && String(e.estudiante_user) === userKey);
 
@@ -83,13 +82,13 @@ async cargarSabanaEstudiantes() {
             });
             const promAct = cantAct > 0 ? (sumaAct / cantAct) : null;
 
-            // B. % Asistencia del Módulo Específico
-            const asisModUser = (asistencias || []).filter(a => Number(a.modulo_id) === Number(mod.id) && String(a.estudiante_user) === userKey);
+            // 2. Promedio Asistencia (Específica del Módulo O General)
+            const asisModUser = (asistencias || []).filter(a => (Number(a.modulo_id) === Number(mod.id) || a.modulo_id === null) && String(a.estudiante_user) === userKey);
             const totalClasesMod = asisModUser.length;
             const presentesMod = asisModUser.filter(a => a.estado === 'presente' || a.estado === 'justificado').length;
             const pctAsisMod = totalClasesMod > 0 ? ((presentesMod / totalClasesMod) * 100) : null;
 
-            // C. Promedio Integrado (Actividad + Asistencia)
+            // 3. Cálculo Final Promediado
             let notaFinalModulo = null;
             let desgloseTexto = '';
 
@@ -98,10 +97,10 @@ async cargarSabanaEstudiantes() {
               desgloseTexto = `TPs: ${Math.round(promAct)}% | Asis: ${Math.round(pctAsisMod)}%`;
             } else if (promAct !== null) {
               notaFinalModulo = Math.round(promAct);
-              desgloseTexto = `TPs: ${Math.round(promAct)}% (Sin Asistencia)`;
+              desgloseTexto = `TPs: ${Math.round(promAct)}%`;
             } else if (pctAsisMod !== null) {
               notaFinalModulo = Math.round(pctAsisMod);
-              desgloseTexto = `Asis: ${Math.round(pctAsisMod)}% (Sin TPs)`;
+              desgloseTexto = `Asis: ${Math.round(pctAsisMod)}%`;
             }
 
             if (notaFinalModulo !== null) {
@@ -119,7 +118,7 @@ async cargarSabanaEstudiantes() {
             }
           });
         } else {
-          // General
+          // General sin Módulos
           const entregasAlumno = entregas.filter(e => String(e.estudiante_user) === userKey);
           let sumaAct = 0, cantAct = 0;
           entregasAlumno.forEach(e => {
