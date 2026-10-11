@@ -2,7 +2,7 @@ const ClasesModulo = {
   trayectoActualId: null,
   claseEditandoId: null,
 
-  // Transforma enlaces en botones con opción de Abrir y Visualizar en Pantalla
+  // Convierte enlaces en la descripción en un contenedor con abrir y visualizar
   convertirLinks(texto) {
     if (!texto) return '';
     const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -17,7 +17,6 @@ const ClasesModulo = {
     });
   },
 
-  // Abre un modal interno para visualizar PDFs, Drive o YouTube sin cambiar de pestaña
   verEnPantalla(url, titulo) {
     let visor = document.getElementById('modal-visor-recurso');
     if (!visor) {
@@ -27,7 +26,6 @@ const ClasesModulo = {
       document.body.appendChild(visor);
     }
 
-    // Convertir enlace normal de Google Drive/Docs/YouTube a URL embebible
     let embedUrl = url;
     if (url.includes('drive.google.com') || url.includes('docs.google.com')) {
       embedUrl = url.replace(/\/view.*$/, '/preview').replace(/\/edit.*$/, '/preview');
@@ -71,68 +69,167 @@ const ClasesModulo = {
     }
 
     modal.innerHTML = `
-      <div style="background:#1e293b; border:1px solid rgba(255,255,255,0.1); border-radius:12px; width:100%; max-width:800px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; color:#f8fafc;">
+      <div style="background:#1e293b; border:1px solid rgba(255,255,255,0.1); border-radius:12px; width:100%; max-width:850px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; color:#f8fafc;">
         <div style="padding:1.2rem 1.5rem; background:#0f172a; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
-          <h3 style="margin:0; font-size:1.15rem;">📚 Clases y Actividades: <span style="color:#38bdf8;">${nombreTrayecto}</span></h3>
+          <h3 style="margin:0; font-size:1.15rem;">📚 Trayecto: <span style="color:#38bdf8;">${nombreTrayecto}</span></h3>
           <button onclick="ClasesModulo.cerrarGestor()" style="background:none; border:none; color:#94a3b8; font-size:1.5rem; cursor:pointer;">&times;</button>
         </div>
 
+        ${!esEstudiante ? `
+          <!-- Pestañas de Navegación del Docente -->
+          <div style="display:flex; gap:0.5rem; padding:0.6rem 1.5rem; background:#1e293b; border-bottom:1px solid rgba(255,255,255,0.08);">
+            <button id="btn-tab-clases" onclick="ClasesModulo.cambiarVistaPestana('clases')" style="padding:0.4rem 1rem; border:none; border-radius:6px; background:#0284c7; color:#fff; font-weight:600; cursor:pointer;">
+              📚 Clases y Actividades
+            </button>
+            <button id="btn-tab-alumnos" onclick="ClasesModulo.cambiarVistaPestana('alumnos')" style="padding:0.4rem 1rem; border:none; border-radius:6px; background:rgba(255,255,255,0.05); color:#94a3b8; font-weight:600; cursor:pointer;">
+              👥 Estudiantes Inscriptos
+            </button>
+          </div>
+        ` : ''}
+
         <div style="padding:1.5rem; overflow-y:auto; flex:1;">
           
-          ${!esEstudiante ? `
-            <details id="details-form-clase" open style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:1.5rem;">
-              <summary id="summary-clase-titulo" style="cursor:pointer; font-weight:600; color:#38bdf8;">➕ Cargar Nueva Clase y/o Actividad</summary>
-              
-              <form onsubmit="ClasesModulo.guardarClase(event)" style="margin-top:1rem; display:flex; flex-direction:column; gap:0.8rem;">
+          <!-- VISTA 1: CLASES Y ACTIVIDADES -->
+          <div id="vista-tab-clases">
+            ${!esEstudiante ? `
+              <details id="details-form-clase" open style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:1.5rem;">
+                <summary id="summary-clase-titulo" style="cursor:pointer; font-weight:600; color:#38bdf8;">➕ Cargar Nueva Clase y/o Actividad</summary>
                 
-                <div>
-                  <label style="display:block; font-size:0.82rem; color:#cbd5e1; margin-bottom:0.3rem;">Título de la Clase / Actividad *</label>
-                  <input type="text" id="clase-titulo" placeholder="Ej: Clase 1: HTML Básico y TP N° 1" required class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
-                </div>
-
-                <div>
-                  <label style="display:block; font-size:0.82rem; color:#cbd5e1; margin-bottom:0.3rem;">Descripción / Consigna general</label>
-                  <textarea id="clase-descripcion" placeholder="Resumen de la clase o pautas del trabajo..." rows="2" class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;"></textarea>
-                </div>
-
-                <div>
-                  <label style="display:block; font-size:0.82rem; color:#38bdf8; font-weight:600; margin-bottom:0.3rem;">📚 Enlace a la Clase Teórica (Google Drive, YouTube, PDF)</label>
-                  <input type="url" id="clase-url-teoria" placeholder="https://drive.google.com/..." class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
-                </div>
-
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.8rem;">
+                <form onsubmit="ClasesModulo.guardarClase(event)" style="margin-top:1rem; display:flex; flex-direction:column; gap:0.8rem;">
                   <div>
-                    <label style="display:block; font-size:0.82rem; color:#facc15; font-weight:600; margin-bottom:0.3rem;">📝 Enlace a la Actividad / TP</label>
-                    <input type="url" id="clase-url-actividad" placeholder="https://drive.google.com/..." class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
+                    <label style="display:block; font-size:0.82rem; color:#cbd5e1; margin-bottom:0.3rem;">Título de la Clase / Actividad *</label>
+                    <input type="text" id="clase-titulo" placeholder="Ej: Clase 1: HTML Básico y TP N° 1" required class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
                   </div>
 
                   <div>
-                    <label style="display:block; font-size:0.82rem; color:#facc15; font-weight:600; margin-bottom:0.3rem;">📅 Fecha de Publicación (Programar)</label>
-                    <input type="date" id="clase-fecha" class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
+                    <label style="display:block; font-size:0.82rem; color:#cbd5e1; margin-bottom:0.3rem;">Descripción / Consigna general</label>
+                    <textarea id="clase-descripcion" placeholder="Resumen de la clase o pautas del trabajo..." rows="2" class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;"></textarea>
                   </div>
-                </div>
 
-                <div style="display:flex; gap:0.5rem; justify-content:flex-end; margin-top:0.4rem;">
-                  <button type="button" id="btn-cancelar-edicion" style="display:none; padding:0.6rem 1rem; background:rgba(255,255,255,0.1); color:#cbd5e1; border:none; border-radius:6px; cursor:pointer;" onclick="ClasesModulo.limpiarFormulario()">
-                    Cancelar Edición
-                  </button>
-                  <button type="submit" id="btn-guardar-clase" class="btn btn-gold" style="padding:0.6rem 1.4rem; background:#0284c7; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600;">
-                    💾 Publicar Contenido
-                  </button>
-                </div>
-              </form>
-            </details>
-          ` : ''}
+                  <div>
+                    <label style="display:block; font-size:0.82rem; color:#38bdf8; font-weight:600; margin-bottom:0.3rem;">📚 Enlace a la Clase Teórica (Google Drive, YouTube, PDF)</label>
+                    <input type="url" id="clase-url-teoria" placeholder="https://drive.google.com/..." class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
+                  </div>
 
-          <div id="lista-clases-cargadas">
-            <p style="color:#94a3b8; text-align:center;">Cargando contenidos...</p>
+                  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.8rem;">
+                    <div>
+                      <label style="display:block; font-size:0.82rem; color:#facc15; font-weight:600; margin-bottom:0.3rem;">📝 Enlace a la Actividad / TP</label>
+                      <input type="url" id="clase-url-actividad" placeholder="https://drive.google.com/..." class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
+                    </div>
+
+                    <div>
+                      <label style="display:block; font-size:0.82rem; color:#facc15; font-weight:600; margin-bottom:0.3rem;">📅 Fecha de Publicación (Programar)</label>
+                      <input type="date" id="clase-fecha" class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
+                    </div>
+                  </div>
+
+                  <div style="display:flex; gap:0.5rem; justify-content:flex-end; margin-top:0.4rem;">
+                    <button type="button" id="btn-cancelar-edicion" style="display:none; padding:0.6rem 1rem; background:rgba(255,255,255,0.1); color:#cbd5e1; border:none; border-radius:6px; cursor:pointer;" onclick="ClasesModulo.limpiarFormulario()">
+                      Cancelar Edición
+                    </button>
+                    <button type="submit" id="btn-guardar-clase" class="btn btn-gold" style="padding:0.6rem 1.4rem; background:#0284c7; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600;">
+                      💾 Publicar Contenido
+                    </button>
+                  </div>
+                </form>
+              </details>
+            ` : ''}
+
+            <div id="lista-clases-cargadas">
+              <p style="color:#94a3b8; text-align:center;">Cargando contenidos...</p>
+            </div>
           </div>
+
+          <!-- VISTA 2: LISTA DE ESTUDIANTES INSCRIPTOS -->
+          <div id="vista-tab-alumnos" style="display:none;">
+            <div id="contenedor-lista-alumnos">
+              <p style="color:#94a3b8; text-align:center;">Cargando nómina de alumnos...</p>
+            </div>
+          </div>
+
         </div>
       </div>
     `
 
     modal.style.display = 'flex'
     await this.cargarListaClases(esEstudiante)
+  },
+
+  cambiarVistaPestana(pestana) {
+    const vClases = document.getElementById('vista-tab-clases');
+    const vAlumnos = document.getElementById('vista-tab-alumnos');
+    const bClases = document.getElementById('btn-tab-clases');
+    const bAlumnos = document.getElementById('btn-tab-alumnos');
+
+    if (pestana === 'alumnos') {
+      if (vClases) vClases.style.display = 'none';
+      if (vAlumnos) vAlumnos.style.display = 'block';
+      if (bClases) { bClases.style.background = 'rgba(255,255,255,0.05)'; bClases.style.color = '#94a3b8'; }
+      if (bAlumnos) { bAlumnos.style.background = '#0284c7'; bAlumnos.style.color = '#fff'; }
+      this.cargarEstudiantesInscriptos();
+    } else {
+      if (vClases) vClases.style.display = 'block';
+      if (vAlumnos) vAlumnos.style.display = 'none';
+      if (bClases) { bClases.style.background = '#0284c7'; bClases.style.color = '#fff'; }
+      if (bAlumnos) { bAlumnos.style.background = 'rgba(255,255,255,0.05)'; bAlumnos.style.color = '#94a3b8'; }
+    }
+  },
+
+  async cargarEstudiantesInscriptos() {
+    const contenedor = document.getElementById('contenedor-lista-alumnos');
+    if (!contenedor) return;
+
+    try {
+      const { data: inscripciones, error } = await supabase
+        .from('inscripciones')
+        .select('estudiante_user')
+        .eq('trayecto_id', Number(this.trayectoActualId));
+
+      if (error) throw error;
+
+      if (!inscripciones || inscripciones.length === 0) {
+        contenedor.innerHTML = '<p style="color:#94a3b8; text-align:center; padding:1.5rem;">No hay estudiantes inscriptos en este trayecto.</p>';
+        return;
+      }
+
+      const listaUsers = inscripciones.map(i => i.estudiante_user);
+
+      const { data: alumnos, error: errUsers } = await supabase
+        .from('usuarios')
+        .select('*')
+        .in('usuario', listaUsers);
+
+      if (errUsers) throw errUsers;
+
+      contenedor.innerHTML = `
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden;">
+          <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.88rem;">
+            <thead>
+              <tr style="background:#0f172a; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.1);">
+                <th style="padding:0.75rem 1rem;">N°</th>
+                <th style="padding:0.75rem 1rem;">Estudiante</th>
+                <th style="padding:0.75rem 1rem;">DNI / Usuario</th>
+                <th style="padding:0.75rem 1rem;">Email</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(alumnos || []).map((u, i) => `
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                  <td style="padding:0.75rem 1rem; color:#94a3b8;">${i + 1}</td>
+                  <td style="padding:0.75rem 1rem; font-weight:600; color:#f8fafc;">${u.apellido \vert{}\vert{} ''}${u.nombre || ''}</td>
+                  <td style="padding:0.75rem 1rem; color:#38bdf8;">${u.usuario || u.dni || 'S/D'}</td>
+                  <td style="padding:0.75rem 1rem; color:#cbd5e1;">${u.email || 'Sin registrar'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+    } catch (err) {
+      console.error('Error al cargar alumnos inscriptos:', err);
+      contenedor.innerHTML = '<p style="color:#f87171; text-align:center;">Error al cargar la nómina de alumnos.</p>';
+    }
   },
 
   cerrarGestor() {
@@ -145,6 +242,10 @@ const ClasesModulo = {
     if (!contenedor) return
 
     try {
+      const sesionRaw = localStorage.getItem('usuario_actual') || localStorage.getItem('usuario_logueado') || sessionStorage.getItem('usuario_logueado')
+      const perfil = sesionRaw ? JSON.parse(sesionRaw) : {}
+      const userEstudiante = perfil.usuario || perfil.dni || perfil.id;
+
       const { data: clases, error } = await supabase
         .from('clases')
         .select('*')
@@ -160,21 +261,27 @@ const ClasesModulo = {
 
       window.clasesGuardadasCache = clases;
 
-      // Obtener la fecha actual en formato ISO para la comparación
+      // Cargar entregas previas
+      const idsClases = clases.map(c => c.id);
+      let entregasGlobales = [];
+      if (idsClases.length > 0) {
+        const { data: ent } = await supabase
+          .from('entregas_actividades')
+          .select('*')
+          .in('clase_id', idsClases);
+        entregasGlobales = ent || [];
+      }
+
       const hoy = new Date();
       hoy.setHours(0,0,0,0);
 
-      // Filtrar publicaciones si es estudiante
       const publicacionesMostrar = clases.filter(c => {
-        if (!esEstudiante) return true; // El docente/admin ve todo
-
+        if (!esEstudiante) return true;
         const matchFecha = (c.descripcion || '').match(/📅 Fecha de Publicación: (\d{2}\/\d{2}\/\d{4})/);
         if (matchFecha) {
           const partes = matchFecha[1].split('/');
           const fechaPub = new Date(partes[2], partes[1] - 1, partes[0]);
-          if (fechaPub > hoy) {
-            return false; // Todavía no llegó el día de publicación
-          }
+          if (fechaPub > hoy) return false;
         }
         return true;
       });
@@ -187,13 +294,53 @@ const ClasesModulo = {
       contenedor.innerHTML = publicacionesMostrar.map((c) => {
         const descHTML = this.convertirLinks(c.descripcion || 'Sin descripción');
         const urlTeoriaEscapada = (c.url_recurso || '').replace(/'/g, "\\'");
+        const tieneActividad = (c.descripcion || '').includes('📝 Enlace a Actividad / TP:');
+
+        let bloqueEntregaEstudiante = '';
+        if (esEstudiante && tieneActividad) {
+          const miEntrega = entregasGlobales.find(e => Number(e.clase_id) === Number(c.id) && String(e.estudiante_user) === String(userEstudiante));
+          
+          bloqueEntregaEstudiante = `
+            <div style="margin-top:0.8rem; padding:0.8rem; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
+              <strong style="display:block; font-size:0.82rem; color:#facc15; margin-bottom:0.4rem;">📤 Entrega de Trabajo Práctico:</strong>
+              ${miEntrega ? `
+                <div style="font-size:0.82rem; color:#4ade80; margin-bottom:0.4rem;">
+                  ✅ Trabajo Entregado (<a href="${miEntrega.url_entrega}" target="_blank" style="color:#38bdf8; text-decoration:underline;">Ver Archivo Enviado</a>)
+                  ${miEntrega.nota ? `<br>🏆 <strong>Calificación:</strong> <span style="color:#fbbf24; font-size:0.9rem;">${miEntrega.nota}</span>` : '<br>⏳ <em>Pendiente de corrección por el docente.</em>'}
+                  ${miEntrega.comentario_docente ? `<br>💬 <strong>Devolución Docente:</strong> ${miEntrega.comentario_docente}` : ''}
+                </div>
+              ` : ''}
+              
+              <div style="display:flex; gap:0.5rem; margin-top:0.3rem;">
+                <input type="url" id="input-entrega-${c.id}" placeholder="Pegá el link a tu trabajo (Google Drive, PDF)" value="${miEntrega ? miEntrega.url_entrega : ''}" style="flex:1; padding:0.4rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px; font-size:0.82rem;">
+                <button onclick="ClasesModulo.enviarEntregaEstudiante(${c.id})" style="padding:0.4rem 0.8rem; background:#0284c7; color:#fff; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:0.8rem;">
+                  ${miEntrega ? 'Reenviar' : 'Enviar Entrega'}
+                </button>
+              </div>
+            </div>
+          `;
+        }
+
+        let bloqueRevisionDocente = '';
+        if (!esEstudiante && tieneActividad) {
+          const entregasDeEstaClase = entregasGlobales.filter(e => Number(e.clase_id) === Number(c.id));
+          bloqueRevisionDocente = `
+            <div style="margin-top:0.8rem;">
+              <button onclick="ClasesModulo.toggleVerEntregasDocente(${c.id})" style="padding:0.35rem 0.7rem; background:rgba(250,204,21,0.15); border:1px solid rgba(250,204,21,0.3); color:#facc15; border-radius:6px; font-size:0.8rem; cursor:pointer; font-weight:600;">
+                📥 Ver Entregas de Alumnos (${entregasDeEstaClase.length})
+              </button>
+              <div id="panel-entregas-docente-${c.id}" style="display:none; margin-top:0.6rem; padding:0.8rem; background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.1); border-radius:6px;">
+                <p style="color:#94a3b8; font-size:0.8rem; margin:0 0 0.5rem 0;">Cargando entregas...</p>
+              </div>
+            </div>
+          `;
+        }
 
         return `
           <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:0.8rem; display:flex; justify-content:space-between; align-items:flex-start;">
             <div style="flex:1; padding-right:1rem;">
               <h4 style="margin:0 0 0.4rem 0; color:#f8fafc; font-size:0.95rem;">📌 ${c.titulo}</h4>
               
-              <!-- 1. MATERIAL TEÓRICO CON VISUALIZACIÓN EN PANTALLA -->
               ${c.url_recurso ? `
                 <div style="margin-bottom:0.5rem; display:flex; gap:0.4rem; flex-wrap:wrap; align-items:center;">
                   <a href="${c.url_recurso}" target="_blank" rel="noopener" style="display:inline-block; padding:0.35rem 0.75rem; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; border-radius:6px; font-size:0.82rem; text-decoration:none; font-weight:600;">📚 Abrir Material Teórico de Clase</a>
@@ -201,8 +348,10 @@ const ClasesModulo = {
                 </div>
               ` : ''}
 
-              <!-- 2. ACTIVIDAD / TP CON VISUALIZACIÓN EN PANTALLA -->
               <div style="margin:0; color:#cbd5e1; font-size:0.85rem; white-space:pre-line;">${descHTML}</div>
+
+              ${bloqueEntregaEstudiante}
+              ${bloqueRevisionDocente}
             </div>
 
             ${!esEstudiante ? `
@@ -218,6 +367,145 @@ const ClasesModulo = {
     } catch (err) {
       console.error('Error al cargar clases:', err)
       contenedor.innerHTML = '<p style="color:#f87171; text-align:center;">Error al cargar las clases.</p>'
+    }
+  },
+
+  async enviarEntregaEstudiante(claseId) {
+    const inputUrl = document.getElementById(`input-entrega-${claseId}`);
+    const url = inputUrl ? inputUrl.value.trim() : '';
+
+    if (!url) {
+      alert('Por favor pegá el enlace a tu trabajo práctico resuelto.');
+      return;
+    }
+
+    const sesionRaw = localStorage.getItem('usuario_actual') || localStorage.getItem('usuario_logueado') || sessionStorage.getItem('usuario_logueado');
+    const perfil = sesionRaw ? JSON.parse(sesionRaw) : {};
+    const idEstudiante = perfil.usuario || perfil.dni || perfil.id;
+
+    if (!idEstudiante) {
+      alert('Error: no se pudo verificar el usuario estudiante.');
+      return;
+    }
+
+    try {
+      const { data: existe } = await supabase
+        .from('entregas_actividades')
+        .select('id')
+        .eq('clase_id', claseId)
+        .eq('estudiante_user', String(idEstudiante))
+        .single();
+
+      if (existe) {
+        const { error } = await supabase
+          .from('entregas_actividades')
+          .update({ url_entrega: url, created_at: new Date() })
+          .eq('id', existe.id);
+        if (error) throw error;
+        alert('✅ Entrega actualizada correctamente.');
+      } else {
+        const { error } = await supabase
+          .from('entregas_actividades')
+          .insert([{
+            clase_id: claseId,
+            estudiante_user: String(idEstudiante),
+            url_entrega: url
+          }]);
+        if (error) throw error;
+        alert('✅ Trabajo Práctico entregado con éxito.');
+      }
+
+      await this.cargarListaClases(true);
+
+    } catch (err) {
+      console.error('Error al enviar entrega:', err);
+      alert('Error al registrar la entrega: ' + err.message);
+    }
+  },
+
+  async toggleVerEntregasDocente(claseId) {
+    const panel = document.getElementById(`panel-entregas-docente-${claseId}`);
+    if (!panel) return;
+
+    if (panel.style.display === 'block') {
+      panel.style.display = 'none';
+      return;
+    }
+
+    panel.style.display = 'block';
+
+    try {
+      const { data: entregas, error } = await supabase
+        .from('entregas_actividades')
+        .select('*')
+        .eq('clase_id', claseId);
+
+      if (error) throw error;
+
+      if (!entregas || entregas.length === 0) {
+        panel.innerHTML = '<p style="color:#94a3b8; font-size:0.8rem; margin:0;">Aún ningún estudiante ha entregado esta actividad.</p>';
+        return;
+      }
+
+      const usersList = entregas.map(e => e.estudiante_user);
+      const { data: alumnos } = await supabase
+        .from('usuarios')
+        .select('usuario, nombre, apellido')
+        .in('usuario', usersList);
+
+      panel.innerHTML = entregas.map(ent => {
+        const alu = (alumnos || []).find(a => String(a.usuario) === String(ent.estudiante_user));
+        const nombreAlumno = alu ? `${alu.apellido || ''} ${alu.nombre || ''}`.trim() : ent.estudiante_user;
+
+        return `
+          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:0.6rem; margin-bottom:0.5rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <strong style="color:#f8fafc; font-size:0.85rem;">👤 ${nombreAlumno}</strong>
+              <a href="${ent.url_entrega}" target="_blank" rel="noopener" style="color:#38bdf8; font-size:0.8rem; text-decoration:underline;">🔗 Ver Trabajo Entregado</a>
+            </div>
+            
+            <div style="display:grid; grid-template-columns: 140px 1fr 100px; gap:0.5rem; margin-top:0.5rem; align-items:center;">
+              <div>
+                <label style="display:block; font-size:0.7rem; color:#facc15;">Nota (0-100 / Concepto):</label>
+                <input type="text" id="nota-ent-${ent.id}" placeholder="Ej: 85 o Aprobado" value="${ent.nota || ''}" style="width:100%; padding:0.3rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:4px; font-size:0.8rem;">
+              </div>
+              <div>
+                <label style="display:block; font-size:0.7rem; color:#cbd5e1;">Comentario / Devolución:</label>
+                <input type="text" id="coment-ent-${ent.id}" placeholder="Excelente trabajo..." value="${ent.comentario_docente || ''}" style="width:100%; padding:0.3rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:4px; font-size:0.8rem;">
+              </div>
+              <button onclick="ClasesModulo.guardarCalificacionDocente(${ent.id})" style="padding:0.35rem 0.5rem; background:#22c55e; color:#fff; border:none; border-radius:4px; font-weight:600; cursor:pointer; font-size:0.75rem; margin-top:1rem;">
+                💾 Guardar
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+    } catch (err) {
+      console.error('Error al cargar entregas:', err);
+      panel.innerHTML = '<p style="color:#f87171; font-size:0.8rem; margin:0;">Error al cargar las entregas.</p>';
+    }
+  },
+
+  async guardarCalificacionDocente(entregaId) {
+    const notaVal = document.getElementById(`nota-ent-${entregaId}`)?.value.trim();
+    const comentVal = document.getElementById(`coment-ent-${entregaId}`)?.value.trim();
+
+    try {
+      const { error } = await supabase
+        .from('entregas_actividades')
+        .update({
+          nota: notaVal || null,
+          comentario_docente: comentVal || null
+        })
+        .eq('id', entregaId);
+
+      if (error) throw error;
+      alert('✅ Calificación y devolución guardadas correctamente.');
+
+    } catch (err) {
+      console.error('Error al calificar:', err);
+      alert('Error al guardar la calificación: ' + err.message);
     }
   },
 
