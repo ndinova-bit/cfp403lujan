@@ -68,7 +68,7 @@ const ClasesModulo = {
     }
 
     let htmlModal = `
-      <div style="background:#1e293b; border:1px solid rgba(255,255,255,0.1); border-radius:12px; width:100%; max-width:850px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; color:#f8fafc;">
+      <div style="background:#1e293b; border:1px solid rgba(255,255,255,0.1); border-radius:12px; width:100%; max-width:900px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; color:#f8fafc;">
         <div style="padding:1.2rem 1.5rem; background:#0f172a; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
           <h3 style="margin:0; font-size:1.15rem;">📚 Trayecto: <span style="color:#38bdf8;">${nombreTrayecto}</span></h3>
           <button type="button" onclick="ClasesModulo.cerrarGestor()" style="background:none; border:none; color:#94a3b8; font-size:1.5rem; cursor:pointer;">&times;</button>
@@ -77,12 +77,15 @@ const ClasesModulo = {
 
     if (!esEstudiante) {
       htmlModal += `
-        <div style="display:flex; gap:0.5rem; padding:0.6rem 1.5rem; background:#1e293b; border-bottom:1px solid rgba(255,255,255,0.08);">
+        <div style="display:flex; gap:0.5rem; padding:0.6rem 1.5rem; background:#1e293b; border-bottom:1px solid rgba(255,255,255,0.08); flex-wrap:wrap;">
           <button type="button" id="btn-tab-clases" onclick="ClasesModulo.cambiarVistaPestana('clases')" style="padding:0.4rem 1rem; border:none; border-radius:6px; background:#0284c7; color:#fff; font-weight:600; cursor:pointer;">
             📚 Clases y Actividades
           </button>
           <button type="button" id="btn-tab-alumnos" onclick="ClasesModulo.cambiarVistaPestana('alumnos')" style="padding:0.4rem 1rem; border:none; border-radius:6px; background:rgba(255,255,255,0.05); color:#94a3b8; font-weight:600; cursor:pointer;">
             👥 Estudiantes Inscriptos
+          </button>
+          <button type="button" id="btn-tab-entregas" onclick="ClasesModulo.cambiarVistaPestana('entregas')" style="padding:0.4rem 1rem; border:none; border-radius:6px; background:rgba(255,255,255,0.05); color:#94a3b8; font-weight:600; cursor:pointer;">
+            📝 Entregas y Calificaciones
           </button>
         </div>
       `;
@@ -90,6 +93,8 @@ const ClasesModulo = {
 
     htmlModal += `
       <div style="padding:1.5rem; overflow-y:auto; flex:1;">
+        
+        <!-- PESTAÑA 1: CLASES -->
         <div id="vista-tab-clases">
     `;
 
@@ -145,11 +150,20 @@ const ClasesModulo = {
           </div>
         </div>
 
+        <!-- PESTAÑA 2: ALUMNO INSCRIPTOS -->
         <div id="vista-tab-alumnos" style="display:none;">
           <div id="contenedor-lista-alumnos">
             <p style="color:#94a3b8; text-align:center;">Cargando nómina de alumnos...</p>
           </div>
         </div>
+
+        <!-- PESTAÑA 3: ENTREGAS Y CALIFICACIONES (UNIFICADO) -->
+        <div id="vista-tab-entregas" style="display:none;">
+          <div id="contenedor-todas-entregas">
+            <p style="color:#94a3b8; text-align:center;">Cargando trabajos entregados...</p>
+          </div>
+        </div>
+
       </div>
     </div>
     `;
@@ -162,20 +176,31 @@ const ClasesModulo = {
   cambiarVistaPestana(pestana) {
     const vClases = document.getElementById('vista-tab-clases');
     const vAlumnos = document.getElementById('vista-tab-alumnos');
+    const vEntregas = document.getElementById('vista-tab-entregas');
+
     const bClases = document.getElementById('btn-tab-clases');
     const bAlumnos = document.getElementById('btn-tab-alumnos');
+    const bEntregas = document.getElementById('btn-tab-entregas');
+
+    // Reset de estilos
+    [bClases, bAlumnos, bEntregas].forEach(b => {
+      if (b) { b.style.background = 'rgba(255,255,255,0.05)'; b.style.color = '#94a3b8'; }
+    });
+    [vClases, vAlumnos, vEntregas].forEach(v => {
+      if (v) v.style.display = 'none';
+    });
 
     if (pestana === 'alumnos') {
-      if (vClases) vClases.style.display = 'none';
       if (vAlumnos) vAlumnos.style.display = 'block';
-      if (bClases) { bClases.style.background = 'rgba(255,255,255,0.05)'; bClases.style.color = '#94a3b8'; }
       if (bAlumnos) { bAlumnos.style.background = '#0284c7'; bAlumnos.style.color = '#fff'; }
       this.cargarEstudiantesInscriptos();
+    } else if (pestana === 'entregas') {
+      if (vEntregas) vEntregas.style.display = 'block';
+      if (bEntregas) { bEntregas.style.background = '#0284c7'; bEntregas.style.color = '#fff'; }
+      this.cargarPanelGeneralEntregas();
     } else {
       if (vClases) vClases.style.display = 'block';
-      if (vAlumnos) vAlumnos.style.display = 'none';
       if (bClases) { bClases.style.background = '#0284c7'; bClases.style.color = '#fff'; }
-      if (bAlumnos) { bAlumnos.style.background = 'rgba(255,255,255,0.05)'; bAlumnos.style.color = '#94a3b8'; }
     }
   },
 
@@ -242,6 +267,112 @@ const ClasesModulo = {
     } catch (err) {
       console.error('Error al cargar alumnos inscriptos:', err);
       contenedor.innerHTML = '<p style="color:#f87171; text-align:center;">Error al cargar la nómina de alumnos.</p>';
+    }
+  },
+
+  async cargarPanelGeneralEntregas() {
+    const contenedor = document.getElementById('contenedor-todas-entregas');
+    if (!contenedor) return;
+
+    try {
+      // 1. Obtener todas las clases de este trayecto
+      const { data: clases } = await supabase
+        .from('clases')
+        .select('id, titulo')
+        .eq('trayecto_id', Number(this.trayectoActualId));
+
+      if (!clases || clases.length === 0) {
+        contenedor.innerHTML = '<p style="color:#94a3b8; text-align:center; padding:1.5rem;">No hay clases publicadas aún.</p>';
+        return;
+      }
+
+      const idsClases = clases.map(c => c.id);
+
+      // 2. Obtener las entregas
+      const { data: entregas, error } = await supabase
+        .from('entregas_actividades')
+        .select('*')
+        .in('clase_id', idsClases)
+        .order('id', { ascending: false });
+
+      if (error) throw error;
+
+      if (!entregas || entregas.length === 0) {
+        contenedor.innerHTML = '<p style="color:#94a3b8; text-align:center; padding:1.5rem;">Aún no se han recibido entregas de trabajos prácticos.</p>';
+        return;
+      }
+
+      // 3. Obtener datos de alumnos
+      const listaUsers = entregas.map(e => e.estudiante_user);
+      const { data: alumnos } = await supabase
+        .from('usuarios')
+        .select('usuario, nombre, apellido')
+        .in('usuario', listaUsers);
+
+      let cardsHTML = '';
+      entregas.forEach(ent => {
+        const claseObj = clases.find(c => Number(c.id) === Number(ent.clase_id));
+        const tituloClase = claseObj ? claseObj.titulo : `Clase N° ${ent.clase_id}`;
+
+        const alu = (alumnos || []).find(a => String(a.usuario) === String(ent.estudiante_user));
+        const nombreAlumno = alu ? `${alu.apellido || ''} ${alu.nombre || ''}`.trim() : ent.estudiante_user;
+
+        cardsHTML += `
+          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:0.8rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:0.5rem;">
+              <div>
+                <strong style="color:#38bdf8; font-size:0.9rem; display:block;">📌 ${tituloClase}</strong>
+                <span style="color:#f8fafc; font-size:0.85rem; font-weight:600;">👤 Estudiante: ${nombreAlumno}</span>
+              </div>
+              <a href="${ent.url_entrega}" target="_blank" rel="noopener" style="padding:0.3rem 0.6rem; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; border-radius:6px; font-size:0.8rem; text-decoration:none; font-weight:600;">🔗 Ver Trabajo Entregado</a>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 160px 1fr 100px; gap:0.6rem; margin-top:0.8rem; align-items:center;">
+              <div>
+                <label style="display:block; font-size:0.75rem; color:#facc15; font-weight:600; margin-bottom:0.2rem;">Nota (0-100 / Concepto):</label>
+                <input type="text" id="nota-panel-${ent.id}" placeholder="Ej: 85 o Aprobado" value="${ent.nota || ''}" style="width:100%; padding:0.4rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px; font-size:0.82rem;">
+              </div>
+
+              <div>
+                <label style="display:block; font-size:0.75rem; color:#cbd5e1; font-weight:600; margin-bottom:0.2rem;">Comentario / Devolución:</label>
+                <input type="text" id="coment-panel-${ent.id}" placeholder="Observaciones pedagógicas..." value="${ent.comentario_docente || ''}" style="width:100%; padding:0.4rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px; font-size:0.82rem;">
+              </div>
+
+              <button type="button" onclick="ClasesModulo.guardarCalificacionDesdePanel(${ent.id})" style="padding:0.45rem 0.6rem; background:#22c55e; color:#fff; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:0.8rem; margin-top:1rem;">
+                💾 Guardar
+              </button>
+            </div>
+          </div>
+        `;
+      });
+
+      contenedor.innerHTML = cardsHTML;
+
+    } catch (err) {
+      console.error('Error al cargar panel de entregas:', err);
+      contenedor.innerHTML = '<p style="color:#f87171; text-align:center;">Error al cargar el listado de entregas.</p>';
+    }
+  },
+
+  async guardarCalificacionDesdePanel(entregaId) {
+    const notaVal = document.getElementById(`nota-panel-${entregaId}`)?.value.trim();
+    const comentVal = document.getElementById(`coment-panel-${entregaId}`)?.value.trim();
+
+    try {
+      const { error } = await supabase
+        .from('entregas_actividades')
+        .update({
+          nota: notaVal || null,
+          comentario_docente: comentVal || null
+        })
+        .eq('id', entregaId);
+
+      if (error) throw error;
+      alert('✅ Calificación guardada con éxito.');
+
+    } catch (err) {
+      console.error('Error al calificar:', err);
+      alert('Error al guardar la calificación: ' + err.message);
     }
   },
 
@@ -337,21 +468,6 @@ const ClasesModulo = {
           `;
         }
 
-        let bloqueRevisionDocente = '';
-        if (!esEstudiante && tieneActividad) {
-          const entregasDeEstaClase = entregasGlobales.filter(e => Number(e.clase_id) === Number(c.id));
-          bloqueRevisionDocente = `
-            <div style="margin-top:0.8rem;">
-              <button type="button" onclick="ClasesModulo.toggleVerEntregasDocente(${c.id})" style="padding:0.35rem 0.7rem; background:rgba(250,204,21,0.15); border:1px solid rgba(250,204,21,0.3); color:#facc15; border-radius:6px; font-size:0.8rem; cursor:pointer; font-weight:600;">
-                📥 Ver Entregas de Alumnos (${entregasDeEstaClase.length})
-              </button>
-              <div id="panel-entregas-docente-${c.id}" style="display:none; margin-top:0.6rem; padding:0.8rem; background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.1); border-radius:6px;">
-                <p style="color:#94a3b8; font-size:0.8rem; margin:0 0 0.5rem 0;">Cargando entregas...</p>
-              </div>
-            </div>
-          `;
-        }
-
         return `
           <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:0.8rem; display:flex; justify-content:space-between; align-items:flex-start;">
             <div style="flex:1; padding-right:1rem;">
@@ -367,7 +483,6 @@ const ClasesModulo = {
               <div style="margin:0; color:#cbd5e1; font-size:0.85rem; white-space:pre-line;">${descHTML}</div>
 
               ${bloqueEntregaEstudiante}
-              ${bloqueRevisionDocente}
             </div>
 
             ${!esEstudiante ? `
@@ -436,92 +551,6 @@ const ClasesModulo = {
     } catch (err) {
       console.error('Error al enviar entrega:', err);
       alert('Error al registrar la entrega: ' + err.message);
-    }
-  },
-
-  async toggleVerEntregasDocente(claseId) {
-    const panel = document.getElementById(`panel-entregas-docente-${claseId}`);
-    if (!panel) return;
-
-    if (panel.style.display === 'block') {
-      panel.style.display = 'none';
-      return;
-    }
-
-    panel.style.display = 'block';
-
-    try {
-      const { data: entregas, error } = await supabase
-        .from('entregas_actividades')
-        .select('*')
-        .eq('clase_id', claseId);
-
-      if (error) throw error;
-
-      if (!entregas || entregas.length === 0) {
-        panel.innerHTML = '<p style="color:#94a3b8; font-size:0.8rem; margin:0;">Aún ningún estudiante ha entregado esta actividad.</p>';
-        return;
-      }
-
-      const usersList = entregas.map(e => e.estudiante_user);
-      const { data: alumnos } = await supabase
-        .from('usuarios')
-        .select('usuario, nombre, apellido')
-        .in('usuario', usersList);
-
-      panel.innerHTML = entregas.map(ent => {
-        const alu = (alumnos || []).find(a => String(a.usuario) === String(ent.estudiante_user));
-        const nombreAlumno = alu ? `${alu.apellido || ''} ${alu.nombre || ''}`.trim() : ent.estudiante_user;
-
-        return `
-          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:0.6rem; margin-bottom:0.5rem;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <strong style="color:#f8fafc; font-size:0.85rem;">👤 ${nombreAlumno}</strong>
-              <a href="${ent.url_entrega}" target="_blank" rel="noopener" style="color:#38bdf8; font-size:0.8rem; text-decoration:underline;">🔗 Ver Trabajo Entregado</a>
-            </div>
-            
-            <div style="display:grid; grid-template-columns: 140px 1fr 100px; gap:0.5rem; margin-top:0.5rem; align-items:center;">
-              <div>
-                <label style="display:block; font-size:0.7rem; color:#facc15;">Nota (0-100 / Concepto):</label>
-                <input type="text" id="nota-ent-${ent.id}" placeholder="Ej: 85 o Aprobado" value="${ent.nota || ''}" style="width:100%; padding:0.3rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:4px; font-size:0.8rem;">
-              </div>
-              <div>
-                <label style="display:block; font-size:0.7rem; color:#cbd5e1;">Comentario / Devolución:</label>
-                <input type="text" id="coment-ent-${ent.id}" placeholder="Excelente trabajo..." value="${ent.comentario_docente || ''}" style="width:100%; padding:0.3rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:4px; font-size:0.8rem;">
-              </div>
-              <button type="button" onclick="ClasesModulo.guardarCalificacionDocente(${ent.id})" style="padding:0.35rem 0.5rem; background:#22c55e; color:#fff; border:none; border-radius:4px; font-weight:600; cursor:pointer; font-size:0.75rem; margin-top:1rem;">
-                💾 Guardar
-              </button>
-            </div>
-          </div>
-        `;
-      }).join('');
-
-    } catch (err) {
-      console.error('Error al cargar entregas:', err);
-      panel.innerHTML = '<p style="color:#f87171; font-size:0.8rem; margin:0;">Error al cargar las entregas.</p>';
-    }
-  },
-
-  async guardarCalificacionDocente(entregaId) {
-    const notaVal = document.getElementById(`nota-ent-${entregaId}`)?.value.trim();
-    const comentVal = document.getElementById(`coment-ent-${entregaId}`)?.value.trim();
-
-    try {
-      const { error } = await supabase
-        .from('entregas_actividades')
-        .update({
-          nota: notaVal || null,
-          comentario_docente: comentVal || null
-        })
-        .eq('id', entregaId);
-
-      if (error) throw error;
-      alert('✅ Calificación y devolución guardadas correctamente.');
-
-    } catch (err) {
-      console.error('Error al calificar:', err);
-      alert('Error al guardar la calificación: ' + err.message);
     }
   },
 
