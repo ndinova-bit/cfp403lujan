@@ -16,7 +16,7 @@ const ClasesModulo = {
     });
   },
 
-  verEnPantalla(url, titulo) {
+verEnPantalla(url, titulo) {
   let visor = document.getElementById('modal-visor-recurso');
   if (!visor) {
     visor = document.createElement('div');
@@ -26,11 +26,16 @@ const ClasesModulo = {
   }
 
   let embedUrl = url;
-  if (url.includes('drive.google.com') || url.includes('docs.google.com')) {
-    // Esta expresión sí remueve los parámetros como ?usp=sharing o ?usp=drivesdk
-    embedUrl = url
-      .replace(/\/view(\?.*)?$/, '/preview')
-      .replace(/\/edit(\?.*)?$/, '/preview');
+
+  if (url.includes('docs.google.com/spreadsheets')) {
+    // Hojas de Cálculo de Google: Usa el visor HTML directo
+    embedUrl = url.replace(/\/edit.*$/, '/htmlview').replace(/\/view.*$/, '/htmlview');
+  } else if (url.includes('docs.google.com/document') || url.includes('docs.google.com/presentation')) {
+    // Docs y Slides
+    embedUrl = url.replace(/\/edit.*$/, '/preview').replace(/\/view.*$/, '/preview');
+  } else if (url.includes('drive.google.com')) {
+    // Archivos de Google Drive (PDFs, Imágenes, etc.)
+    embedUrl = url.replace(/\/view.*$/, '/preview').replace(/\/edit.*$/, '/preview');
   } else if (url.includes('youtube.com/watch?v=')) {
     embedUrl = url.replace('watch?v=', 'embed/');
   }
@@ -40,7 +45,7 @@ const ClasesModulo = {
       <div style="padding:0.8rem 1.2rem; background:#1e293b; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
         <strong style="color:#38bdf8; font-size:0.95rem;">📄 Vista Previa: ${titulo}</strong>
         <div style="display:flex; gap:0.5rem; align-items:center;">
-          <a href="${url}" target="_blank" rel="noopener" style="padding:0.25rem 0.6rem; background:#0284c7; color:#fff; border-radius:4px; font-size:0.8rem; text-decoration:none; font-weight:600;">🔗 Abrir en pestaña aparte</a>
+          <a href="${url}" target="_blank" rel="noopener" style="padding:0.25rem 0.6rem; background:#0284c7; color:#fff; border-radius:4px; font-size:0.8rem; text-decoration:none; font-weight:600;">🔗 Abrir pestaña aparte</a>
           <button type="button" onclick="document.getElementById('modal-visor-recurso').style.display='none'" style="background:none; border:none; color:#f87171; font-size:1.4rem; cursor:pointer; font-weight:bold; margin-left:0.5rem;">✕</button>
         </div>
       </div>
@@ -51,7 +56,7 @@ const ClasesModulo = {
   `;
 
   visor.style.display = 'flex';
-},
+}
 
   async abrirGestor(trayectoId, nombreTrayecto) {
     this.trayectoActualId = trayectoId;
