@@ -113,14 +113,12 @@ const AsistenciasModulo = {
         });
       });
 
-      // Eliminar registros previos de ese mismo día y trayecto
       await supabase
         .from('asistencias')
         .delete()
         .eq('trayecto_id', Number(this.trayectoActualId))
         .eq('fecha', fecha);
 
-      // Insertar nuevo lote
       const { error } = await supabase.from('asistencias').insert(registros);
       if (error) throw error;
 
