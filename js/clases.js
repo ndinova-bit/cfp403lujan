@@ -68,7 +68,7 @@ const ClasesModulo = {
     }
 
     let htmlModal = `
-      <div style="background:#1e293b; border:1px solid rgba(255,255,255,0.1); border-radius:12px; width:100%; max-width:900px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; color:#f8fafc;">
+      <div style="background:#1e293b; border:1px solid rgba(255,255,255,0.1); border-radius:12px; width:100%; max-width:950px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; color:#f8fafc;">
         <div style="padding:1.2rem 1.5rem; background:#0f172a; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
           <h3 style="margin:0; font-size:1.15rem;">📚 Trayecto: <span style="color:#38bdf8;">${nombreTrayecto}</span></h3>
           <button type="button" onclick="ClasesModulo.cerrarGestor()" style="background:none; border:none; color:#94a3b8; font-size:1.5rem; cursor:pointer;">&times;</button>
@@ -82,7 +82,7 @@ const ClasesModulo = {
             📚 Clases y Actividades
           </button>
           <button type="button" id="btn-tab-alumnos" onclick="ClasesModulo.cambiarVistaPestana('alumnos')" style="padding:0.4rem 1rem; border:none; border-radius:6px; background:rgba(255,255,255,0.05); color:#94a3b8; font-weight:600; cursor:pointer;">
-            👥 Estudiantes Inscriptos
+            👥 Estudiantes y Sábana de Notas
           </button>
           <button type="button" id="btn-tab-entregas" onclick="ClasesModulo.cambiarVistaPestana('entregas')" style="padding:0.4rem 1rem; border:none; border-radius:6px; background:rgba(255,255,255,0.05); color:#94a3b8; font-weight:600; cursor:pointer;">
             📝 Entregas y Calificaciones
@@ -107,7 +107,6 @@ const ClasesModulo = {
               <input type="text" id="clase-titulo" placeholder="Ej: Clase 1: HTML Básico y TP N° 1" required class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
             </div>
 
-            <!-- DESPLEGABLE DINÁMICO DE MÓDULOS -->
             <div>
               <label style="display:block; font-size:0.82rem; color:#fbbf24; font-weight:600; margin-bottom:0.3rem;">📌 Módulo Asociado (Opcional)</label>
               <select id="clase-modulo-id" class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
@@ -158,7 +157,7 @@ const ClasesModulo = {
 
         <div id="vista-tab-alumnos" style="display:none;">
           <div id="contenedor-lista-alumnos">
-            <p style="color:#94a3b8; text-align:center;">Cargando nómina de alumnos...</p>
+            <p style="color:#94a3b8; text-align:center;">Cargando sábana de estudiantes...</p>
           </div>
         </div>
 
@@ -225,7 +224,7 @@ const ClasesModulo = {
     if (pestana === 'alumnos') {
       if (vAlumnos) vAlumnos.style.display = 'block';
       if (bAlumnos) { bAlumnos.style.background = '#0284c7'; bAlumnos.style.color = '#fff'; }
-      this.cargarEstudiantesInscriptos();
+      this.cargarSabanaEstudiantes();
     } else if (pestana === 'entregas') {
       if (vEntregas) vEntregas.style.display = 'block';
       if (bEntregas) { bEntregas.style.background = '#0284c7'; bEntregas.style.color = '#fff'; }
@@ -236,17 +235,18 @@ const ClasesModulo = {
     }
   },
 
-  async cargarEstudiantesInscriptos() {
+  async cargarSabanaEstudiantes() {
     const contenedor = document.getElementById('contenedor-lista-alumnos');
     if (!contenedor) return;
 
     try {
-      const { data: inscripciones, error } = await supabase
+      // 1. Inscriptos
+      const { data: inscripciones, error: errIns } = await supabase
         .from('inscripciones')
         .select('estudiante_user')
         .eq('trayecto_id', Number(this.trayectoActualId));
 
-      if (error) throw error;
+      if (errIns) throw errIns;
 
       if (!inscripciones || inscripciones.length === 0) {
         contenedor.innerHTML = '<p style="color:#94a3b8; text-align:center; padding:1.5rem;">No hay estudiantes inscriptos en este trayecto.</p>';
@@ -255,38 +255,133 @@ const ClasesModulo = {
 
       const listaUsers = inscripciones.map(i => i.estudiante_user);
 
-      const { data: alumnos, error: errUsers } = await supabase
+      // 2. Usuarios
+      const { data: alumnos } = await supabase
         .from('usuarios')
         .select('*')
         .in('usuario', listaUsers);
 
-      if (errUsers) throw errUsers;
+      // 3. Módulos del Trayecto
+      const { data: modulos } = await supabase
+        .from('modulos')
+        .select('id, nombre, codigo')
+        .eq('trayecto_id', Number(this.trayectoActualId))
+        .order('id', { ascending: true });
+
+      // 4. Clases y Entregas
+      const { data: clases } = await supabase
+        .from('clases')
+        .select('id, modulo_id')
+        .eq('trayecto_id', Number(this.trayectoActualId));
+
+      const idsClases = (clases || []).map(c => c.id);
+      let entregas = [];
+      if (idsClases.length > 0) {
+        const { data: ent } = await supabase
+          .from('entregas_actividades')
+          .select('*')
+          .in('clase_id', idsClases);
+        entregas = ent || [];
+      }
+
+      // 5. Excepciones habilitadas por docente
+      const { data: excepciones } = await supabase
+        .from('excepciones_estudiantes')
+        .select('*')
+        .eq('trayecto_id', Number(this.trayectoActualId));
+
+      const tieneModulos = modulos && modulos.length > 0;
+
+      let thModulosHTML = '';
+      if (tieneModulos) {
+        thModulosHTML = modulos.map(m => `<th style="padding:0.75rem; text-align:center;">${m.nombre}</th>`).join('');
+      } else {
+        thModulosHTML = `<th style="padding:0.75rem; text-align:center;">Promedio General</th>`;
+      }
 
       let filasHTML = '';
       (alumnos || []).forEach((u, i) => {
         const nombreCompleto = `${u.apellido || ''} ${u.nombre || ''}`.trim();
-        const dniUser = u.usuario || u.dni || 'S/D';
-        const mail = u.email || 'Sin registrar';
+        const userKey = String(u.usuario || u.dni || u.id);
+
+        let celdasNotasHTML = '';
+
+        if (tieneModulos) {
+          modulos.forEach(mod => {
+            const clasesDelModulo = (clases || []).filter(c => Number(c.modulo_id) === Number(mod.id)).map(c => c.id);
+            const entregasAlumnoMod = entregas.filter(e => clasesDelModulo.includes(Number(e.clase_id)) && String(e.estudiante_user) === userKey);
+
+            let suma = 0, cant = 0;
+            entregasAlumnoMod.forEach(e => {
+              const val = parseFloat(e.nota);
+              if (!isNaN(val)) { suma += val; cant++; }
+            });
+
+            const prom = cant > 0 ? Math.round(suma / cant) : null;
+            if (prom !== null) {
+              const acreditado = prom >= 70;
+              celdasNotasHTML += `
+                <td style="padding:0.75rem; text-align:center;">
+                  <span style="display:inline-block; padding:0.2rem 0.5rem; border-radius:4px; font-weight:600; font-size:0.8rem; ${acreditado ? 'background:rgba(34,197,94,0.2); color:#4ade80; border:1px solid rgba(34,197,94,0.4);' : 'background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4);'}">
+                    ${prom}% ${acreditado ? '✅' : '⚠️'}
+                  </span>
+                </td>
+              `;
+            } else {
+              celdasNotasHTML += `<td style="padding:0.75rem; text-align:center; color:#64748b; font-size:0.8rem;">S/D</td>`;
+            }
+          });
+        } else {
+          const entregasAlumno = entregas.filter(e => String(e.estudiante_user) === userKey);
+          let suma = 0, cant = 0;
+          entregasAlumno.forEach(e => {
+            const val = parseFloat(e.nota);
+            if (!isNaN(val)) { suma += val; cant++; }
+          });
+          const prom = cant > 0 ? Math.round(suma / cant) : null;
+          if (prom !== null) {
+            const acreditado = prom >= 70;
+            celdasNotasHTML += `
+              <td style="padding:0.75rem; text-align:center;">
+                <span style="display:inline-block; padding:0.2rem 0.5rem; border-radius:4px; font-weight:600; font-size:0.8rem; ${acreditado ? 'background:rgba(34,197,94,0.2); color:#4ade80; border:1px solid rgba(34,197,94,0.4);' : 'background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4);'}">
+                  ${prom}% ${acreditado ? '✅' : '⚠️'}
+                </span>
+              </td>
+            `;
+          } else {
+            celdasNotasHTML += `<td style="padding:0.75rem; text-align:center; color:#64748b; font-size:0.8rem;">S/D</td>`;
+          }
+        }
+
+        // Estado Excepción
+        const exEspecial = (excepciones || []).find(x => String(x.estudiante_user) === userKey && x.habilitado);
 
         filasHTML += `
           <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
             <td style="padding:0.75rem 1rem; color:#94a3b8;">${i + 1}</td>
-            <td style="padding:0.75rem 1rem; font-weight:600; color:#f8fafc;">${nombreCompleto}</td>
-            <td style="padding:0.75rem 1rem; color:#38bdf8;">${dniUser}</td>
-            <td style="padding:0.75rem 1rem; color:#cbd5e1;">${mail}</td>
+            <td style="padding:0.75rem 1rem; font-weight:600; color:#f8fafc;">
+              ${nombreCompleto}
+              <span style="display:block; font-size:0.75rem; color:#94a3b8;">DNI: ${userKey}</span>
+            </td>
+            ${celdasNotasHTML}
+            <td style="padding:0.75rem 1rem; text-align:center;">
+              <button type="button" onclick="ClasesModulo.toggleExcepcionEstudiante('${userKey}', ${exEspecial ? 'false' : 'true'})" style="padding:0.3rem 0.6rem; border-radius:6px; border:none; font-size:0.75rem; font-weight:600; cursor:pointer; ${exEspecial ? 'background:#eab308; color:#000;' : 'background:rgba(255,255,255,0.08); color:#cbd5e1;'}">
+                ${exEspecial ? '🔓 Excepción Activa' : '🔒 Excepción Inactiva'}
+              </button>
+            </td>
           </tr>
         `;
       });
 
       contenedor.innerHTML = `
-        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden;">
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow-x:auto;">
           <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.88rem;">
             <thead>
               <tr style="background:#0f172a; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.1);">
                 <th style="padding:0.75rem 1rem;">N°</th>
                 <th style="padding:0.75rem 1rem;">Estudiante</th>
-                <th style="padding:0.75rem 1rem;">DNI / Usuario</th>
-                <th style="padding:0.75rem 1rem;">Email</th>
+                ${thModulosHTML}
+                <th style="padding:0.75rem 1rem; text-align:center;">Permiso Excepcional</th>
               </tr>
             </thead>
             <tbody>
@@ -297,8 +392,37 @@ const ClasesModulo = {
       `;
 
     } catch (err) {
-      console.error('Error al cargar alumnos inscriptos:', err);
-      contenedor.innerHTML = '<p style="color:#f87171; text-align:center;">Error al cargar la nómina de alumnos.</p>';
+      console.error('Error al cargar sábana de estudiantes:', err);
+      contenedor.innerHTML = '<p style="color:#f87171; text-align:center;">Error al cargar la información.</p>';
+    }
+  },
+
+  async toggleExcepcionEstudiante(userEstudiante, activar) {
+    try {
+      if (activar) {
+        const { error } = await supabase
+          .from('excepciones_estudiantes')
+          .insert([{
+            trayecto_id: Number(this.trayectoActualId),
+            estudiante_user: String(userEstudiante),
+            habilitado: true
+          }]);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('excepciones_estudiantes')
+          .delete()
+          .eq('trayecto_id', Number(this.trayectoActualId))
+          .eq('estudiante_user', String(userEstudiante));
+        if (error) throw error;
+      }
+
+      alert(activar ? '✅ Excepción activada: El alumno podrá avanzar libremente.' : '🔒 Excepción desactivada.');
+      await this.cargarSabanaEstudiantes();
+
+    } catch (err) {
+      console.error('Error al toggle excepción:', err);
+      alert('Error al cambiar estado de excepción: ' + err.message);
     }
   },
 
@@ -359,7 +483,6 @@ const ClasesModulo = {
         const alu = (alumnos || []).find(a => String(a.usuario) === String(ent.estudiante_user));
         const nombreAlumno = alu ? `${alu.apellido || ''} ${alu.nombre || ''}`.trim() : ent.estudiante_user;
 
-        // Evaluación de acreditación >= 70
         let estadoAcreditacionHTML = '';
         const numNota = parseFloat(ent.nota);
         if (!isNaN(numNota)) {
@@ -464,6 +587,13 @@ const ClasesModulo = {
 
       window.clasesGuardadasCache = clases;
 
+      // Obtener módulos
+      const { data: modulos } = await supabase
+        .from('modulos')
+        .select('*')
+        .eq('trayecto_id', Number(this.trayectoActualId))
+        .order('id', { ascending: true });
+
       const idsClases = clases.map(c => c.id);
       let entregasGlobales = [];
       if (idsClases.length > 0) {
@@ -472,6 +602,18 @@ const ClasesModulo = {
           .select('*')
           .in('clase_id', idsClases);
         entregasGlobales = ent || [];
+      }
+
+      // Excepciones
+      let tieneExcepcion = false;
+      if (esEstudiante && userEstudiante) {
+        const { data: exc } = await supabase
+          .from('excepciones_estudiantes')
+          .select('*')
+          .eq('trayecto_id', Number(this.trayectoActualId))
+          .eq('estudiante_user', String(userEstudiante))
+          .eq('habilitado', true);
+        tieneExcepcion = exc && exc.length > 0;
       }
 
       const hoy = new Date();
@@ -500,6 +642,28 @@ const ClasesModulo = {
 
         let bloqueEntregaEstudiante = '';
         if (esEstudiante && tieneActividad) {
+          // Evaluación de bloqueo secuencial por módulo
+          let estaBloqueado = false;
+          if (!tieneExcepcion && c.modulo_id && modulos && modulos.length > 1) {
+            const idxModActual = modulos.findIndex(m => Number(m.id) === Number(c.modulo_id));
+            if (idxModActual > 0) {
+              const modAnterior = modulos[idxModActual - 1];
+              const clasesModAnt = clases.filter(cl => Number(cl.modulo_id) === Number(modAnterior.id)).map(cl => cl.id);
+              const entregasAnt = entregasGlobales.filter(e => clasesModAnt.includes(Number(e.clase_id)) && String(e.estudiante_user) === String(userEstudiante));
+
+              let suma = 0, cant = 0;
+              entregasAnt.forEach(e => {
+                const val = parseFloat(e.nota);
+                if (!isNaN(val)) { suma += val; cant++; }
+              });
+
+              const promAnt = cant > 0 ? (suma / cant) : 0;
+              if (promAnt < 70) {
+                estaBloqueado = true;
+              }
+            }
+          }
+
           const miEntrega = entregasGlobales.find(e => Number(e.clase_id) === Number(c.id) && String(e.estudiante_user) === String(userEstudiante));
           
           let estadoEntregaHTML = '';
@@ -519,18 +683,26 @@ const ClasesModulo = {
             `;
           }
 
-          bloqueEntregaEstudiante = `
-            <div style="margin-top:0.8rem; padding:0.8rem; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
-              <strong style="display:block; font-size:0.82rem; color:#facc15; margin-bottom:0.4rem;">📤 Entrega de Trabajo Práctico:</strong>
-              ${estadoEntregaHTML}
-              <div style="display:flex; gap:0.5rem; margin-top:0.3rem;">
-                <input type="url" id="input-entrega-${c.id}" placeholder="Pegá el link a tu trabajo (Google Drive, PDF)" value="${miEntrega ? miEntrega.url_entrega : ''}" style="flex:1; padding:0.4rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px; font-size:0.82rem;">
-                <button type="button" onclick="ClasesModulo.enviarEntregaEstudiante(${c.id})" style="padding:0.4rem 0.8rem; background:#0284c7; color:#fff; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:0.8rem;">
-                  ${miEntrega ? 'Reenviar' : 'Enviar Entrega'}
-                </button>
+          if (estaBloqueado) {
+            bloqueEntregaEstudiante = `
+              <div style="margin-top:0.8rem; padding:0.8rem; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:6px; color:#f87171; font-size:0.82rem;">
+                🔒 <strong>Módulo Bloqueado:</strong> Requiere acreditar el módulo anterior con una nota mayor o igual a 70 o contar con habilitación excepcional del docente.
               </div>
-            </div>
-          `;
+            `;
+          } else {
+            bloqueEntregaEstudiante = `
+              <div style="margin-top:0.8rem; padding:0.8rem; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
+                <strong style="display:block; font-size:0.82rem; color:#facc15; margin-bottom:0.4rem;">📤 Entrega de Trabajo Práctico:</strong>
+                ${estadoEntregaHTML}
+                <div style="display:flex; gap:0.5rem; margin-top:0.3rem;">
+                  <input type="url" id="input-entrega-${c.id}" placeholder="Pegá el link a tu trabajo (Google Drive, PDF)" value="${miEntrega ? miEntrega.url_entrega : ''}" style="flex:1; padding:0.4rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px; font-size:0.82rem;">
+                  <button type="button" onclick="ClasesModulo.enviarEntregaEstudiante(${c.id})" style="padding:0.4rem 0.8rem; background:#0284c7; color:#fff; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:0.8rem;">
+                    ${miEntrega ? 'Reenviar' : 'Enviar Entrega'}
+                  </button>
+                </div>
+              </div>
+            `;
+          }
         }
 
         return `
