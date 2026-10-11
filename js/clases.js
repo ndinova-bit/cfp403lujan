@@ -71,7 +71,7 @@ async cargarSabanaEstudiantes() {
 
         if (tieneModulos) {
           modulos.forEach(mod => {
-            // 1. Promedio TPs del Módulo
+            // A. Promedio TPs
             const clasesDelModulo = (clases || []).filter(c => Number(c.modulo_id) === Number(mod.id)).map(c => c.id);
             const entregasAlumnoMod = entregas.filter(e => clasesDelModulo.includes(Number(e.clase_id)) && String(e.estudiante_user) === userKey);
 
@@ -82,13 +82,13 @@ async cargarSabanaEstudiantes() {
             });
             const promAct = cantAct > 0 ? (sumaAct / cantAct) : null;
 
-            // 2. Promedio Asistencia (Específica del Módulo O General)
+            // B. Promedio Asistencia (Específica o General)
             const asisModUser = (asistencias || []).filter(a => (Number(a.modulo_id) === Number(mod.id) || a.modulo_id === null) && String(a.estudiante_user) === userKey);
-            const totalClasesMod = asisModUser.length;
-            const presentesMod = asisModUser.filter(a => a.estado === 'presente' || a.estado === 'justificado').length;
+            const totalClasesMod = asisModUser.length; // Incluye presente, ausente y justificado
+            const presentesMod = asisModUser.filter(a => a.estado === 'presente').length; // Solo 'presente' suma
             const pctAsisMod = totalClasesMod > 0 ? ((presentesMod / totalClasesMod) * 100) : null;
 
-            // 3. Cálculo Final Promediado
+            // C. Promedio 50/50 entre TPs y Asistencia
             let notaFinalModulo = null;
             let desgloseTexto = '';
 
@@ -97,10 +97,10 @@ async cargarSabanaEstudiantes() {
               desgloseTexto = `TPs: ${Math.round(promAct)}% | Asis: ${Math.round(pctAsisMod)}%`;
             } else if (promAct !== null) {
               notaFinalModulo = Math.round(promAct);
-              desgloseTexto = `TPs: ${Math.round(promAct)}%`;
+              desgloseTexto = `TPs: ${Math.round(promAct)}% (Sin Asis)`;
             } else if (pctAsisMod !== null) {
               notaFinalModulo = Math.round(pctAsisMod);
-              desgloseTexto = `Asis: ${Math.round(pctAsisMod)}%`;
+              desgloseTexto = `Asis: ${Math.round(pctAsisMod)}% (Sin TPs)`;
             }
 
             if (notaFinalModulo !== null) {
@@ -118,7 +118,7 @@ async cargarSabanaEstudiantes() {
             }
           });
         } else {
-          // General sin Módulos
+          // General
           const entregasAlumno = entregas.filter(e => String(e.estudiante_user) === userKey);
           let sumaAct = 0, cantAct = 0;
           entregasAlumno.forEach(e => {
@@ -129,7 +129,7 @@ async cargarSabanaEstudiantes() {
 
           const asisUser = (asistencias || []).filter(a => String(a.estudiante_user) === userKey);
           const totalClases = asisUser.length;
-          const presentes = asisUser.filter(a => a.estado === 'presente' || a.estado === 'justificado').length;
+          const presentes = asisUser.filter(a => a.estado === 'presente').length;
           const pctAsis = totalClases > 0 ? ((presentes / totalClases) * 100) : null;
 
           let notaFinalGeneral = null;
