@@ -2,20 +2,61 @@ const ClasesModulo = {
   trayectoActualId: null,
   claseEditandoId: null,
 
-  // Convierte URLs de la actividad en un botón amarillo interactivo
+  // Transforma enlaces en botones con opción de Abrir y Visualizar en Pantalla
   convertirLinks(texto) {
     if (!texto) return '';
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     return texto.replace(urlRegex, (url) => {
-      return `<div style="margin-top:0.4rem;"><a href="${url}" target="_blank" rel="noopener" style="display:inline-block; padding:0.35rem 0.75rem; background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.3); color:#facc15; border-radius:6px; font-size:0.82rem; text-decoration:none; font-weight:600;">📝 Abrir Enlace de Actividad / TP</a></div>`;
+      const urlEscapada = url.replace(/'/g, "\\'");
+      return `
+        <div style="margin-top:0.4rem; display:flex; gap:0.4rem; flex-wrap:wrap; align-items:center;">
+          <a href="${url}" target="_blank" rel="noopener" style="display:inline-block; padding:0.35rem 0.75rem; background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.3); color:#facc15; border-radius:6px; font-size:0.82rem; text-decoration:none; font-weight:600;">📝 Abrir Enlace de Actividad / TP</a>
+          <button onclick="ClasesModulo.verEnPantalla('${urlEscapada}', 'Actividad / TP')" style="padding:0.35rem 0.75rem; background:rgba(234,179,8,0.25); border:1px solid rgba(234,179,8,0.5); color:#fef08a; border-radius:6px; font-size:0.82rem; cursor:pointer; font-weight:600;">👁️ Visualizar en Pantalla</button>
+        </div>
+      `;
     });
+  },
+
+  // Abre un modal interno para visualizar PDFs, Drive o YouTube sin cambiar de pestaña
+  verEnPantalla(url, titulo) {
+    let visor = document.getElementById('modal-visor-recurso');
+    if (!visor) {
+      visor = document.createElement('div');
+      visor.id = 'modal-visor-recurso';
+      visor.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10000; justify-content:center; align-items:center; padding:1rem;';
+      document.body.appendChild(visor);
+    }
+
+    // Convertir enlace normal de Google Drive/Docs/YouTube a URL embebible
+    let embedUrl = url;
+    if (url.includes('drive.google.com') || url.includes('docs.google.com')) {
+      embedUrl = url.replace(/\/view.*$/, '/preview').replace(/\/edit.*$/, '/preview');
+    } else if (url.includes('youtube.com/watch?v=')) {
+      embedUrl = url.replace('watch?v=', 'embed/');
+    }
+
+    visor.innerHTML = `
+      <div style="background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:12px; width:100%; max-width:950px; height:85vh; display:flex; flex-direction:column; overflow:hidden; color:#f8fafc; box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);">
+        <div style="padding:0.8rem 1.2rem; background:#1e293b; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
+          <strong style="color:#38bdf8; font-size:0.95rem;">📄 Vista Previa: ${titulo}</strong>
+          <div style="display:flex; gap:0.5rem; align-items:center;">
+            <a href="${url}" target="_blank" rel="noopener" style="color:#94a3b8; font-size:0.8rem; text-decoration:underline;">🔗 Abrir en pestaña aparte</a>
+            <button onclick="document.getElementById('modal-visor-recurso').style.display='none'" style="background:none; border:none; color:#f87171; font-size:1.4rem; cursor:pointer; font-weight:bold; margin-left:0.5rem;">✕</button>
+          </div>
+        </div>
+        <div style="flex:1; background:#000; position:relative;">
+          <iframe src="${embedUrl}" style="width:100%; height:100%; border:none;" allow="autoplay"></iframe>
+        </div>
+      </div>
+    `;
+
+    visor.style.display = 'flex';
   },
 
   async abrirGestor(trayectoId, nombreTrayecto) {
     this.trayectoActualId = trayectoId
     this.claseEditandoId = null
 
-    // Detectar rol actual desde la sesión
     const sesionRaw = localStorage.getItem('usuario_actual') || localStorage.getItem('usuario_logueado') || sessionStorage.getItem('usuario_logueado')
     const perfil = sesionRaw ? JSON.parse(sesionRaw) : {}
     const esEstudiante = String(perfil.rol || '').toLowerCase().trim() === 'estudiante'
@@ -38,7 +79,6 @@ const ClasesModulo = {
 
         <div style="padding:1.5rem; overflow-y:auto; flex:1;">
           
-          <!-- Formulario exclusivo para Docentes y Admins -->
           ${!esEstudiante ? `
             <details id="details-form-clase" open style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:1.5rem;">
               <summary id="summary-clase-titulo" style="cursor:pointer; font-weight:600; color:#38bdf8;">➕ Cargar Nueva Clase y/o Actividad</summary>
@@ -84,7 +124,6 @@ const ClasesModulo = {
             </details>
           ` : ''}
 
-          <!-- Listado de Publicaciones -->
           <div id="lista-clases-cargadas">
             <p style="color:#94a3b8; text-align:center;">Cargando contenidos...</p>
           </div>
@@ -121,18 +160,48 @@ const ClasesModulo = {
 
       window.clasesGuardadasCache = clases;
 
-      contenedor.innerHTML = clases.map((c) => {
+      // Obtener la fecha actual en formato ISO para la comparación
+      const hoy = new Date();
+      hoy.setHours(0,0,0,0);
+
+      // Filtrar publicaciones si es estudiante
+      const publicacionesMostrar = clases.filter(c => {
+        if (!esEstudiante) return true; // El docente/admin ve todo
+
+        const matchFecha = (c.descripcion || '').match(/📅 Fecha de Publicación: (\d{2}\/\d{2}\/\d{4})/);
+        if (matchFecha) {
+          const partes = matchFecha[1].split('/');
+          const fechaPub = new Date(partes[2], partes[1] - 1, partes[0]);
+          if (fechaPub > hoy) {
+            return false; // Todavía no llegó el día de publicación
+          }
+        }
+        return true;
+      });
+
+      if (publicacionesMostrar.length === 0) {
+        contenedor.innerHTML = '<p style="color:#94a3b8; text-align:center; padding:1rem;">No hay contenidos disponibles publicados para la fecha actual.</p>';
+        return;
+      }
+
+      contenedor.innerHTML = publicacionesMostrar.map((c) => {
         const descHTML = this.convertirLinks(c.descripcion || 'Sin descripción');
+        const urlTeoriaEscapada = (c.url_recurso || '').replace(/'/g, "\\'");
 
         return `
           <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:0.8rem; display:flex; justify-content:space-between; align-items:flex-start;">
             <div style="flex:1; padding-right:1rem;">
               <h4 style="margin:0 0 0.4rem 0; color:#f8fafc; font-size:0.95rem;">📌 ${c.titulo}</h4>
               
-              <!-- 1. PRIMERO MATERIAL TEÓRICO -->
-              ${c.url_recurso ? `<div style="margin-bottom:0.5rem;"><a href="${c.url_recurso}" target="_blank" rel="noopener" style="display:inline-block; padding:0.35rem 0.75rem; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; border-radius:6px; font-size:0.82rem; text-decoration:none; font-weight:600;">📚 Abrir Material Teórico de Clase</a></div>` : ''}
+              <!-- 1. MATERIAL TEÓRICO CON VISUALIZACIÓN EN PANTALLA -->
+              ${c.url_recurso ? `
+                <div style="margin-bottom:0.5rem; display:flex; gap:0.4rem; flex-wrap:wrap; align-items:center;">
+                  <a href="${c.url_recurso}" target="_blank" rel="noopener" style="display:inline-block; padding:0.35rem 0.75rem; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; border-radius:6px; font-size:0.82rem; text-decoration:none; font-weight:600;">📚 Abrir Material Teórico de Clase</a>
+                  <button onclick="ClasesModulo.verEnPantalla('${urlTeoriaEscapada}', '${c.titulo.replace(/'/g, "\\'")}')" style="padding:0.35rem 0.75rem; background:rgba(56,189,248,0.25); border:1px solid rgba(56,189,248,0.5); color:#7dd3fc; border-radius:6px; font-size:0.82rem; cursor:pointer; font-weight:600;">👁️ Visualizar en Pantalla</button>
+                </div>
+              ` : ''}
 
-              <!-- 2. DEBAJO ACTIVIDAD / DESCRIPCIÓN Y FECHA -->
+              <!-- 2. ACTIVIDAD / TP CON VISUALIZACIÓN EN PANTALLA -->
               <div style="margin:0; color:#cbd5e1; font-size:0.85rem; white-space:pre-line;">${descHTML}</div>
             </div>
 
@@ -178,7 +247,6 @@ const ClasesModulo = {
       document.getElementById('clase-fecha').value = '';
     }
 
-    // Limpiar lineas que agregamos dinamicamente
     let descLimpia = rawDesc
       .replace(/📅 Fecha de Publicación: \d{2}\/\d{2}\/\d{4}\n?/, '')
       .replace(/📝 Enlace a Actividad \/ TP: https?:\/\/[^\s]+\n?/, '')
