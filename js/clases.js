@@ -1,12 +1,9 @@
 const ClasesModulo = {
   trayectoActualId: null,
-  tipoActual: 'clase', // 'clase' o 'actividad'
 
   async abrirGestor(trayectoId, nombreTrayecto) {
     this.trayectoActualId = trayectoId
-    this.tipoActual = 'clase'
-    
-    // Crear el modal dinámicamente si no existe en el DOM
+
     let modal = document.getElementById('modal-gestor-clases')
     if (!modal) {
       modal = document.createElement('div')
@@ -17,57 +14,48 @@ const ClasesModulo = {
     }
 
     modal.innerHTML = `
-      <div style="background:#1e293b; border:1px solid rgba(255,255,255,0.1); border-radius:12px; width:100%; max-width:800px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; color:#f8fafc;">
+      <div style="background:#1e293b; border:1px solid rgba(255,255,255,0.1); border-radius:12px; width:100%; max-width:750px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; color:#f8fafc;">
         <div style="padding:1.2rem 1.5rem; background:#0f172a; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
-          <h3 style="margin:0; font-size:1.2rem;">📚 Clases y Actividades: <span style="color:#38bdf8;">${nombreTrayecto}</span></h3>
+          <h3 style="margin:0; font-size:1.15rem;">📚 Clases y Actividades: <span style="color:#38bdf8;">${nombreTrayecto}</span></h3>
           <button onclick="ClasesModulo.cerrarGestor()" style="background:none; border:none; color:#94a3b8; font-size:1.5rem; cursor:pointer;">&times;</button>
         </div>
 
         <div style="padding:1.5rem; overflow-y:auto; flex:1;">
           
-          <!-- Pestañas de Selección: Clase Teórica vs Actividad / TP -->
-          <div style="display:flex; gap:0.5rem; margin-bottom:1rem; background:rgba(0,0,0,0.3); padding:0.3rem; border-radius:8px;">
-            <button id="btn-tab-clase" type="button" onclick="ClasesModulo.cambiarPestana('clase')" style="flex:1; padding:0.6rem; border:none; border-radius:6px; background:#0284c7; color:#fff; font-weight:600; cursor:pointer;">
-              📚 Clase Teórica / Recurso
-            </button>
-            <button id="btn-tab-actividad" type="button" onclick="ClasesModulo.cambiarPestana('actividad')" style="flex:1; padding:0.6rem; border:none; border-radius:6px; background:transparent; color:#94a3b8; font-weight:600; cursor:pointer;">
-              📝 Actividad / Trabajo Práctico
-            </button>
-          </div>
-
-          <!-- Formulario para Nueva Publicación -->
+          <!-- Formulario Único Integrado -->
           <details open style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:1.5rem;">
-            <summary id="summary-form-titulo" style="cursor:pointer; font-weight:600; color:#38bdf8;">➕ Cargar Nueva Clase Teórica</summary>
+            <summary style="cursor:pointer; font-weight:600; color:#38bdf8;">➕ Cargar Nueva Clase / Actividad</summary>
             
             <form onsubmit="ClasesModulo.guardarClase(event)" style="margin-top:1rem; display:flex; flex-direction:column; gap:0.8rem;">
               <div>
-                <label id="lbl-clase-titulo" style="display:block; font-size:0.82rem; color:#cbd5e1; margin-bottom:0.3rem;">Título de la Clase *</label>
-                <input type="text" id="clase-titulo" placeholder="Ej: Clase 1: HTML Básico" required class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
+                <label style="display:block; font-size:0.82rem; color:#cbd5e1; margin-bottom:0.3rem;">Título de la Clase o Actividad *</label>
+                <input type="text" id="clase-titulo" placeholder="Ej: Clase 1: HTML o TP N° 1: Práctica Básica" required class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
               </div>
 
               <div>
-                <label id="lbl-clase-desc" style="display:block; font-size:0.82rem; color:#cbd5e1; margin-bottom:0.3rem;">Descripción breve o resumen</label>
-                <textarea id="clase-descripcion" placeholder="Descripción de la clase o instrucciones..." rows="2" class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;"></textarea>
+                <label style="display:block; font-size:0.82rem; color:#cbd5e1; margin-bottom:0.3rem;">Descripción / Consigna</label>
+                <textarea id="clase-descripcion" placeholder="Escribí aquí el resumen de la clase o la consigna de la actividad..." rows="3" class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;"></textarea>
               </div>
 
-              <div>
-                <label style="display:block; font-size:0.82rem; color:#cbd5e1; margin-bottom:0.3rem;">Link al recurso (Google Drive, YouTube, etc.)</label>
-                <input type="url" id="clase-url" placeholder="https://drive.google.com/..." class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.8rem;">
+                <div>
+                  <label style="display:block; font-size:0.82rem; color:#cbd5e1; margin-bottom:0.3rem;">Enlace / Recurso (Drive, PDF, Video)</label>
+                  <input type="url" id="clase-url" placeholder="https://drive.google.com/..." class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
+                </div>
+
+                <div>
+                  <label style="display:block; font-size:0.82rem; color:#facc15; margin-bottom:0.3rem;">📅 Fecha Programada / Límite</label>
+                  <input type="date" id="clase-fecha" class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
+                </div>
               </div>
 
-              <!-- Campo exclusivo para Actividades -->
-              <div id="contenedor-fecha-limite" style="display:none;">
-                <label style="display:block; font-size:0.82rem; color:#facc15; margin-bottom:0.3rem;">📅 Fecha Límite de Entrega</label>
-                <input type="date" id="clase-fecha-limite" class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
-              </div>
-
-              <button type="submit" id="btn-submit-clase" class="btn btn-gold" style="align-self:flex-end; padding:0.5rem 1.2rem; background:#0284c7; color:#fff; border:none; border-radius:6px; cursor:pointer;">
-                Guardar Clase
+              <button type="submit" class="btn btn-gold" style="align-self:flex-end; padding:0.6rem 1.4rem; background:#0284c7; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600; margin-top:0.4rem;">
+                💾 Publicar
               </button>
             </form>
           </details>
 
-          <!-- Listado de Clases y Actividades Cargadas -->
+          <!-- Listado de Publicaciones -->
           <div id="lista-clases-cargadas">
             <p style="color:#94a3b8; text-align:center;">Cargando contenidos...</p>
           </div>
@@ -77,55 +65,6 @@ const ClasesModulo = {
 
     modal.style.display = 'flex'
     await this.cargarListaClases()
-  },
-
-  cambiarPestana(tipo) {
-    this.tipoActual = tipo
-    const btnClase = document.getElementById('btn-tab-clase')
-    const btnActidad = document.getElementById('btn-tab-actividad')
-    const summaryTitulo = document.getElementById('summary-form-titulo')
-    const lblTitulo = document.getElementById('lbl-clase-titulo')
-    const lblDesc = document.getElementById('lbl-clase-desc')
-    const inputTitulo = document.getElementById('clase-titulo')
-    const inputDesc = document.getElementById('clase-descripcion')
-    const contenedorFecha = document.getElementById('contenedor-fecha-limite')
-    const btnSubmit = document.getElementById('btn-submit-clase')
-
-    if (tipo === 'actividad') {
-      btnActidad.style.background = '#eab308'
-      btnActidad.style.color = '#000'
-      btnClase.style.background = 'transparent'
-      btnClase.style.color = '#94a3b8'
-
-      if (summaryTitulo) summaryTitulo.innerText = '➕ Cargar Nueva Actividad / TP'
-      if (lblTitulo) lblTitulo.innerText = 'Título de la Actividad / TP *'
-      if (lblDesc) lblDesc.innerText = 'Consigna o pautas de trabajo'
-      if (inputTitulo) inputTitulo.placeholder = 'Ej: TP N° 1: Elaboración de masa'
-      if (inputDesc) inputDesc.placeholder = 'Escribí detalladamente la consigna...'
-      if (contenedorFecha) contenedorFecha.style.display = 'block'
-      if (btnSubmit) {
-        btnSubmit.innerText = 'Guardar Actividad'
-        btnSubmit.style.background = '#eab308'
-        btnSubmit.style.color = '#000'
-      }
-    } else {
-      btnClase.style.background = '#0284c7'
-      btnClase.style.color = '#fff'
-      btnActidad.style.background = 'transparent'
-      btnActidad.style.color = '#94a3b8'
-
-      if (summaryTitulo) summaryTitulo.innerText = '➕ Cargar Nueva Clase Teórica'
-      if (lblTitulo) lblTitulo.innerText = 'Título de la Clase *'
-      if (lblDesc) lblDesc.innerText = 'Descripción breve o resumen'
-      if (inputTitulo) inputTitulo.placeholder = 'Ej: Clase 1: HTML Básico'
-      if (inputDesc) inputDesc.placeholder = 'Descripción breve o consigna...'
-      if (contenedorFecha) contenedorFecha.style.display = 'none'
-      if (btnSubmit) {
-        btnSubmit.innerText = 'Guardar Clase'
-        btnSubmit.style.background = '#0284c7'
-        btnSubmit.style.color = '#fff'
-      }
-    }
   },
 
   cerrarGestor() {
@@ -141,7 +80,7 @@ const ClasesModulo = {
       const { data: clases, error } = await supabase
         .from('clases')
         .select('*')
-        .eq('trayecto_id', this.trayectoActualId)
+        .eq('trayecto_id', Number(this.trayectoActualId))
         .order('id', { ascending: false })
 
       if (error) throw error
@@ -151,31 +90,20 @@ const ClasesModulo = {
         return
       }
 
-      contenedor.innerHTML = clases.map((c) => {
-        const esActividad = c.tipo === 'actividad'
-        const badge = esActividad 
-          ? '<span style="background:rgba(234,179,8,0.2); color:#facc15; border:1px solid rgba(234,179,8,0.4); padding:0.15rem 0.5rem; border-radius:4px; font-size:0.75rem; font-weight:600;">📝 Actividad / TP</span>'
-          : '<span style="background:rgba(56,189,248,0.2); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); padding:0.15rem 0.5rem; border-radius:4px; font-size:0.75rem; font-weight:600;">📚 Clase Teórica</span>'
-
-        return `
-          <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:0.8rem; display:flex; justify-content:space-between; align-items:flex-start;">
-            <div>
-              <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem;">
-                ${badge}
-                <h4 style="margin:0; color:#f8fafc; font-size:0.95rem;">${c.titulo}</h4>
-              </div>
-              <p style="margin:0 0 0.4rem 0; color:#cbd5e1; font-size:0.85rem;">${c.descripcion || 'Sin descripción'}</p>
-              ${c.fecha_limite ? `<p style="margin:0 0 0.4rem 0; color:#facc15; font-size:0.8rem;">📅 Fecha Límite: <strong>${c.fecha_limite}</strong></p>` : ''}
-              ${c.url_recurso ? `<a href="${c.url_recurso}" target="_blank" style="color:#38bdf8; font-size:0.82rem; text-decoration:none;">🔗 Ver Recurso Adjunto</a>` : ''}
-            </div>
-            <button onclick="ClasesModulo.eliminarClase(${c.id})" style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#f87171; border-radius:6px; padding:0.3rem 0.6rem; cursor:pointer; font-size:0.8rem;">🗑️</button>
+      contenedor.innerHTML = clases.map((c, idx) => `
+        <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:0.8rem; display:flex; justify-content:space-between; align-items:flex-start;">
+          <div style="flex:1; padding-right:1rem;">
+            <h4 style="margin:0 0 0.4rem 0; color:#f8fafc; font-size:0.95rem;">📌 ${c.titulo}</h4>
+            <p style="margin:0 0 0.4rem 0; color:#cbd5e1; font-size:0.85rem; white-space:pre-line;">${c.descripcion || 'Sin descripción'}</p>
+            ${c.url_recurso ? `<a href="${c.url_recurso}" target="_blank" style="color:#38bdf8; font-size:0.82rem; text-decoration:underline;">🔗 Abrir Recurso / Archivo Adjunto</a>` : ''}
           </div>
-        `
-      }).join('')
+          <button onclick="ClasesModulo.eliminarClase(${c.id})" title="Eliminar" style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#f87171; border-radius:6px; padding:0.3rem 0.6rem; cursor:pointer; font-size:0.8rem;">🗑️</button>
+        </div>
+      `).join('')
 
     } catch (err) {
       console.error('Error al cargar clases:', err)
-      contenedor.innerHTML = '<p style="color:#f87171; text-align:center;">Error al cargar los contenidos.</p>'
+      contenedor.innerHTML = '<p style="color:#f87171; text-align:center;">Error al cargar las clases.</p>'
     }
   },
 
@@ -183,41 +111,40 @@ const ClasesModulo = {
     if (e) e.preventDefault()
 
     const titulo = document.getElementById('clase-titulo')?.value.trim()
-    const descripcion = document.getElementById('clase-descripcion')?.value.trim()
+    let descripcion = document.getElementById('clase-descripcion')?.value.trim()
     const url = document.getElementById('clase-url')?.value.trim()
-    const fechaLimite = document.getElementById('clase-fecha-limite')?.value
+    const fecha = document.getElementById('clase-fecha')?.value
 
     if (!titulo) {
-      alert('Por favor ingresá al menos el título.')
+      alert('Por favor ingresá un título.')
       return
     }
 
+    // Si el docente ingresa fecha programada/límite, se concatena a la descripción para guardarla limpiamente
+    if (fecha) {
+      const fechaFmt = fecha.split('-').reverse().join('/')
+      descripcion = `📅 Fecha Programada / Límite: ${fechaFmt}\n${descripcion || ''}`
+    }
+
     try {
-      const datosGuardar = {
-        trayecto_id: Number(this.trayectoActualId),
-        titulo: titulo,
-        descripcion: descripcion || null,
-        url_recurso: url || null,
-        tipo: this.tipoActual
-      }
-
-      if (this.tipoActual === 'actividad' && fechaLimite) {
-        datosGuardar.fecha_limite = fechaLimite
-      }
-
       const { error } = await supabase
         .from('clases')
-        .insert([datosGuardar])
+        .insert([{
+          trayecto_id: Number(this.trayectoActualId),
+          titulo: titulo,
+          descripcion: descripcion || null,
+          url_recurso: url || null
+        }])
 
       if (error) throw error
 
-      alert(`✅ ${this.tipoActual === 'actividad' ? 'Actividad' : 'Clase'} publicada correctamente.`)
+      alert('✅ Publicación guardada con éxito.')
+
+      // Reseteo completo del formulario (previene que queden links viejos)
       document.getElementById('clase-titulo').value = ''
       document.getElementById('clase-descripcion').value = ''
       document.getElementById('clase-url').value = ''
-      if (document.getElementById('clase-fecha-limite')) {
-        document.getElementById('clase-fecha-limite').value = ''
-      }
+      if (document.getElementById('clase-fecha')) document.getElementById('clase-fecha').value = ''
       
       await this.cargarListaClases()
 
