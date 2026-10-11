@@ -17,50 +17,50 @@ const ClasesModulo = {
   },
 
   verEnPantalla(url, titulo) {
-  // Si es una carpeta de Google Drive, no se puede embeber en iframe
-  if (url.includes('drive.google.com/drive/folders') || url.includes('drive.google.com/folderview')) {
-    alert('📁 Las carpetas completas de Google Drive no se pueden previsualizar en pantalla por restricciones de seguridad de Google. Se abrirá en una nueva pestaña.');
-    window.open(url, '_blank');
-    return;
-  }
+    if (url.includes('drive.google.com/drive/folders') || url.includes('drive.google.com/folderview')) {
+      alert('📁 Las carpetas de Google Drive no se pueden previsualizar en pantalla por restricciones de seguridad. Se abrirá en una pestaña nueva.');
+      window.open(url, '_blank');
+      return;
+    }
 
-  let visor = document.getElementById('modal-visor-recurso');
-  if (!visor) {
-    visor = document.createElement('div');
-    visor.id = 'modal-visor-recurso';
-    visor.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10000; justify-content:center; align-items:center; padding:1rem;';
-    document.body.appendChild(visor);
-  }
+    let visor = document.getElementById('modal-visor-recurso');
+    if (!visor) {
+      visor = document.createElement('div');
+      visor.id = 'modal-visor-recurso';
+      visor.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10000; justify-content:center; align-items:center; padding:1rem;';
+      document.body.appendChild(visor);
+    }
 
-  let embedUrl = url;
+    let embedUrl = url;
 
-  if (url.includes('docs.google.com/spreadsheets')) {
-    embedUrl = url.replace(/\/edit.*$/, '/htmlview').replace(/\/view.*$/, '/htmlview');
-  } else if (url.includes('docs.google.com/document') || url.includes('docs.google.com/presentation')) {
-    embedUrl = url.replace(/\/edit.*$/, '/preview').replace(/\/view.*$/, '/preview');
-  } else if (url.includes('drive.google.com')) {
-    embedUrl = url.replace(/\/view.*$/, '/preview').replace(/\/edit.*$/, '/preview');
-  } else if (url.includes('youtube.com/watch?v=')) {
-    embedUrl = url.replace('watch?v=', 'embed/');
-  }
+    if (url.includes('docs.google.com/spreadsheets')) {
+      embedUrl = url.replace(/\/edit.*$/, '/htmlview').replace(/\/view.*$/, '/htmlview');
+    } else if (url.includes('docs.google.com/document') || url.includes('docs.google.com/presentation')) {
+      embedUrl = url.replace(/\/edit.*$/, '/preview').replace(/\/view.*$/, '/preview');
+    } else if (url.includes('drive.google.com')) {
+      embedUrl = url.replace(/\/view.*$/, '/preview').replace(/\/edit.*$/, '/preview');
+    } else if (url.includes('youtube.com/watch?v=')) {
+      embedUrl = url.replace('watch?v=', 'embed/');
+    }
 
-  visor.innerHTML = `
-    <div style="background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:12px; width:100%; max-width:950px; height:85vh; display:flex; flex-direction:column; overflow:hidden; color:#f8fafc; box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);">
-      <div style="padding:0.8rem 1.2rem; background:#1e293b; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
-        <strong style="color:#38bdf8; font-size:0.95rem;">📄 Vista Previa: ${titulo}</strong>
-        <div style="display:flex; gap:0.5rem; align-items:center;">
-          <a href="${url}" target="_blank" rel="noopener" style="padding:0.25rem 0.6rem; background:#0284c7; color:#fff; border-radius:4px; font-size:0.8rem; text-decoration:none; font-weight:600;">🔗 Abrir pestaña aparte</a>
-          <button type="button" onclick="document.getElementById('modal-visor-recurso').style.display='none'" style="background:none; border:none; color:#f87171; font-size:1.4rem; cursor:pointer; font-weight:bold; margin-left:0.5rem;">✕</button>
+    visor.innerHTML = `
+      <div style="background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:12px; width:100%; max-width:950px; height:85vh; display:flex; flex-direction:column; overflow:hidden; color:#f8fafc; box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);">
+        <div style="padding:0.8rem 1.2rem; background:#1e293b; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
+          <strong style="color:#38bdf8; font-size:0.95rem;">📄 Vista Previa: ${titulo}</strong>
+          <div style="display:flex; gap:0.5rem; align-items:center;">
+            <a href="${url}" target="_blank" rel="noopener" style="padding:0.25rem 0.6rem; background:#0284c7; color:#fff; border-radius:4px; font-size:0.8rem; text-decoration:none; font-weight:600;">🔗 Abrir pestaña aparte</a>
+            <button type="button" onclick="document.getElementById('modal-visor-recurso').style.display='none'" style="background:none; border:none; color:#f87171; font-size:1.4rem; cursor:pointer; font-weight:bold; margin-left:0.5rem;">✕</button>
+          </div>
+        </div>
+        <div style="flex:1; background:#000; position:relative;">
+          <iframe src="${embedUrl}" style="width:100%; height:100%; border:none;" allow="autoplay"></iframe>
         </div>
       </div>
-      <div style="flex:1; background:#000; position:relative;">
-        <iframe src="${embedUrl}" style="width:100%; height:100%; border:none;" allow="autoplay"></iframe>
-      </div>
-    </div>
-  `;
+    `;
 
-  visor.style.display = 'flex';
-},
+    visor.style.display = 'flex';
+  },
+
   async abrirGestor(trayectoId, nombreTrayecto) {
     this.trayectoActualId = trayectoId;
     this.claseEditandoId = null;
@@ -79,10 +79,17 @@ const ClasesModulo = {
     }
 
     let htmlModal = `
-      <div style="background:#1e293b; border:1px solid rgba(255,255,255,0.1); border-radius:12px; width:100%; max-width:950px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; color:#f8fafc;">
+      <div style="background:#1e293b; border:1px solid rgba(255,255,255,0.1); border-radius:12px; width:100%; max-width:980px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; color:#f8fafc;">
         <div style="padding:1.2rem 1.5rem; background:#0f172a; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
           <h3 style="margin:0; font-size:1.15rem;">📚 Trayecto: <span style="color:#38bdf8;">${nombreTrayecto}</span></h3>
-          <button type="button" onclick="ClasesModulo.cerrarGestor()" style="background:none; border:none; color:#94a3b8; font-size:1.5rem; cursor:pointer;">&times;</button>
+          <div style="display:flex; gap:0.5rem; align-items:center;">
+            ${!esEstudiante ? `
+              <button type="button" onclick="ReportesModulo.descargarBackupCompletoJSON()" style="padding:0.35rem 0.7rem; background:rgba(34,197,94,0.2); border:1px solid rgba(34,197,94,0.4); color:#4ade80; border-radius:6px; font-size:0.78rem; font-weight:600; cursor:pointer;">
+                💾 Backup DB
+              </button>
+            ` : ''}
+            <button type="button" onclick="ClasesModulo.cerrarGestor()" style="background:none; border:none; color:#94a3b8; font-size:1.5rem; cursor:pointer;">&times;</button>
+          </div>
         </div>
     `;
 
@@ -94,6 +101,9 @@ const ClasesModulo = {
           </button>
           <button type="button" id="btn-tab-alumnos" onclick="ClasesModulo.cambiarVistaPestana('alumnos')" style="padding:0.4rem 1rem; border:none; border-radius:6px; background:rgba(255,255,255,0.05); color:#94a3b8; font-weight:600; cursor:pointer;">
             👥 Estudiantes y Sábana de Notas
+          </button>
+          <button type="button" id="btn-tab-asistencias" onclick="ClasesModulo.cambiarVistaPestana('asistencias')" style="padding:0.4rem 1rem; border:none; border-radius:6px; background:rgba(255,255,255,0.05); color:#94a3b8; font-weight:600; cursor:pointer;">
+            📅 Tomar Asistencia
           </button>
           <button type="button" id="btn-tab-entregas" onclick="ClasesModulo.cambiarVistaPestana('entregas')" style="padding:0.4rem 1rem; border:none; border-radius:6px; background:rgba(255,255,255,0.05); color:#94a3b8; font-weight:600; cursor:pointer;">
             📝 Entregas y Calificaciones
@@ -167,8 +177,19 @@ const ClasesModulo = {
         </div>
 
         <div id="vista-tab-alumnos" style="display:none;">
+          <div style="display:flex; justify-content:flex-end; margin-bottom:0.8rem;">
+            <button type="button" onclick="ReportesModulo.exportarExcelTabla('tabla-sabana-notas', 'Sabana_Notas.csv')" style="padding:0.4rem 0.8rem; background:#10b981; color:#fff; border:none; border-radius:6px; font-weight:600; font-size:0.8rem; cursor:pointer;">
+              📊 Exportar Sábana a Excel
+            </button>
+          </div>
           <div id="contenedor-lista-alumnos">
             <p style="color:#94a3b8; text-align:center;">Cargando sábana de estudiantes...</p>
+          </div>
+        </div>
+
+        <div id="vista-tab-asistencias" style="display:none;">
+          <div id="contenedor-vista-asistencias">
+            <p style="color:#94a3b8; text-align:center;">Cargando panel de asistencia...</p>
           </div>
         </div>
 
@@ -219,16 +240,18 @@ const ClasesModulo = {
   cambiarVistaPestana(pestana) {
     const vClases = document.getElementById('vista-tab-clases');
     const vAlumnos = document.getElementById('vista-tab-alumnos');
+    const vAsistencias = document.getElementById('vista-tab-asistencias');
     const vEntregas = document.getElementById('vista-tab-entregas');
 
     const bClases = document.getElementById('btn-tab-clases');
     const bAlumnos = document.getElementById('btn-tab-alumnos');
+    const bAsistencias = document.getElementById('btn-tab-asistencias');
     const bEntregas = document.getElementById('btn-tab-entregas');
 
-    [bClases, bAlumnos, bEntregas].forEach(b => {
+    [bClases, bAlumnos, bAsistencias, bEntregas].forEach(b => {
       if (b) { b.style.background = 'rgba(255,255,255,0.05)'; b.style.color = '#94a3b8'; }
     });
-    [vClases, vAlumnos, vEntregas].forEach(v => {
+    [vClases, vAlumnos, vAsistencias, vEntregas].forEach(v => {
       if (v) v.style.display = 'none';
     });
 
@@ -236,6 +259,12 @@ const ClasesModulo = {
       if (vAlumnos) vAlumnos.style.display = 'block';
       if (bAlumnos) { bAlumnos.style.background = '#0284c7'; bAlumnos.style.color = '#fff'; }
       this.cargarSabanaEstudiantes();
+    } else if (pestana === 'asistencias') {
+      if (vAsistencias) vAsistencias.style.display = 'block';
+      if (bAsistencias) { bAsistencias.style.background = '#0284c7'; bAsistencias.style.color = '#fff'; }
+      if (window.AsistenciasModulo) {
+        AsistenciasModulo.renderizarVista(this.trayectoActualId, 'contenedor-vista-asistencias');
+      }
     } else if (pestana === 'entregas') {
       if (vEntregas) vEntregas.style.display = 'block';
       if (bEntregas) { bEntregas.style.background = '#0284c7'; bEntregas.style.color = '#fff'; }
@@ -291,6 +320,14 @@ const ClasesModulo = {
         entregas = ent || [];
       }
 
+      // 5. Asistencias
+      const { data: asistencias } = await supabase
+        .from('asistencias')
+        .select('*')
+        .eq('trayecto_id', Number(this.trayectoActualId));
+
+      const tieneAsistenciasRegistradas = asistencias && asistencias.length > 0;
+
       const { data: excepciones } = await supabase
         .from('excepciones_estudiantes')
         .select('*')
@@ -303,6 +340,10 @@ const ClasesModulo = {
         thModulosHTML = modulos.map(m => `<th style="padding:0.75rem; text-align:center;">${m.nombre}</th>`).join('');
       } else {
         thModulosHTML = `<th style="padding:0.75rem; text-align:center;">Promedio General</th>`;
+      }
+
+      if (tieneAsistenciasRegistradas) {
+        thModulosHTML += `<th style="padding:0.75rem; text-align:center; color:#38bdf8;">% Asistencia</th>`;
       }
 
       let filasHTML = '';
@@ -359,6 +400,24 @@ const ClasesModulo = {
           }
         }
 
+        // Columna de Asistencia
+        if (tieneAsistenciasRegistradas) {
+          const asisUser = asistencias.filter(a => String(a.estudiante_user) === userKey);
+          const totalClases = asisUser.length;
+          const presentes = asisUser.filter(a => a.estado === 'presente' || a.estado === 'justificado').length;
+          const pctAsistencia = totalClases > 0 ? Math.round((presentes / totalClases) * 100) : null;
+
+          if (pctAsistencia !== null) {
+            celdasNotasHTML += `
+              <td style="padding:0.75rem; text-align:center; font-weight:600; color:#38bdf8;">
+                ${pctAsistencia}% (${presentes}/${totalClases})
+              </td>
+            `;
+          } else {
+            celdasNotasHTML += `<td style="padding:0.75rem; text-align:center; color:#64748b;">S/D</td>`;
+          }
+        }
+
         const exEspecial = (excepciones || []).find(x => String(x.estudiante_user) === userKey && x.habilitado);
 
         filasHTML += `
@@ -380,7 +439,7 @@ const ClasesModulo = {
 
       contenedor.innerHTML = `
         <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow-x:auto;">
-          <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.88rem;">
+          <table id="tabla-sabana-notas" style="width:100%; border-collapse:collapse; text-align:left; font-size:0.88rem;">
             <thead>
               <tr style="background:#0f172a; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.1);">
                 <th style="padding:0.75rem 1rem;">N°</th>
