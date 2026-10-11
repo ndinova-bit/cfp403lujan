@@ -67,87 +67,94 @@ const ClasesModulo = {
       document.body.appendChild(modal);
     }
 
-    const tabsHTML = !esEstudiante ? `
-      <div style="display:flex; gap:0.5rem; padding:0.6rem 1.5rem; background:#1e293b; border-bottom:1px solid rgba(255,255,255,0.08);">
-        <button type="button" id="btn-tab-clases" onclick="ClasesModulo.cambiarVistaPestana('clases')" style="padding:0.4rem 1rem; border:none; border-radius:6px; background:#0284c7; color:#fff; font-weight:600; cursor:pointer;">
-          📚 Clases y Actividades
-        </button>
-        <button type="button" id="btn-tab-alumnos" onclick="ClasesModulo.cambiarVistaPestana('alumnos')" style="padding:0.4rem 1rem; border:none; border-radius:6px; background:rgba(255,255,255,0.05); color:#94a3b8; font-weight:600; cursor:pointer;">
-          👥 Estudiantes Inscriptos
-        </button>
-      </div>
-    ` : '';
-
-    const formDocenteHTML = !esEstudiante ? `
-      <details id="details-form-clase" open style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:1.5rem;">
-        <summary id="summary-clase-titulo" style="cursor:pointer; font-weight:600; color:#38bdf8;">➕ Cargar Nueva Clase y/o Actividad</summary>
-        
-        <form onsubmit="ClasesModulo.guardarClase(event)" style="margin-top:1rem; display:flex; flex-direction:column; gap:0.8rem;">
-          <div>
-            <label style="display:block; font-size:0.82rem; color:#cbd5e1; margin-bottom:0.3rem;">Título de la Clase / Actividad *</label>
-            <input type="text" id="clase-titulo" placeholder="Ej: Clase 1: HTML Básico y TP N° 1" required class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
-          </div>
-
-          <div>
-            <label style="display:block; font-size:0.82rem; color:#cbd5e1; margin-bottom:0.3rem;">Descripción / Consigna general</label>
-            <textarea id="clase-descripcion" placeholder="Resumen de la clase o pautas del trabajo..." rows="2" class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;"></textarea>
-          </div>
-
-          <div>
-            <label style="display:block; font-size:0.82rem; color:#38bdf8; font-weight:600; margin-bottom:0.3rem;">📚 Enlace a la Clase Teórica (Google Drive, YouTube, PDF)</label>
-            <input type="url" id="clase-url-teoria" placeholder="https://drive.google.com/..." class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
-          </div>
-
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.8rem;">
-            <div>
-              <label style="display:block; font-size:0.82rem; color:#facc15; font-weight:600; margin-bottom:0.3rem;">📝 Enlace a la Actividad / TP</label>
-              <input type="url" id="clase-url-actividad" placeholder="https://drive.google.com/..." class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
-            </div>
-
-            <div>
-              <label style="display:block; font-size:0.82rem; color:#facc15; font-weight:600; margin-bottom:0.3rem;">📅 Fecha de Publicación (Programar)</label>
-              <input type="date" id="clase-fecha" class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
-            </div>
-          </div>
-
-          <div style="display:flex; gap:0.5rem; justify-content:flex-end; margin-top:0.4rem;">
-            <button type="button" id="btn-cancelar-edicion" style="display:none; padding:0.6rem 1rem; background:rgba(255,255,255,0.1); color:#cbd5e1; border:none; border-radius:6px; cursor:pointer;" onclick="ClasesModulo.limpiarFormulario()">
-              Cancelar Edición
-            </button>
-            <button type="submit" id="btn-guardar-clase" class="btn btn-gold" style="padding:0.6rem 1.4rem; background:#0284c7; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600;">
-              💾 Publicar Contenido
-            </button>
-          </div>
-        </form>
-      </details>
-    ` : '';
-
-    modal.innerHTML = `
+    let htmlModal = `
       <div style="background:#1e293b; border:1px solid rgba(255,255,255,0.1); border-radius:12px; width:100%; max-width:850px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; color:#f8fafc;">
         <div style="padding:1.2rem 1.5rem; background:#0f172a; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
           <h3 style="margin:0; font-size:1.15rem;">📚 Trayecto: <span style="color:#38bdf8;">${nombreTrayecto}</span></h3>
           <button type="button" onclick="ClasesModulo.cerrarGestor()" style="background:none; border:none; color:#94a3b8; font-size:1.5rem; cursor:pointer;">&times;</button>
         </div>
+    `;
 
-        ${tabsHTML}
+    if (!esEstudiante) {
+      htmlModal += `
+        <div style="display:flex; gap:0.5rem; padding:0.6rem 1.5rem; background:#1e293b; border-bottom:1px solid rgba(255,255,255,0.08);">
+          <button type="button" id="btn-tab-clases" onclick="ClasesModulo.cambiarVistaPestana('clases')" style="padding:0.4rem 1rem; border:none; border-radius:6px; background:#0284c7; color:#fff; font-weight:600; cursor:pointer;">
+            📚 Clases y Actividades
+          </button>
+          <button type="button" id="btn-tab-alumnos" onclick="ClasesModulo.cambiarVistaPestana('alumnos')" style="padding:0.4rem 1rem; border:none; border-radius:6px; background:rgba(255,255,255,0.05); color:#94a3b8; font-weight:600; cursor:pointer;">
+            👥 Estudiantes Inscriptos
+          </button>
+        </div>
+      `;
+    }
 
-        <div style="padding:1.5rem; overflow-y:auto; flex:1;">
-          <div id="vista-tab-clases">
-            ${formDocenteHTML}
-            <div id="lista-clases-cargadas">
-              <p style="color:#94a3b8; text-align:center;">Cargando contenidos...</p>
+    htmlModal += `
+      <div style="padding:1.5rem; overflow-y:auto; flex:1;">
+        <div id="vista-tab-clases">
+    `;
+
+    if (!esEstudiante) {
+      htmlModal += `
+        <details id="details-form-clase" open style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:1.5rem;">
+          <summary id="summary-clase-titulo" style="cursor:pointer; font-weight:600; color:#38bdf8;">➕ Cargar Nueva Clase y/o Actividad</summary>
+          
+          <form onsubmit="ClasesModulo.guardarClase(event)" style="margin-top:1rem; display:flex; flex-direction:column; gap:0.8rem;">
+            <div>
+              <label style="display:block; font-size:0.82rem; color:#cbd5e1; margin-bottom:0.3rem;">Título de la Clase / Actividad *</label>
+              <input type="text" id="clase-titulo" placeholder="Ej: Clase 1: HTML Básico y TP N° 1" required class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
             </div>
+
+            <div>
+              <label style="display:block; font-size:0.82rem; color:#cbd5e1; margin-bottom:0.3rem;">Descripción / Consigna general</label>
+              <textarea id="clase-descripcion" placeholder="Resumen de la clase o pautas del trabajo..." rows="2" class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;"></textarea>
+            </div>
+
+            <div>
+              <label style="display:block; font-size:0.82rem; color:#38bdf8; font-weight:600; margin-bottom:0.3rem;">📚 Enlace a la Clase Teórica (Google Drive, YouTube, PDF)</label>
+              <input type="url" id="clase-url-teoria" placeholder="https://drive.google.com/..." class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.8rem;">
+              <div>
+                <label style="display:block; font-size:0.82rem; color:#facc15; font-weight:600; margin-bottom:0.3rem;">📝 Enlace a la Actividad / TP</label>
+                <input type="url" id="clase-url-actividad" placeholder="https://drive.google.com/..." class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
+              </div>
+
+              <div>
+                <label style="display:block; font-size:0.82rem; color:#facc15; font-weight:600; margin-bottom:0.3rem;">📅 Fecha de Publicación (Programar)</label>
+                <input type="date" id="clase-fecha" class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
+              </div>
+            </div>
+
+            <div style="display:flex; gap:0.5rem; justify-content:flex-end; margin-top:0.4rem;">
+              <button type="button" id="btn-cancelar-edicion" style="display:none; padding:0.6rem 1rem; background:rgba(255,255,255,0.1); color:#cbd5e1; border:none; border-radius:6px; cursor:pointer;" onclick="ClasesModulo.limpiarFormulario()">
+                Cancelar Edición
+              </button>
+              <button type="submit" id="btn-guardar-clase" class="btn btn-gold" style="padding:0.6rem 1.4rem; background:#0284c7; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600;">
+                💾 Publicar Contenido
+              </button>
+            </div>
+          </form>
+        </details>
+      `;
+    }
+
+    htmlModal += `
+          <div id="lista-clases-cargadas">
+            <p style="color:#94a3b8; text-align:center;">Cargando contenidos...</p>
           </div>
+        </div>
 
-          <div id="vista-tab-alumnos" style="display:none;">
-            <div id="contenedor-lista-alumnos">
-              <p style="color:#94a3b8; text-align:center;">Cargando nómina de alumnos...</p>
-            </div>
+        <div id="vista-tab-alumnos" style="display:none;">
+          <div id="contenedor-lista-alumnos">
+            <p style="color:#94a3b8; text-align:center;">Cargando nómina de alumnos...</p>
           </div>
         </div>
       </div>
+    </div>
     `;
 
+    modal.innerHTML = htmlModal;
     modal.style.display = 'flex';
     await this.cargarListaClases(esEstudiante);
   },
@@ -198,6 +205,22 @@ const ClasesModulo = {
 
       if (errUsers) throw errUsers;
 
+      let filasHTML = '';
+      (alumnos || []).forEach((u, i) => {
+        const nombreCompleto = `${u.apellido || ''} ${u.nombre || ''}`.trim();
+        const dniUser = u.usuario || u.dni || 'S/D';
+        const mail = u.email || 'Sin registrar';
+
+        filasHTML += `
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+            <td style="padding:0.75rem 1rem; color:#94a3b8;">${i + 1}</td>
+            <td style="padding:0.75rem 1rem; font-weight:600; color:#f8fafc;">${nombreCompleto}</td>
+            <td style="padding:0.75rem 1rem; color:#38bdf8;">${dniUser}</td>
+            <td style="padding:0.75rem 1rem; color:#cbd5e1;">${mail}</td>
+          </tr>
+        `;
+      });
+
       contenedor.innerHTML = `
         <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden;">
           <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.88rem;">
@@ -210,14 +233,7 @@ const ClasesModulo = {
               </tr>
             </thead>
             <tbody>
-              ${(alumnos || []).map((u, i) => `
-                <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-                  <td style="padding:0.75rem 1rem; color:#94a3b8;">${i + 1}</td>
-                  <td style="padding:0.75rem 1rem; font-weight:600; color:#f8fafc;">${u.apellido \vert{}\vert{} ''}${u.nombre || ''}</td>
-                  <td style="padding:0.75rem 1rem; color:#38bdf8;">${u.usuario || u.dni || 'S/D'}</td>
-                  <td style="padding:0.75rem 1rem; color:#cbd5e1;">${u.email || 'Sin registrar'}</td>
-                </tr>
-              `).join('')}
+              ${filasHTML}
             </tbody>
           </table>
         </div>
@@ -296,17 +312,21 @@ const ClasesModulo = {
         if (esEstudiante && tieneActividad) {
           const miEntrega = entregasGlobales.find(e => Number(e.clase_id) === Number(c.id) && String(e.estudiante_user) === String(userEstudiante));
           
+          let estadoEntregaHTML = '';
+          if (miEntrega) {
+            estadoEntregaHTML = `
+              <div style="font-size:0.82rem; color:#4ade80; margin-bottom:0.4rem;">
+                ✅ Trabajo Entregado (<a href="${miEntrega.url_entrega}" target="_blank" style="color:#38bdf8; text-decoration:underline;">Ver Archivo Enviado</a>)
+                ${miEntrega.nota ? `<br>🏆 <strong>Calificación:</strong> <span style="color:#fbbf24; font-size:0.9rem;">${miEntrega.nota}</span>` : '<br>⏳ <em>Pendiente de corrección por el docente.</em>'}
+                ${miEntrega.comentario_docente ? `<br>💬 <strong>Devolución Docente:</strong> ${miEntrega.comentario_docente}` : ''}
+              </div>
+            `;
+          }
+
           bloqueEntregaEstudiante = `
             <div style="margin-top:0.8rem; padding:0.8rem; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
               <strong style="display:block; font-size:0.82rem; color:#facc15; margin-bottom:0.4rem;">📤 Entrega de Trabajo Práctico:</strong>
-              ${miEntrega ? `
-                <div style="font-size:0.82rem; color:#4ade80; margin-bottom:0.4rem;">
-                  ✅ Trabajo Entregado (<a href="${miEntrega.url_entrega}" target="_blank" style="color:#38bdf8; text-decoration:underline;">Ver Archivo Enviado</a>)
-                  ${miEntrega.nota ? `<br>🏆 <strong>Calificación:</strong> <span style="color:#fbbf24; font-size:0.9rem;">${miEntrega.nota}</span>` : '<br>⏳ <em>Pendiente de corrección por el docente.</em>'}
-                  ${miEntrega.comentario_docente ? `<br>💬 <strong>Devolución Docente:</strong> ${miEntrega.comentario_docente}` : ''}
-                </div>
-              ` : ''}
-              
+              ${estadoEntregaHTML}
               <div style="display:flex; gap:0.5rem; margin-top:0.3rem;">
                 <input type="url" id="input-entrega-${c.id}" placeholder="Pegá el link a tu trabajo (Google Drive, PDF)" value="${miEntrega ? miEntrega.url_entrega : ''}" style="flex:1; padding:0.4rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px; font-size:0.82rem;">
                 <button type="button" onclick="ClasesModulo.enviarEntregaEstudiante(${c.id})" style="padding:0.4rem 0.8rem; background:#0284c7; color:#fff; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:0.8rem;">
