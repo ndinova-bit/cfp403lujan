@@ -36,6 +36,7 @@ const AsistenciasModulo = {
 
       const hoy = new Date().toISOString().split('T')[0];
 
+// Agrupar historial por fecha y módulo
       const fechasMap = {};
       (historialAsistencias || []).forEach(a => {
         const modObj = (modulos || []).find(m => Number(m.id) === Number(a.modulo_id));
@@ -44,8 +45,10 @@ const AsistenciasModulo = {
         if (!fechasMap[key]) {
           fechasMap[key] = { fecha: a.fecha, modulo: modNombre, total: 0, presentes: 0 };
         }
-        fechasMap[key].total++;
-        if (a.estado === 'presente' || a.estado === 'justificado') {
+        fechasMap[key].total++; // Incrementa el total de alumnos evaluados esa fecha
+
+        // === ACÁ VA LA LÍNEA ===
+        if (a.estado === 'presente') { // Solo el presente directo suma al contador de presentes
           fechasMap[key].presentes++;
         }
       });
