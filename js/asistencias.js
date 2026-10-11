@@ -65,7 +65,9 @@ const AsistenciasModulo = {
             <tbody>
               ${(alumnos || []).map((u, i) => {
                 const userKey = String(u.usuario || u.dni || u.id);
-                const nombreCompleto = `${u.apellido \vert{}\vert{} ''}${u.nombre || ''}`.trim();
+                const ap = u.apellido ? u.apellido : '';
+                const nom = u.nombre ? u.nombre : '';
+                const nombreCompleto = (ap + ' ' + nom).trim() || userKey;
                 return `
                   <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
                     <td style="padding:0.75rem 1rem; color:#94a3b8;">${i + 1}</td>
