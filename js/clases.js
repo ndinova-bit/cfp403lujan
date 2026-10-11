@@ -93,8 +93,6 @@ const ClasesModulo = {
 
     htmlModal += `
       <div style="padding:1.5rem; overflow-y:auto; flex:1;">
-        
-        <!-- PESTAÑA 1: CLASES -->
         <div id="vista-tab-clases">
     `;
 
@@ -107,6 +105,14 @@ const ClasesModulo = {
             <div>
               <label style="display:block; font-size:0.82rem; color:#cbd5e1; margin-bottom:0.3rem;">Título de la Clase / Actividad *</label>
               <input type="text" id="clase-titulo" placeholder="Ej: Clase 1: HTML Básico y TP N° 1" required class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
+            </div>
+
+            <!-- DESPLEGABLE DINÁMICO DE MÓDULOS -->
+            <div>
+              <label style="display:block; font-size:0.82rem; color:#fbbf24; font-weight:600; margin-bottom:0.3rem;">📌 Módulo Asociado (Opcional)</label>
+              <select id="clase-modulo-id" class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
+                <option value="">Cargando módulos...</option>
+              </select>
             </div>
 
             <div>
@@ -150,27 +156,54 @@ const ClasesModulo = {
           </div>
         </div>
 
-        <!-- PESTAÑA 2: ALUMNO INSCRIPTOS -->
         <div id="vista-tab-alumnos" style="display:none;">
           <div id="contenedor-lista-alumnos">
             <p style="color:#94a3b8; text-align:center;">Cargando nómina de alumnos...</p>
           </div>
         </div>
 
-        <!-- PESTAÑA 3: ENTREGAS Y CALIFICACIONES (UNIFICADO) -->
         <div id="vista-tab-entregas" style="display:none;">
           <div id="contenedor-todas-entregas">
             <p style="color:#94a3b8; text-align:center;">Cargando trabajos entregados...</p>
           </div>
         </div>
-
       </div>
     </div>
     `;
 
     modal.innerHTML = htmlModal;
     modal.style.display = 'flex';
+
+    if (!esEstudiante) {
+      await this.poblarComboModulos();
+    }
     await this.cargarListaClases(esEstudiante);
+  },
+
+  async poblarComboModulos() {
+    const select = document.getElementById('clase-modulo-id');
+    if (!select) return;
+
+    try {
+      const { data: modulos, error } = await supabase
+        .from('modulos')
+        .select('id, nombre, codigo')
+        .eq('trayecto_id', Number(this.trayectoActualId));
+
+      if (error) throw error;
+
+      if (!modulos || modulos.length === 0) {
+        select.innerHTML = '<option value="">Sin módulos asignados a este trayecto (General)</option>';
+        return;
+      }
+
+      select.innerHTML = '<option value="">-- Seleccionar Módulo (Opcional) --</option>' + 
+        modulos.map(m => `<option value="${m.id}">${m.nombre} (${m.codigo || 'S/C'})</option>`).join('');
+
+    } catch (err) {
+      console.error('Error al poblar combo de módulos:', err);
+      select.innerHTML = '<option value="">General (Sin módulo específico)</option>';
+    }
   },
 
   cambiarVistaPestana(pestana) {
@@ -182,7 +215,6 @@ const ClasesModulo = {
     const bAlumnos = document.getElementById('btn-tab-alumnos');
     const bEntregas = document.getElementById('btn-tab-entregas');
 
-    // Reset de estilos
     [bClases, bAlumnos, bEntregas].forEach(b => {
       if (b) { b.style.background = 'rgba(255,255,255,0.05)'; b.style.color = '#94a3b8'; }
     });
@@ -275,10 +307,9 @@ const ClasesModulo = {
     if (!contenedor) return;
 
     try {
-      // 1. Obtener todas las clases de este trayecto
       const { data: clases } = await supabase
         .from('clases')
-        .select('id, titulo')
+        .select('id, titulo, modulo_id')
         .eq('trayecto_id', Number(this.trayectoActualId));
 
       if (!clases || clases.length === 0) {
@@ -286,9 +317,13 @@ const ClasesModulo = {
         return;
       }
 
+      const { data: modulos } = await supabase
+        .from('modulos')
+        .select('id, nombre')
+        .eq('trayecto_id', Number(this.trayectoActualId));
+
       const idsClases = clases.map(c => c.id);
 
-      // 2. Obtener las entregas
       const { data: entregas, error } = await supabase
         .from('entregas_actividades')
         .select('*')
@@ -302,7 +337,6 @@ const ClasesModulo = {
         return;
       }
 
-      // 3. Obtener datos de alumnos
       const listaUsers = entregas.map(e => e.estudiante_user);
       const { data: alumnos } = await supabase
         .from('usuarios')
@@ -313,16 +347,40 @@ const ClasesModulo = {
       entregas.forEach(ent => {
         const claseObj = clases.find(c => Number(c.id) === Number(ent.clase_id));
         const tituloClase = claseObj ? claseObj.titulo : `Clase N° ${ent.clase_id}`;
+        
+        let moduloBadge = '';
+        if (claseObj && claseObj.modulo_id) {
+          const modObj = (modulos || []).find(m => Number(m.id) === Number(claseObj.modulo_id));
+          if (modObj) {
+            moduloBadge = `<span style="font-size:0.75rem; background:rgba(250,204,21,0.15); color:#facc15; border:1px solid rgba(250,204,21,0.3); padding:0.15rem 0.4rem; border-radius:4px; margin-left:0.4rem;">📘 Módulo: ${modObj.nombre}</span>`;
+          }
+        }
 
         const alu = (alumnos || []).find(a => String(a.usuario) === String(ent.estudiante_user));
         const nombreAlumno = alu ? `${alu.apellido || ''} ${alu.nombre || ''}`.trim() : ent.estudiante_user;
+
+        // Evaluación de acreditación >= 70
+        let estadoAcreditacionHTML = '';
+        const numNota = parseFloat(ent.nota);
+        if (!isNaN(numNota)) {
+          if (numNota >= 70) {
+            estadoAcreditacionHTML = `<span style="font-size:0.75rem; background:rgba(34,197,94,0.2); color:#4ade80; border:1px solid rgba(34,197,94,0.4); padding:0.2rem 0.5rem; border-radius:4px; font-weight:600;">✅ ACREDITADO (>=70)</span>`;
+          } else {
+            estadoAcreditacionHTML = `<span style="font-size:0.75rem; background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4); padding:0.2rem 0.5rem; border-radius:4px; font-weight:600;">⚠️ NO ACREDITADO (<70)</span>`;
+          }
+        } else if (ent.nota) {
+          const notaLower = ent.nota.toLowerCase();
+          if (notaLower.includes('aprobado') || notaLower.includes('sobresaliente')) {
+            estadoAcreditacionHTML = `<span style="font-size:0.75rem; background:rgba(34,197,94,0.2); color:#4ade80; border:1px solid rgba(34,197,94,0.4); padding:0.2rem 0.5rem; border-radius:4px; font-weight:600;">✅ ACREDITADO</span>`;
+          }
+        }
 
         cardsHTML += `
           <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:0.8rem;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:0.5rem;">
               <div>
-                <strong style="color:#38bdf8; font-size:0.9rem; display:block;">📌 ${tituloClase}</strong>
-                <span style="color:#f8fafc; font-size:0.85rem; font-weight:600;">👤 Estudiante: ${nombreAlumno}</span>
+                <strong style="color:#38bdf8; font-size:0.9rem; display:inline-block;">📌 ${tituloClase}</strong> ${moduloBadge}
+                <div style="color:#f8fafc; font-size:0.85rem; font-weight:600; margin-top:0.2rem;">👤 Estudiante: ${nombreAlumno} ${estadoAcreditacionHTML}</div>
               </div>
               <a href="${ent.url_entrega}" target="_blank" rel="noopener" style="padding:0.3rem 0.6rem; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; border-radius:6px; font-size:0.8rem; text-decoration:none; font-weight:600;">🔗 Ver Trabajo Entregado</a>
             </div>
@@ -369,6 +427,7 @@ const ClasesModulo = {
 
       if (error) throw error;
       alert('✅ Calificación guardada con éxito.');
+      await this.cargarPanelGeneralEntregas();
 
     } catch (err) {
       console.error('Error al calificar:', err);
@@ -445,10 +504,16 @@ const ClasesModulo = {
           
           let estadoEntregaHTML = '';
           if (miEntrega) {
+            let badgeAcreditado = '';
+            const numNota = parseFloat(miEntrega.nota);
+            if (!isNaN(numNota) && numNota >= 70) {
+              badgeAcreditado = ' <span style="color:#4ade80; font-weight:bold;">(✅ Módulo Acreditado)</span>';
+            }
+
             estadoEntregaHTML = `
               <div style="font-size:0.82rem; color:#4ade80; margin-bottom:0.4rem;">
                 ✅ Trabajo Entregado (<a href="${miEntrega.url_entrega}" target="_blank" style="color:#38bdf8; text-decoration:underline;">Ver Archivo Enviado</a>)
-                ${miEntrega.nota ? `<br>🏆 <strong>Calificación:</strong> <span style="color:#fbbf24; font-size:0.9rem;">${miEntrega.nota}</span>` : '<br>⏳ <em>Pendiente de corrección por el docente.</em>'}
+                ${miEntrega.nota ? `<br>🏆 <strong>Calificación:</strong> <span style="color:#fbbf24; font-size:0.9rem;">${miEntrega.nota}</span>${badgeAcreditado}` : '<br>⏳ <em>Pendiente de corrección por el docente.</em>'}
                 ${miEntrega.comentario_docente ? `<br>💬 <strong>Devolución Docente:</strong> ${miEntrega.comentario_docente}` : ''}
               </div>
             `;
@@ -562,6 +627,9 @@ const ClasesModulo = {
 
     document.getElementById('clase-titulo').value = clase.titulo || '';
     document.getElementById('clase-url-teoria').value = clase.url_recurso || '';
+    if (document.getElementById('clase-modulo-id')) {
+      document.getElementById('clase-modulo-id').value = clase.modulo_id || '';
+    }
 
     let rawDesc = clase.descripcion || '';
     let matchUrlAct = rawDesc.match(/https?:\/\/[^\s]+/);
@@ -607,6 +675,7 @@ const ClasesModulo = {
     document.getElementById('clase-url-teoria').value = '';
     document.getElementById('clase-url-actividad').value = '';
     if (document.getElementById('clase-fecha')) document.getElementById('clase-fecha').value = '';
+    if (document.getElementById('clase-modulo-id')) document.getElementById('clase-modulo-id').value = '';
 
     const summary = document.getElementById('summary-clase-titulo');
     if (summary) summary.innerText = '➕ Cargar Nueva Clase y/o Actividad';
@@ -626,6 +695,7 @@ const ClasesModulo = {
     const urlTeoria = document.getElementById('clase-url-teoria')?.value.trim();
     const urlActividad = document.getElementById('clase-url-actividad')?.value.trim();
     const fecha = document.getElementById('clase-fecha')?.value;
+    const moduloIdVal = document.getElementById('clase-modulo-id')?.value;
 
     if (!titulo) {
       alert('Por favor ingresá un título.');
@@ -650,7 +720,8 @@ const ClasesModulo = {
         trayecto_id: Number(this.trayectoActualId),
         titulo: titulo,
         descripcion: descripcion || null,
-        url_recurso: urlTeoria || null
+        url_recurso: urlTeoria || null,
+        modulo_id: moduloIdVal ? Number(moduloIdVal) : null
       };
 
       if (this.claseEditandoId) {
