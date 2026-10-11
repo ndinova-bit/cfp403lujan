@@ -1,8 +1,22 @@
 const ClasesModulo = {
   trayectoActualId: null,
 
+  // Convierte URLs de texto plano en botones o links cliqueables automáticamente
+  convertirLinks(texto) {
+    if (!texto) return '';
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return texto.replace(urlRegex, (url) => {
+      return `<a href="${url}" target="_blank" rel="noopener" style="display:inline-block; margin-top:0.3rem; color:#facc15; font-weight:600; text-decoration:underline; word-break:break-all;">📝 Abrir Enlace de Actividad / TP</a>`;
+    });
+  },
+
   async abrirGestor(trayectoId, nombreTrayecto) {
     this.trayectoActualId = trayectoId
+
+    // Detectar rol actual desde la sesión
+    const sesionRaw = localStorage.getItem('usuario_actual') || localStorage.getItem('usuario_logueado') || sessionStorage.getItem('usuario_logueado')
+    const perfil = sesionRaw ? JSON.parse(sesionRaw) : {}
+    const esEstudiante = String(perfil.rol || '').toLowerCase().trim() === 'estudiante'
 
     let modal = document.getElementById('modal-gestor-clases')
     if (!modal) {
@@ -22,46 +36,46 @@ const ClasesModulo = {
 
         <div style="padding:1.5rem; overflow-y:auto; flex:1;">
           
-          <!-- Formulario Único Integrado -->
-          <details open style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:1.5rem;">
-            <summary style="cursor:pointer; font-weight:600; color:#38bdf8;">➕ Cargar Nueva Clase y/o Actividad</summary>
-            
-            <form onsubmit="ClasesModulo.guardarClase(event)" style="margin-top:1rem; display:flex; flex-direction:column; gap:0.8rem;">
+          <!-- Formulario exclusivo para Docentes y Admins -->
+          ${!esEstudiante ? `
+            <details open style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:1.5rem;">
+              <summary style="cursor:pointer; font-weight:600; color:#38bdf8;">➕ Cargar Nueva Clase y/o Actividad</summary>
               
-              <div>
-                <label style="display:block; font-size:0.82rem; color:#cbd5e1; margin-bottom:0.3rem;">Título de la Clase / Actividad *</label>
-                <input type="text" id="clase-titulo" placeholder="Ej: Clase 1: HTML Básico y TP N° 1" required class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
-              </div>
-
-              <div>
-                <label style="display:block; font-size:0.82rem; color:#cbd5e1; margin-bottom:0.3rem;">Descripción / Consigna general</label>
-                <textarea id="clase-descripcion" placeholder="Resumen de la clase o pautas del trabajo..." rows="2" class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;"></textarea>
-              </div>
-
-              <!-- ENLACE A LA CLASE TEÓRICA -->
-              <div>
-                <label style="display:block; font-size:0.82rem; color:#38bdf8; font-weight:600; margin-bottom:0.3rem;">📚 Enlace a la Clase Teórica (Google Drive, YouTube, PDF)</label>
-                <input type="url" id="clase-url-teoria" placeholder="https://drive.google.com/..." class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
-              </div>
-
-              <!-- ENLACE A LA ACTIVIDAD / TP -->
-              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.8rem;">
+              <form onsubmit="ClasesModulo.guardarClase(event)" style="margin-top:1rem; display:flex; flex-direction:column; gap:0.8rem;">
+                
                 <div>
-                  <label style="display:block; font-size:0.82rem; color:#facc15; font-weight:600; margin-bottom:0.3rem;">📝 Enlace a la Actividad / TP</label>
-                  <input type="url" id="clase-url-actividad" placeholder="https://drive.google.com/..." class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
+                  <label style="display:block; font-size:0.82rem; color:#cbd5e1; margin-bottom:0.3rem;">Título de la Clase / Actividad *</label>
+                  <input type="text" id="clase-titulo" placeholder="Ej: Clase 1: HTML Básico y TP N° 1" required class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
                 </div>
 
                 <div>
-                  <label style="display:block; font-size:0.82rem; color:#facc15; font-weight:600; margin-bottom:0.3rem;">📅 Fecha Límite de Entrega</label>
-                  <input type="date" id="clase-fecha" class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
+                  <label style="display:block; font-size:0.82rem; color:#cbd5e1; margin-bottom:0.3rem;">Descripción / Consigna general</label>
+                  <textarea id="clase-descripcion" placeholder="Resumen de la clase o pautas del trabajo..." rows="2" class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;"></textarea>
                 </div>
-              </div>
 
-              <button type="submit" class="btn btn-gold" style="align-self:flex-end; padding:0.6rem 1.4rem; background:#0284c7; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600; margin-top:0.4rem;">
-                💾 Publicar Contenido
-              </button>
-            </form>
-          </details>
+                <div>
+                  <label style="display:block; font-size:0.82rem; color:#38bdf8; font-weight:600; margin-bottom:0.3rem;">📚 Enlace a la Clase Teórica (Google Drive, YouTube, PDF)</label>
+                  <input type="url" id="clase-url-teoria" placeholder="https://drive.google.com/..." class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.8rem;">
+                  <div>
+                    <label style="display:block; font-size:0.82rem; color:#facc15; font-weight:600; margin-bottom:0.3rem;">📝 Enlace a la Actividad / TP</label>
+                    <input type="url" id="clase-url-actividad" placeholder="https://drive.google.com/..." class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
+                  </div>
+
+                  <div>
+                    <label style="display:block; font-size:0.82rem; color:#facc15; font-weight:600; margin-bottom:0.3rem;">📅 Fecha Límite de Entrega</label>
+                    <input type="date" id="clase-fecha" class="form-control" style="width:100%; padding:0.6rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px;">
+                  </div>
+                </div>
+
+                <button type="submit" class="btn btn-gold" style="align-self:flex-end; padding:0.6rem 1.4rem; background:#0284c7; color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:600; margin-top:0.4rem;">
+                  💾 Publicar Contenido
+                </button>
+              </form>
+            </details>
+          ` : ''}
 
           <!-- Listado de Publicaciones -->
           <div id="lista-clases-cargadas">
@@ -72,7 +86,7 @@ const ClasesModulo = {
     `
 
     modal.style.display = 'flex'
-    await this.cargarListaClases()
+    await this.cargarListaClases(esEstudiante)
   },
 
   cerrarGestor() {
@@ -80,7 +94,7 @@ const ClasesModulo = {
     if (modal) modal.style.display = 'none'
   },
 
-  async cargarListaClases() {
+  async cargarListaClases(esEstudiante = false) {
     const contenedor = document.getElementById('lista-clases-cargadas')
     if (!contenedor) return
 
@@ -98,16 +112,22 @@ const ClasesModulo = {
         return
       }
 
-      contenedor.innerHTML = clases.map((c) => `
-        <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:0.8rem; display:flex; justify-content:space-between; align-items:flex-start;">
-          <div style="flex:1; padding-right:1rem;">
-            <h4 style="margin:0 0 0.4rem 0; color:#f8fafc; font-size:0.95rem;">📌 ${c.titulo}</h4>
-            <p style="margin:0 0 0.5rem 0; color:#cbd5e1; font-size:0.85rem; white-space:pre-line;">${c.descripcion || 'Sin descripción'}</p>
-            ${c.url_recurso ? `<div style="margin-top:0.4rem;"><a href="${c.url_recurso}" target="_blank" style="color:#38bdf8; font-size:0.82rem; text-decoration:underline;">🔗 Material Teórico de Clase</a></div>` : ''}
+      contenedor.innerHTML = clases.map((c) => {
+        const descHTML = this.convertirLinks(c.descripcion || 'Sin descripción');
+
+        return `
+          <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:0.8rem; display:flex; justify-content:space-between; align-items:flex-start;">
+            <div style="flex:1; padding-right:1rem;">
+              <h4 style="margin:0 0 0.4rem 0; color:#f8fafc; font-size:0.95rem;">📌 ${c.titulo}</h4>
+              <div style="margin:0 0 0.5rem 0; color:#cbd5e1; font-size:0.85rem; white-space:pre-line;">${descHTML}</div>
+              ${c.url_recurso ? `<div style="margin-top:0.5rem;"><a href="${c.url_recurso}" target="_blank" rel="noopener" style="display:inline-block; padding:0.35rem 0.75rem; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; border-radius:6px; font-size:0.82rem; text-decoration:none; font-weight:600;">📚 Abrir Material Teórico de Clase</a></div>` : ''}
+            </div>
+            ${!esEstudiante ? `
+              <button onclick="ClasesModulo.eliminarClase(${c.id})" title="Eliminar" style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#f87171; border-radius:6px; padding:0.3rem 0.6rem; cursor:pointer; font-size:0.8rem;">🗑️</button>
+            ` : ''}
           </div>
-          <button onclick="ClasesModulo.eliminarClase(${c.id})" title="Eliminar" style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#f87171; border-radius:6px; padding:0.3rem 0.6rem; cursor:pointer; font-size:0.8rem;">🗑️</button>
-        </div>
-      `).join('')
+        `
+      }).join('')
 
     } catch (err) {
       console.error('Error al cargar clases:', err)
@@ -129,7 +149,6 @@ const ClasesModulo = {
       return
     }
 
-    // Armamos bloques informativos extras dentro de la descripción para no romper la tabla
     let extras = []
     if (fecha) {
       const fechaFmt = fecha.split('-').reverse().join('/')
@@ -157,7 +176,6 @@ const ClasesModulo = {
 
       alert('✅ Publicación guardada con éxito.')
 
-      // Limpieza total del formulario (evita que se repitan enlaces viejos)
       document.getElementById('clase-titulo').value = ''
       document.getElementById('clase-descripcion').value = ''
       document.getElementById('clase-url-teoria').value = ''
