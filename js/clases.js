@@ -17,38 +17,41 @@ const ClasesModulo = {
   },
 
   verEnPantalla(url, titulo) {
-    let visor = document.getElementById('modal-visor-recurso');
-    if (!visor) {
-      visor = document.createElement('div');
-      visor.id = 'modal-visor-recurso';
-      visor.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10000; justify-content:center; align-items:center; padding:1rem;';
-      document.body.appendChild(visor);
-    }
+  let visor = document.getElementById('modal-visor-recurso');
+  if (!visor) {
+    visor = document.createElement('div');
+    visor.id = 'modal-visor-recurso';
+    visor.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10000; justify-content:center; align-items:center; padding:1rem;';
+    document.body.appendChild(visor);
+  }
 
-    let embedUrl = url;
-    if (url.includes('drive.google.com') || url.includes('docs.google.com')) {
-      embedUrl = url.replace(/\/view.*$/, '/preview').replace(/\/edit.*$/, '/preview');
-    } else if (url.includes('youtube.com/watch?v=')) {
-      embedUrl = url.replace('watch?v=', 'embed/');
-    }
+  let embedUrl = url;
+  if (url.includes('drive.google.com') || url.includes('docs.google.com')) {
+    // Esta expresión sí remueve los parámetros como ?usp=sharing o ?usp=drivesdk
+    embedUrl = url
+      .replace(/\/view(\?.*)?$/, '/preview')
+      .replace(/\/edit(\?.*)?$/, '/preview');
+  } else if (url.includes('youtube.com/watch?v=')) {
+    embedUrl = url.replace('watch?v=', 'embed/');
+  }
 
-    visor.innerHTML = `
-      <div style="background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:12px; width:100%; max-width:950px; height:85vh; display:flex; flex-direction:column; overflow:hidden; color:#f8fafc; box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);">
-        <div style="padding:0.8rem 1.2rem; background:#1e293b; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
-          <strong style="color:#38bdf8; font-size:0.95rem;">📄 Vista Previa: ${titulo}</strong>
-          <div style="display:flex; gap:0.5rem; align-items:center;">
-            <a href="${url}" target="_blank" rel="noopener" style="color:#94a3b8; font-size:0.8rem; text-decoration:underline;">🔗 Abrir en pestaña aparte</a>
-            <button type="button" onclick="document.getElementById('modal-visor-recurso').style.display='none'" style="background:none; border:none; color:#f87171; font-size:1.4rem; cursor:pointer; font-weight:bold; margin-left:0.5rem;">✕</button>
-          </div>
-        </div>
-        <div style="flex:1; background:#000; position:relative;">
-          <iframe src="${embedUrl}" style="width:100%; height:100%; border:none;" allow="autoplay"></iframe>
+  visor.innerHTML = `
+    <div style="background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:12px; width:100%; max-width:950px; height:85vh; display:flex; flex-direction:column; overflow:hidden; color:#f8fafc; box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);">
+      <div style="padding:0.8rem 1.2rem; background:#1e293b; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
+        <strong style="color:#38bdf8; font-size:0.95rem;">📄 Vista Previa: ${titulo}</strong>
+        <div style="display:flex; gap:0.5rem; align-items:center;">
+          <a href="${url}" target="_blank" rel="noopener" style="padding:0.25rem 0.6rem; background:#0284c7; color:#fff; border-radius:4px; font-size:0.8rem; text-decoration:none; font-weight:600;">🔗 Abrir en pestaña aparte</a>
+          <button type="button" onclick="document.getElementById('modal-visor-recurso').style.display='none'" style="background:none; border:none; color:#f87171; font-size:1.4rem; cursor:pointer; font-weight:bold; margin-left:0.5rem;">✕</button>
         </div>
       </div>
-    `;
+      <div style="flex:1; background:#000; position:relative;">
+        <iframe src="${embedUrl}" style="width:100%; height:100%; border:none;" allow="autoplay"></iframe>
+      </div>
+    </div>
+  `;
 
-    visor.style.display = 'flex';
-  },
+  visor.style.display = 'flex';
+},
 
   async abrirGestor(trayectoId, nombreTrayecto) {
     this.trayectoActualId = trayectoId;
