@@ -1,5 +1,5 @@
 /* ==========================================================================
-   js/pdf-lab.js - Generación de Certificados PDF y Emisión por Trayecto
+   js/pdf-lab.js - Generación e Impresión de Certificados PDF
    ========================================================================== */
 
 async function generarCertificadoPDF_v3(trayectoJson, alumnoNombre, usuarioDni, inscripcionId) {
@@ -164,6 +164,7 @@ async function generarCertificadoPDF_v3(trayectoJson, alumnoNombre, usuarioDni, 
     frente.drawText(String(mesE),  { x: 320, y: 98, size: 12, font: fuenteRegular, color: colorNegro });
     frente.drawText(String(anioE), { x: 495, y: 98, size: 12, font: fuenteRegular, color: colorNegro });
 
+    // --- MÓDULOS REVERSO CON LÍNEA PUNTEADA COMPLETA ---
     let modulosArr = [];
     try { modulosArr = typeof trayecto.modulos === 'string' ? JSON.parse(trayecto.modulos) : (trayecto.modulos || []); } catch (e) {}
 
@@ -193,9 +194,14 @@ async function generarCertificadoPDF_v3(trayectoJson, alumnoNombre, usuarioDni, 
       const idxFila = esColumnaDerecha ? (index - 5) : index;
       const xPos = esColumnaDerecha ? 318 : 42; 
       const yBase = yInicial - (idxFila * pasoEntreItems);          
+      const xMaxCol = xPos + maxAnchoCol;
 
-      if (linea1) reverso.drawText(linea1, { x: xPos, y: yBase, size: tamanoFuenteMod, font: fuenteRegular, color: colorNegro });
-      if (linea2) reverso.drawText(linea2, { x: xPos, y: yBase - altoRenglonSecundario, size: tamanoFuenteMod, font: fuenteRegular, color: colorNegro });
+      if (linea1 && !linea2) {
+        dibujaRenglonPunteado(reverso, linea1, xPos, yBase, xMaxCol, fuenteRegular, tamanoFuenteMod);
+      } else {
+        if (linea1) reverso.drawText(linea1, { x: xPos, y: yBase, size: tamanoFuenteMod, font: fuenteRegular, color: colorNegro });
+        if (linea2) dibujaRenglonPunteado(reverso, linea2, xPos, yBase - altoRenglonSecundario, xMaxCol, fuenteRegular, tamanoFuenteMod);
+      }
     });
 
     if (fEgreso) reverso.drawText(fEgreso, { x: 140, y: 202, size: 12, font: fuenteRegular, color: colorNegro });
@@ -221,7 +227,6 @@ async function generarCertificadoPDF_v3(trayectoJson, alumnoNombre, usuarioDni, 
   }
 }
 
-// Alias para mantener compatibilidad si en el HTML se llama a emitirCertificadoPDF
 const emitirCertificadoPDF = (opts) => {
   return generarCertificadoPDF_v3(
     opts.trayecto || opts,
@@ -235,11 +240,26 @@ const emitirCertificadoPDF = (opts) => {
    Gestión de Nómina y Emisión Masiva de Certificados por Trayecto
    ========================================================================== */
 
-/* ==========================================================================
-   Gestión de Nómina y Emisión Masiva de Certificados por Trayecto
-   ========================================================================== */
-
 const CertificadosAdmin = {
+  // Guardar persistentemente el N° de Egresado en Supabase al editar la casilla
+  async guardarNumEgresado(inscripcionId, valor) {
+    try {
+      const { error } = await supabase
+        .from('inscripciones')
+        .update({ num_egresado: valor.trim() })
+        .eq('id', inscripcionId);
+
+      if (error) throw error;
+
+      if (typeof Toast !== 'undefined') {
+        Toast.fire({ icon: 'success', title: 'N° de egresado guardado' });
+      }
+    } catch (err) {
+      console.error('Error al guardar N° de egresado:', err);
+      alert('Error al guardar N° de egresado: ' + err.message);
+    }
+  },
+
   async cargarNominaCertificados() {
     const contenedor = document.getElementById('contenedor-certificados-trayectos');
     if (!contenedor) return;
@@ -295,7 +315,7 @@ const CertificadosAdmin = {
               <td style="padding: 0.75rem;"><span style="color: #4ade80; font-weight: 700;">100% Acreditado</span></td>
               <td style="padding: 0.75rem;"><span class="badge" style="background: rgba(34, 197, 94, 0.2); color: #4ade80; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">APROBADO</span></td>
               <td style="padding: 0.75rem;">
-                <input type="text" id="num-eg-${ins.id}" class="form-control" placeholder="Ej: 01" value="${ins.num_egresado || ''}" style="width: 100px; padding: 0.35rem 0.5rem; font-size: 0.85rem;">
+                <input type="text" id="num-eg-${ins.id}" class="form-control" placeholder="Ej: 01" value="${ins.num_egresado || ''}" style="width: 100px; padding: 0.35rem 0.5rem; font-size: 0.85rem;" onchange="CertificadosAdmin.guardarNumEgresado('${ins.id}', this.value)">
               </td>
               <td style="padding: 0.75rem; text-align: right;">
                 <button class="btn btn-gold" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" 
@@ -350,7 +370,7 @@ const CertificadosAdmin = {
     }
   },
 
-  // Emisión consolidada de un único PDF con todas las páginas del trayecto
+  // Generación en lote dividida en 2 archivos PDF independientes: Frentes y Reversos
   async emitirTodosPorTrayecto(trayectoId) {
     try {
       const [rTrayectos, rInscripciones, rUsuarios, rModulos] = await Promise.all([
@@ -370,7 +390,7 @@ const CertificadosAdmin = {
         return;
       }
 
-      // 1. Pregunta LA FECHA UNA SOLA VEZ para todo el lote
+      // Pregunta la fecha una única vez
       const { value: fEgreso } = await Swal.fire({
         title: 'Fecha de Egreso en Lote',
         input: 'text',
@@ -380,15 +400,14 @@ const CertificadosAdmin = {
       });
       if (!fEgreso) return;
 
-      // Cargar plantilla base
       const resBytes = await fetch('./plantilla.pdf');
       if (!resBytes.ok) throw new Error('No se encontró plantilla.pdf en el servidor.');
       const plantillaBytes = await resBytes.arrayBuffer();
 
-      // Crear un documento PDF consolidado vacío
-      const pdfConsolidado = await PDFLib.PDFDocument.create();
+      // Creamos dos documentos PDF separados
+      const pdfFrentes = await PDFLib.PDFDocument.create();
+      const pdfReversos = await PDFLib.PDFDocument.create();
 
-      // Recorrer todos los alumnos del trayecto e ir anexando sus páginas
       for (const ins of inscripciones) {
         const usr = usuarios.find(u => String(u.usuario) === String(ins.estudiante_user)) || {};
         const alumnoNombre = `${usr.nombre || ''} ${usr.apellido || ''}`.trim() || ins.estudiante_user;
@@ -397,7 +416,6 @@ const CertificadosAdmin = {
         const inputNumEg = document.getElementById(`num-eg-${ins.id}`);
         const numEgresadoDef = inputNumEg ? inputNumEg.value.trim() : (ins.num_egresado || '01');
 
-        // Generar las páginas del alumno sobre una copia limpia de la plantilla
         const docTemp = await PDFLib.PDFDocument.load(plantillaBytes);
         const fuenteBold = await docTemp.embedFont(PDFLib.StandardFonts.HelveticaBold);
         const fuenteRegular = await docTemp.embedFont(PDFLib.StandardFonts.Helvetica);
@@ -438,7 +456,7 @@ const CertificadosAdmin = {
           }
         }
 
-        // --- DIBUJAR FRENTE ---
+        // --- CONSTRUIR FRENTE ---
         const tamanoNombre = 14;
         const centroLineaNombre = 130 + (532 - 130) / 2;
         const textoAlumno = alumnoNombre.toUpperCase();
@@ -506,7 +524,7 @@ const CertificadosAdmin = {
         frente.drawText(String(mesE),  { x: 320, y: 98, size: 12, font: fuenteRegular, color: colorNegro });
         frente.drawText(String(anioE), { x: 495, y: 98, size: 12, font: fuenteRegular, color: colorNegro });
 
-        // --- DIBUJAR REVERSO ---
+        // --- CONSTRUIR REVERSO ---
         let modulosArr = trayecto.modulos || [];
         const yInicial = 370, pasoEntreItems = 30.5, altoRenglonSecundario = 12, tamanoFuenteMod = 9.0, maxAnchoCol = 235;
 
@@ -530,9 +548,14 @@ const CertificadosAdmin = {
           const idxFila = esColumnaDerecha ? (index - 5) : index;
           const xPos = esColumnaDerecha ? 318 : 42; 
           const yBase = yInicial - (idxFila * pasoEntreItems);          
+          const xMaxCol = xPos + maxAnchoCol;
 
-          if (linea1) reverso.drawText(linea1, { x: xPos, y: yBase, size: tamanoFuenteMod, font: fuenteRegular, color: colorNegro });
-          if (linea2) reverso.drawText(linea2, { x: xPos, y: yBase - altoRenglonSecundario, size: tamanoFuenteMod, font: fuenteRegular, color: colorNegro });
+          if (linea1 && !linea2) {
+            dibujaRenglonPunteado(reverso, linea1, xPos, yBase, xMaxCol, fuenteRegular, tamanoFuenteMod);
+          } else {
+            if (linea1) reverso.drawText(linea1, { x: xPos, y: yBase, size: tamanoFuenteMod, font: fuenteRegular, color: colorNegro });
+            if (linea2) dibujaRenglonPunteado(reverso, linea2, xPos, yBase - altoRenglonSecundario, xMaxCol, fuenteRegular, tamanoFuenteMod);
+          }
         });
 
         if (fEgreso) reverso.drawText(fEgreso, { x: 140, y: 202, size: 12, font: fuenteRegular, color: colorNegro });
@@ -540,19 +563,29 @@ const CertificadosAdmin = {
         if (cfpVal) reverso.drawText(String(cfpVal), { x: 150, y: 72, size: 12, font: fuenteRegular, color: colorNegro });
         if (distritoVal) reverso.drawText(String(distritoVal), { x: 390, y: 72, size: 12, font: fuenteRegular, color: colorNegro });
 
-        // Copiar las 2 páginas generadas de este alumno al PDF principal en lote
-        const paginasCopiadas = await pdfConsolidado.copyPages(docTemp, docTemp.getPageIndices());
-        paginasCopiadas.forEach(p => pdfConsolidado.addPage(p));
+        // Añadir Pág 0 (Frente) al documento Frentes
+        const [pagFrente] = await pdfFrentes.copyPages(docTemp, [0]);
+        pdfFrentes.addPage(pagFrente);
+
+        // Añadir Pág 1 (Reverso) al documento Reversos
+        if (docTemp.getPageCount() > 1) {
+          const [pagReverso] = await pdfReversos.copyPages(docTemp, [1]);
+          pdfReversos.addPage(pagReverso);
+        }
       }
 
-      // Guardar y abrir el archivo PDF único con todos los egresados
-      const pdfBytesFinal = await pdfConsolidado.save();
-      const blob = new Blob([pdfBytesFinal], { type: 'application/pdf' });
-      const pdfUrl = URL.createObjectURL(blob);
-      window.open(pdfUrl, '_blank');
+      // 1. Abrir/Descargar PDF Lote de Frentes
+      const pdfFrentesBytes = await pdfFrentes.save();
+      const blobFrentes = new Blob([pdfFrentesBytes], { type: 'application/pdf' });
+      window.open(URL.createObjectURL(blobFrentes), '_blank');
+
+      // 2. Abrir/Descargar PDF Lote de Reversos
+      const pdfReversosBytes = await pdfReversos.save();
+      const blobReversos = new Blob([pdfReversosBytes], { type: 'application/pdf' });
+      window.open(URL.createObjectURL(blobReversos), '_blank');
 
       if (typeof Toast !== 'undefined') {
-        Toast.fire({ icon: 'success', title: `PDF Lote emitido (${inscripciones.length} alumnos)` });
+        Toast.fire({ icon: 'success', title: `Lotes Frentes y Reversos emitidos (${inscripciones.length} alumnos)` });
       }
 
     } catch (err) {
@@ -564,7 +597,6 @@ const CertificadosAdmin = {
 
 window.CertificadosAdmin = CertificadosAdmin;
 
-// Cargar la nómina de certificados cuando se presiona el botón del menú lateral
 document.addEventListener('DOMContentLoaded', () => {
   const btnCertificados = document.getElementById('btn-certificados');
   if (btnCertificados) {
