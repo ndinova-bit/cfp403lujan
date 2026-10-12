@@ -177,7 +177,7 @@ const Trayectos = {
     }
   },
 
-  renderizarTrayectos() {
+renderizarTrayectos() {
     const contenedores = [
       document.getElementById('lista-trayectos-cards'),
       document.getElementById('lista-trayectos-admin'),
@@ -221,8 +221,6 @@ const Trayectos = {
       grid.style.gap = '1.5rem';
       grid.style.width = '100%';
 
-      const mostrarAccionesAdmin = isAdmin && !esVistaPublica;
-
       this.listaTrayectos.forEach(trayecto => {
         const card = document.createElement('div');
         card.className = 'course-card fade-in';
@@ -234,20 +232,40 @@ const Trayectos = {
         card.style.flexDirection = 'column';
         card.style.justifyContent = 'space-between';
 
-        // Administradores, Docentes y Estudiantes pueden hacer clic para abrir el gestor
+        // Clic general sobre toda la tarjeta para ingresar
         if (!esVistaPublica && (esDocente || esEstudiante || isAdmin)) {
           card.style.cursor = 'pointer';
           card.onclick = () => ClasesModulo.abrirGestor(trayecto.id, trayecto.nombre.replace(/'/g, "\\'"));
         }
 
-        const accionesAdmin = mostrarAccionesAdmin ? `
-          <div style="margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08); display: flex; gap: 0.5rem; justify-content: flex-end;">
-            <button class="btn btn-outline" style="padding: 0.3rem 0.7rem; font-size: 0.8rem; color: #38bdf8; border-color: rgba(56,189,248,0.4);" onclick="event.stopPropagation(); Trayectos.editarTrayecto('${trayecto.id}')">
-              ✏️ Editar
+        const cicloBadge = `
+          <span style="font-size: 0.75rem; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 600;">
+            Ciclo Lectivo ${trayecto.ciclo_lectivo || new Date().getFullYear()}
+          </span>
+        `;
+
+        // Botón explícito de Gestor / CSV para Admin y Docentes
+        let accionGestionHTML = '';
+        if (!esVistaPublica && (isAdmin || esDocente)) {
+          accionGestionHTML = `
+            <button class="btn btn-gold" style="padding: 0.35rem 0.7rem; font-size: 0.8rem; background: #0284c7; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;" onclick="event.stopPropagation(); ClasesModulo.abrirGestor(${trayecto.id}, '${trayecto.nombre.replace(/'/g, "\\'")}')">
+              ⚙️ Gestor / CSV
             </button>
-            <button class="btn btn-outline" style="padding: 0.3rem 0.7rem; font-size: 0.8rem; color: #f87171; border-color: rgba(248,113,113,0.4);" onclick="event.stopPropagation(); Trayectos.eliminarTrayecto('${trayecto.id}')">
-              🗑️ Eliminar
-            </button>
+          `;
+        }
+
+        // Acciones completas para Administrador (Gestor + Editar + Eliminar)
+        const accionesAdmin = (isAdmin && !esVistaPublica) ? `
+          <div style="margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08); display: flex; gap: 0.5rem; justify-content: space-between; align-items: center;">
+            ${accionGestionHTML}
+            <div style="display:flex; gap:0.4rem;">
+              <button class="btn btn-outline" style="padding: 0.35rem 0.7rem; font-size: 0.8rem; color: #38bdf8; border-color: rgba(56,189,248,0.4);" onclick="event.stopPropagation(); Trayectos.editarTrayecto('${trayecto.id}')">
+                ✏️ Editar
+              </button>
+              <button class="btn btn-outline" style="padding: 0.35rem 0.7rem; font-size: 0.8rem; color: #f87171; border-color: rgba(248,113,113,0.4);" onclick="event.stopPropagation(); Trayectos.eliminarTrayecto('${trayecto.id}')">
+                🗑️
+              </button>
+            </div>
           </div>
         ` : '';
 
@@ -259,12 +277,6 @@ const Trayectos = {
             </button>
           </div>
         ` : '';
-
-        const cicloBadge = `
-          <span style="font-size: 0.75rem; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 600;">
-            Ciclo Lectivo ${trayecto.ciclo_lectivo || new Date().getFullYear()}
-          </span>
-        `;
 
         if (esVistaPublica && !esDocente && !esEstudiante && !isAdmin) {
           card.innerHTML = `
@@ -353,6 +365,7 @@ const Trayectos = {
 
       contenedor.appendChild(grid);
     });
+  },
   },
 
   async editarTrayecto(id) {
