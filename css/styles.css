@@ -733,7 +733,9 @@ body {
   .instagram-widget {
     max-width: none;
   }
-  /* Grilla para Oferta Académica, Pasos de Inscripción y Noticias */
+}
+
+/* Grilla para Oferta Académica, Pasos de Inscripción y Noticias */
 .features-grid,
 .steps-grid,
 .news-grid,
@@ -783,7 +785,8 @@ body {
   margin-top: 1.5rem;
   box-shadow: 0 4px 14px rgba(234, 179, 8, 0.25);
 }
- /* FORZAR ANCHO COMPLETO Y DESBLOQUEAR CONTENEDORES */
+
+/* FORZAR ANCHO COMPLETO Y DESBLOQUEAR CONTENEDORES */
 .public-container {
   width: 100% !important;
   max-width: 1200px !important;
@@ -808,7 +811,8 @@ body {
   gap: 1.25rem !important;
   margin-bottom: 3rem !important;
 }
-  /* ==========================================
+
+/* ==========================================
    SOLUCIÓN DEFINITIVA DE ANCHO Y CENTRADO
    ========================================== */
 
@@ -847,7 +851,8 @@ main,
   max-width: 100% !important;
   box-sizing: border-box !important;
 }
- /* ==========================================
+
+/* ==========================================
    PANTALLA Y TARJETA DE LOGIN
    ========================================== */
 .auth-screen {
@@ -1015,7 +1020,8 @@ main,
   background: rgba(255, 255, 255, 0.05);
   color: #f8fafc;
 }
-  /* ==========================================
+
+/* ==========================================
    LAYOUT PRINCIPAL DASHBOARD ADMIN
    ========================================== */
 .dashboard-layout {
@@ -1303,4 +1309,48 @@ select {
   position: relative;
   z-index: 10;
   pointer-events: auto !important;
+}
+
+/* ==========================================================================
+   EFECTO DE ENFOQUE Y DIFUMINADO INTERACTIVO (FOCUS & BLUR ON HOVER/TOUCH)
+   ========================================================================== */
+
+/* 1. Transición suave para las tarjetas de trayectos */
+.features-grid > *,
+.trayectos-grid > *,
+#coursesContainer > *,
+.course-card {
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              filter 0.35s ease,
+              opacity 0.35s ease,
+              box-shadow 0.35s ease,
+              border-color 0.35s ease !important;
+  will-change: transform, filter, opacity;
+}
+
+/* 2. Cuando la grilla detecta hover/touch en una tarjeta, atenuar y difuminar las demás */
+.features-grid:has(> *:hover) > *:not(:hover),
+.trayectos-grid:has(> *:hover) > *:not(:hover),
+#coursesContainer:has(> *:hover) > *:not(:hover) {
+  filter: blur(2px) grayscale(25%);
+  opacity: 0.45;
+  transform: scale(0.97);
+}
+
+/* 3. Agrandar y destacar únicamente la tarjeta seleccionada */
+.features-grid > *:hover,
+.features-grid > *:active,
+.trayectos-grid > *:hover,
+.trayectos-grid > *:active,
+#coursesContainer > *:hover,
+#coursesContainer > *:active,
+.course-card:hover,
+.course-card:active {
+  transform: translateY(-6px) scale(1.03) !important;
+  filter: blur(0) grayscale(0%) !important;
+  opacity: 1 !important;
+  z-index: 20;
+  border-color: var(--accent-gold, #eab308) !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5), 
+              0 0 20px rgba(234, 179, 8, 0.3) !important;
 }
