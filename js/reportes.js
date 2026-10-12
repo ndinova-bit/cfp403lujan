@@ -81,7 +81,6 @@ const ReportesModulo = {
 
   // Restaurar Base de Datos completa desde un archivo JSON (Exclusivo Admin)
   async restaurarBackupDesdeJSON() {
-    // Verificación estricta de Perfil Admin
     const perfilRaw = localStorage.getItem('usuario_actual') || 
                       localStorage.getItem('usuario_logueado') || 
                       sessionStorage.getItem('usuario_logueado');
@@ -101,7 +100,7 @@ const ReportesModulo = {
       const archivo = e.target.files[0];
       if (!archivo) return;
 
-      if (!confirm('⚠️ ¿Estás seguro de que deseas restaurar la base de datos? Esto insertará o actualizará la información existente con los datos del archivo cargado.')) {
+      if (!confirm('⚠️ ¿Estás seguro de que deseas restaurar la base de datos? Esto insertará o actualizará la información existente.')) {
         return;
       }
 
@@ -114,7 +113,6 @@ const ReportesModulo = {
             throw new Error('El archivo cargado no contiene un formato JSON válido.');
           }
 
-          // Lista ordenada para respetar claves foráneas
           const tablas = [
             'usuarios',
             'trayectos',
@@ -127,18 +125,24 @@ const ReportesModulo = {
             'notificaciones'
           ];
 
+          let errores = [];
+
           for (const tabla of tablas) {
             if (Array.isArray(data[tabla]) && data[tabla].length > 0) {
               const { error } = await supabase.from(tabla).upsert(data[tabla]);
               if (error) {
                 console.error(`Error procesando tabla ${tabla}:`, error);
-                throw new Error(`Fallo al procesar ${tabla}: ${error.message}`);
+                errores.push(`${tabla}: ${error.message}`);
               }
             }
           }
 
-          alert('🎉 ¡Base de datos restaurada con éxito!');
-          window.location.reload();
+          if (errores.length > 0) {
+            alert('⚠️ Restauración parcial. Ocurrieron errores en las siguientes tablas:\n\n' + errores.join('\n'));
+          } else {
+            alert('🎉 ¡Base de datos restaurada con éxito!');
+            window.location.reload();
+          }
 
         } catch (err) {
           console.error('Error al restaurar backup:', err);
@@ -150,7 +154,6 @@ const ReportesModulo = {
     };
 
     input.click();
-  }
-};
+  };
 
 window.ReportesModulo = ReportesModulo;
