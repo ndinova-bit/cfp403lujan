@@ -304,22 +304,25 @@
       </div>
 
       <nav class="sidebar-nav">
-        <button id="btn-dashboard" class="nav-item-btn active" onclick="UI.showTab('dashboard')">
-          <span class="icon">📊</span> Dashboard
-        </button>
-        <button id="btn-trayectos" class="nav-item-btn" onclick="UI.showTab('trayectos')">
-          <span class="icon">📚</span> Trayectos Formativos
-        </button>
-        <button id="btn-nuevo-trayecto" class="nav-item-btn admin-only" onclick="UI.showTab('nuevo-trayecto')">
-          <span class="icon">➕</span> Cargar Trayecto
-        </button>
-        <button id="btn-certificados" class="nav-item-btn admin-only" onclick="UI.showTab('certificados')">
-          <span class="icon">📜</span> Emitir Certificados
-        </button>
-        <button id="btn-usuarios" class="nav-item-btn admin-only" onclick="UI.showTab('usuarios')">
-          <span class="icon">👥</span> Usuarios y Roles
-        </button>
-      </nav>
+  <button id="btn-dashboard" class="nav-item-btn active" onclick="UI.showTab('dashboard')">
+    <span class="icon">📊</span> Dashboard
+  </button>
+  <button id="btn-trayectos" class="nav-item-btn" onclick="UI.showTab('trayectos')">
+    <span class="icon">📚</span> Trayectos Formativos
+  </button>
+  <button id="btn-nuevo-trayecto" class="nav-item-btn admin-only" onclick="UI.showTab('nuevo-trayecto')">
+    <span class="icon">➕</span> Cargar Trayecto
+  </button>
+  <button id="btn-certificados" class="nav-item-btn admin-only" onclick="UI.showTab('certificados')">
+    <span class="icon">📜</span> Emitir Certificados
+  </button>
+  <button id="btn-usuarios" class="nav-item-btn admin-only" onclick="UI.showTab('usuarios')">
+    <span class="icon">👥</span> Usuarios y Roles
+  </button>
+  <button id="btn-backups" class="nav-item-btn admin-only" onclick="UI.showTab('backups')">
+    <span class="icon">💾</span> Base de Datos
+  </button>
+</nav>
 
       <button class="btn btn-danger" style="margin-top: auto; width: 100%;" onclick="Auth.cerrarSesion()">
         🚪 Cerrar Sesión
