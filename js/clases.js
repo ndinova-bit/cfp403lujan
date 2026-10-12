@@ -185,8 +185,14 @@ const ClasesModulo = {
           </div>
         </div>
 
-        <div id="vista-tab-alumnos" style="display:none;">
-          <div style="display:flex; justify-content:flex-end; margin-bottom:0.8rem;">
+      <div id="vista-tab-alumnos" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem; flex-wrap:wrap; gap:0.5rem;">
+            <div>
+              <label for="input-importar-csv" style="padding:0.4rem 0.8rem; background:#0284c7; color:#fff; border-radius:6px; font-weight:600; font-size:0.8rem; cursor:pointer; display:inline-block;">
+                📥 Importar Nómina de Alumnos (CSV)
+              </label>
+              <input type="file" id="input-importar-csv" accept=".csv" style="display:none;" onchange="ClasesModulo.importarEstudiantesCSV(this.files[0])">
+            </div>
             <button type="button" onclick="ReportesModulo.exportarExcelTabla('tabla-sabana-notas', 'Sabana_Notas.csv')" style="padding:0.4rem 0.8rem; background:#10b981; color:#fff; border:none; border-radius:6px; font-weight:600; font-size:0.8rem; cursor:pointer;">
               📊 Exportar Sábana a Excel
             </button>
