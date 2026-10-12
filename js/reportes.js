@@ -138,7 +138,7 @@ const ReportesModulo = {
           }
 
           if (errores.length > 0) {
-            alert('⚠️ Restauración parcial. Ocurrieron errores en las siguientes tablas:\n\n' + errores.join('\n'));
+            alert('⚠️ Restauración realizada con observaciones en algunas tablas:\n\n' + errores.join('\n'));
           } else {
             alert('🎉 ¡Base de datos restaurada con éxito!');
             window.location.reload();
@@ -154,6 +154,7 @@ const ReportesModulo = {
     };
 
     input.click();
-  };
+  }
+};
 
 window.ReportesModulo = ReportesModulo;
