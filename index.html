@@ -488,15 +488,27 @@
           </div>
         </section>
 
-        <!-- VISTA 4: CERTIFICADOS POR LISTADO -->
+        <!-- VISTA 4: CERTIFICADOS POR TRAYECTO (ADMIN) -->
         <section id="certificados" class="section-tab admin-only" style="display: none;">
           <div class="card-panel">
-            <div class="card-panel-header">
+            <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
               <div>
-                <h3>Emisión de Certificados de Egresados</h3>
-                <p style="font-size: 0.85rem; color: #94a3b8;">Estudiantes aptos para certificación (Calificación &ge; 70%)</p>
+                <h3 style="margin: 0;">Emisión de Certificados de Egresados</h3>
+                <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.25rem;">
+                  Nómina de estudiantes con todos los módulos acreditados, agrupados por Trayecto Formativo.
+                </p>
               </div>
+              <button class="btn btn-secondary" onclick="CertificadosAdmin.cargarNominaCertificados()">
+                🔄 Actualizar Nómina
+              </button>
             </div>
+
+            <!-- Contenedor donde se renderizan las tarjetas/tablas por Trayecto -->
+            <div id="contenedor-certificados-trayectos">
+              <!-- Carga dinámica desde js/pdf-lab.js -->
+            </div>
+          </div>
+        </section>
 
             <!-- TABLA DE ESTUDIANTES PARA ASIGNACIÓN DE N° DE EGRESADO -->
             <div style="overflow-x: auto; margin-top: 1rem;">
