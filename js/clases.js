@@ -2,6 +2,7 @@ const ClasesModulo = {
   trayectoActualId: null,
   claseEditandoId: null,
 
+  
   convertirLinks(texto) {
     if (!texto) return '';
     const urlRegex = /(https?:\/\/[^\s]+)/g;
