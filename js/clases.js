@@ -1101,11 +1101,21 @@ if (miEntrega) {
     }
   },
 
-  async guardarCalificacionDesdePanel(entregaId) {
+async guardarCalificacionDesdePanel(entregaId) {
     const notaVal = document.getElementById(`nota-panel-${entregaId}`)?.value.trim();
     const comentVal = document.getElementById(`coment-panel-${entregaId}`)?.value.trim();
 
     try {
+      // 1. Obtener la entrega actual para saber de quién es y qué clase fue
+      const { data: entrega, error: errEnt } = await supabase
+        .from('entregas_actividades')
+        .select('*, clases(titulo)')
+        .eq('id', entregaId)
+        .single();
+
+      if (errEnt) throw errEnt;
+
+      // 2. Actualizar nota y devolución
       const { error } = await supabase
         .from('entregas_actividades')
         .update({
@@ -1115,7 +1125,25 @@ if (miEntrega) {
         .eq('id', entregaId);
 
       if (error) throw error;
-      alert('✅ Calificación guardada con éxito.');
+
+      // 3. Crear notificación automática para el alumno
+      const tituloClase = entrega.clases ? entrega.clases.titulo : 'una actividad';
+      const numNota = parseFloat(notaVal);
+      let estadoTxt = 'evaluado';
+      
+      if (!isNaN(numNota)) {
+        estadoTxt = numNota >= 70 ? `calificado con ${numNota}% (Acreditado) ✅` : `calificado con ${numNota}% (No Acreditado) ⚠️`;
+      }
+
+      await supabase.from('notificaciones').insert([{
+        estudiante_user: String(entrega.estudiante_user),
+        trayecto_id: Number(this.trayectoActualId),
+        clase_id: Number(entrega.clase_id),
+        titulo: `Novedad en ${tituloClase}`,
+        mensaje: `Tu trabajo fue ${estadoTxt}.${comentVal ? ` Observación: "${comentVal}"` : ''}`
+      }]);
+
+      alert('✅ Calificación guardada y estudiante notificado.');
       await this.cargarPanelGeneralEntregas();
 
     } catch (err) {
@@ -1123,11 +1151,5 @@ if (miEntrega) {
       alert('Error al guardar la calificación: ' + err.message);
     }
   },
-
-  cerrarGestor() {
-    const modal = document.getElementById('modal-gestor-clases');
-    if (modal) modal.style.display = 'none';
-  }
-};
 
 window.ClasesModulo = ClasesModulo;
