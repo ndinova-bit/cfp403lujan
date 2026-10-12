@@ -1,6 +1,4 @@
 <!DOCTYPE html>
-
-
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -255,7 +253,7 @@
 
         <div class="form-group">
           <label for="login-pass">Contraseña</label>
-          <input type="password" id="login-pass" class="form-control" placeholder="••••••••" required>
+          <input type="password" id="login-pass" class="form-control" placeholder="••••••••" autocomplete="current-password" required>
         </div>
 
         <button type="submit" class="btn-block btn-gold">Iniciar Sesión</button>
@@ -274,7 +272,7 @@
         </div>
         <div class="form-group">
           <label for="reg-pass">Contraseña</label>
-          <input type="password" id="reg-pass" class="form-control" placeholder="••••••••" required>
+          <input type="password" id="reg-pass" class="form-control" placeholder="••••••••" autocomplete="new-password" required>
         </div>
         <div class="form-group">
           <label for="reg-rol">Rol Solicitado</label>
@@ -304,25 +302,25 @@
       </div>
 
       <nav class="sidebar-nav">
-  <button id="btn-dashboard" class="nav-item-btn active" onclick="UI.showTab('dashboard')">
-    <span class="icon">📊</span> Dashboard
-  </button>
-  <button id="btn-trayectos" class="nav-item-btn" onclick="UI.showTab('trayectos')">
-    <span class="icon">📚</span> Trayectos Formativos
-  </button>
-  <button id="btn-nuevo-trayecto" class="nav-item-btn admin-only" onclick="UI.showTab('nuevo-trayecto')">
-    <span class="icon">➕</span> Cargar Trayecto
-  </button>
-  <button id="btn-certificados" class="nav-item-btn admin-only" onclick="UI.showTab('certificados')">
-    <span class="icon">📜</span> Emitir Certificados
-  </button>
-  <button id="btn-usuarios" class="nav-item-btn admin-only" onclick="UI.showTab('usuarios')">
-    <span class="icon">👥</span> Usuarios y Roles
-  </button>
-  <button id="btn-backups" class="nav-item-btn admin-only" onclick="UI.showTab('backups')">
-    <span class="icon">💾</span> Base de Datos
-  </button>
-</nav>
+        <button id="btn-dashboard" class="nav-item-btn active" onclick="UI.showTab('dashboard')">
+          <span class="icon">📊</span> Dashboard
+        </button>
+        <button id="btn-trayectos" class="nav-item-btn" onclick="UI.showTab('trayectos')">
+          <span class="icon">📚</span> Trayectos Formativos
+        </button>
+        <button id="btn-nuevo-trayecto" class="nav-item-btn admin-only" onclick="UI.showTab('nuevo-trayecto')">
+          <span class="icon">➕</span> Cargar Trayecto
+        </button>
+        <button id="btn-certificados" class="nav-item-btn admin-only" onclick="UI.showTab('certificados')">
+          <span class="icon">📜</span> Emitir Certificados
+        </button>
+        <button id="btn-usuarios" class="nav-item-btn admin-only" onclick="UI.showTab('usuarios')">
+          <span class="icon">👥</span> Usuarios y Roles
+        </button>
+        <button id="btn-backups" class="nav-item-btn admin-only" onclick="UI.showTab('backups')">
+          <span class="icon">💾</span> Base de Datos
+        </button>
+      </nav>
 
       <button class="btn btn-danger" style="margin-top: auto; width: 100%;" onclick="Auth.cerrarSesion()">
         🚪 Cerrar Sesión
@@ -388,7 +386,7 @@
           </div>
         </section>
 
-     <!-- VISTA 2: LISTA DE TRAYECTOS DENTRO DEL DASHBOARD -->
+        <!-- VISTA 2: LISTA DE TRAYECTOS DENTRO DEL DASHBOARD -->
         <section id="trayectos" class="section-tab" style="display: none;">
           <div class="card-panel-header">
             <div>
@@ -409,7 +407,7 @@
           <div id="lista-trayectos-admin"></div>
         </section>
         
-    <!-- VISTA 3: CARGA / EDICIÓN DE TRAYECTO (FORMULARIO) -->
+        <!-- VISTA 3: CARGA / EDICIÓN DE TRAYECTO (FORMULARIO) -->
         <section id="nuevo-trayecto" class="section-tab admin-only" style="display: none;">
           <div class="card-panel">
             <div class="card-panel-header">
@@ -544,7 +542,7 @@
           </div>
         </section>
 
-        <!-- VISTA: GESTIÓN DE USUARIOS -->
+        <!-- VISTA 5: GESTIÓN DE USUARIOS -->
         <section id="usuarios" class="section-tab admin-only" style="display: none;">
           <div class="card-panel">
             <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
@@ -578,6 +576,50 @@
           </div>
         </section>
 
+        <!-- VISTA 6: BASE DE DATOS Y RESPALDO (EXCLUSIVO ADMIN) -->
+        <section id="backups" class="section-tab admin-only" style="display: none;">
+          <div class="card-panel" style="max-width: 750px; margin: 0 auto; padding: 2rem;">
+            <div class="card-panel-header" style="margin-bottom: 1.5rem;">
+              <div>
+                <h2 style="color: #f8fafc; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                  💾 Gestor de Base de Datos y Backups
+                </h2>
+                <p style="color: #94a3b8; font-size: 0.875rem; margin-top: 0.25rem;">
+                  Herramientas exclusivas de administración para respaldar o restaurar toda la base de datos de Supabase.
+                </p>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem;">
+              <!-- Descargar Backup -->
+              <div style="background: rgba(15, 23, 42, 0.6); padding: 1.25rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                  <h4 style="color: #38bdf8; margin-top: 0; margin-bottom: 0.5rem; font-size: 1.05rem;">📥 Descargar Backup</h4>
+                  <p style="color: #94a3b8; font-size: 0.8rem; line-height: 1.4;">
+                    Genera una copia completa de todas las tablas (usuarios, trayectos, módulos, clases, inscripciones, entregas, asistencias, excepciones y notificaciones) en formato JSON.
+                  </p>
+                </div>
+                <button class="btn" style="background: #0284c7; color: white; border: none; padding: 0.65rem; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 1rem; width: 100%;" onclick="ReportesModulo.descargarBackupCompletoJSON()">
+                  ⬇️ Descargar Copia JSON
+                </button>
+              </div>
+
+              <!-- Restaurar Backup -->
+              <div style="background: rgba(15, 23, 42, 0.6); padding: 1.25rem; border-radius: 8px; border: 1px solid rgba(248, 113, 113, 0.25); display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                  <h4 style="color: #f87171; margin-top: 0; margin-bottom: 0.5rem; font-size: 1.05rem;">📤 Restaurar Backup</h4>
+                  <p style="color: #94a3b8; font-size: 0.8rem; line-height: 1.4;">
+                    Sube un archivo JSON previamente descargado para sobrescribir y actualizar los datos directamente en Supabase.
+                  </p>
+                </div>
+                <button class="btn" style="background: #dc2626; color: white; border: none; padding: 0.65rem; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 1rem; width: 100%;" onclick="ReportesModulo.restaurarBackupDesdeJSON()">
+                  ⚠️ Subir y Restaurar
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
       </main>
     </div>
   </div>
@@ -591,16 +633,16 @@
       </div>
 
       <form id="form-alta-usuario">
-  <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-    <div class="form-group">
-      <label for="usr-alta-apellido">Apellido *</label>
-      <input type="text" id="usr-alta-apellido" class="form-control" required>
-    </div>
-    <div class="form-group">
-      <label for="usr-alta-nombre">Nombre *</label>
-      <input type="text" id="usr-alta-nombre" class="form-control" required>
-    </div>
-  </div>
+        <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label for="usr-alta-apellido">Apellido *</label>
+            <input type="text" id="usr-alta-apellido" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label for="usr-alta-nombre">Nombre *</label>
+            <input type="text" id="usr-alta-nombre" class="form-control" required>
+          </div>
+        </div>
         <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.75rem;">
           <div class="form-group">
             <label for="usr-alta-dni">DNI / Documento *</label>
@@ -664,14 +706,14 @@
     </div>
   </div>
 
- <!-- Librerías Externas -->
+  <!-- Librerías Externas -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
-<!-- Lógica Interna -->
+  <!-- Lógica Interna -->
   <script src="js/supabase-config.js" defer></script>
   <script src="js/pdf-lab.js" defer></script>
   <script src="js/ui.js?v=50001" defer></script>
