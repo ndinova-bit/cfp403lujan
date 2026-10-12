@@ -77,6 +77,79 @@ const ReportesModulo = {
       console.error('Error al generar backup:', err);
       alert('Error al generar backup de seguridad: ' + err.message);
     }
+  },
+
+  // Restaurar Base de Datos completa desde un archivo JSON (Exclusivo Admin)
+  async restaurarBackupDesdeJSON() {
+    // Verificación estricta de Perfil Admin
+    const perfilRaw = localStorage.getItem('usuario_actual') || 
+                      localStorage.getItem('usuario_logueado') || 
+                      sessionStorage.getItem('usuario_logueado');
+    const perfil = perfilRaw ? JSON.parse(perfilRaw) : {};
+    const rolNorm = String(perfil.rol || '').toLowerCase().trim();
+
+    if (rolNorm !== 'admin' && rolNorm !== 'administrador') {
+      alert('⛔ Acceso denegado. Esta acción está reservada únicamente para el Administrador.');
+      return;
+    }
+
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+
+    input.onchange = async (e) => {
+      const archivo = e.target.files[0];
+      if (!archivo) return;
+
+      if (!confirm('⚠️ ¿Estás seguro de que deseas restaurar la base de datos? Esto insertará o actualizará la información existente con los datos del archivo cargado.')) {
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const data = JSON.parse(event.target.result);
+
+          if (!data || typeof data !== 'object') {
+            throw new Error('El archivo cargado no contiene un formato JSON válido.');
+          }
+
+          // Lista ordenada para respetar claves foráneas
+          const tablas = [
+            'usuarios',
+            'trayectos',
+            'modulos',
+            'clases',
+            'inscripciones',
+            'entregas_actividades',
+            'asistencias',
+            'excepciones_estudiantes',
+            'notificaciones'
+          ];
+
+          for (const tabla of tablas) {
+            if (Array.isArray(data[tabla]) && data[tabla].length > 0) {
+              const { error } = await supabase.from(tabla).upsert(data[tabla]);
+              if (error) {
+                console.error(`Error procesando tabla ${tabla}:`, error);
+                throw new Error(`Fallo al procesar ${tabla}: ${error.message}`);
+              }
+            }
+          }
+
+          alert('🎉 ¡Base de datos restaurada con éxito!');
+          window.location.reload();
+
+        } catch (err) {
+          console.error('Error al restaurar backup:', err);
+          alert('❌ Error al procesar la restauración: ' + err.message);
+        }
+      };
+
+      reader.readAsText(archivo);
+    };
+
+    input.click();
   }
 };
 
