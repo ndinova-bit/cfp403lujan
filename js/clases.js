@@ -2,7 +2,6 @@ const ClasesModulo = {
   trayectoActualId: null,
   claseEditandoId: null,
 
-  
   convertirLinks(texto) {
     if (!texto) return '';
     const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -429,7 +428,7 @@ const ClasesModulo = {
           let estadoEntregaHTML = '';
           let bloqueadoPorNota = false;
 
-if (miEntrega) {
+          if (miEntrega) {
             const numNota = parseFloat(miEntrega.nota);
             const tieneNota = miEntrega.nota !== null && miEntrega.nota !== undefined && miEntrega.nota !== '';
 
@@ -437,15 +436,14 @@ if (miEntrega) {
               bloqueadoPorNota = true;
               
               if (!isNaN(numNota) && numNota >= 70) {
-                // Lanzar confeti si acaba de ver la nota aprobada
-                if (window.confetti && !sessionStorage.getItem(`confetti_visto_${c.id}`)) {
-                  sessionStorage.setItem(`confetti_visto_${c.id}`, 'true');
+                const claveVisto = `confetti_visto_${c.id}_${userEstudiante}`;
+                if (window.confetti && !sessionStorage.getItem(claveVisto)) {
+                  sessionStorage.setItem(claveVisto, 'true');
                   setTimeout(() => {
                     confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
                   }, 300);
                 }
 
-                // Definir Insignia y Mensaje según el puntaje
                 let medalla = '🥇';
                 let tituloMedalla = '¡Desempeño Sobresaliente!';
                 let colorGlow = '#facc15';
@@ -1101,12 +1099,11 @@ if (miEntrega) {
     }
   },
 
-async guardarCalificacionDesdePanel(entregaId) {
+  async guardarCalificacionDesdePanel(entregaId) {
     const notaVal = document.getElementById(`nota-panel-${entregaId}`)?.value.trim();
     const comentVal = document.getElementById(`coment-panel-${entregaId}`)?.value.trim();
 
     try {
-      // 1. Obtener la entrega actual para saber de quién es y qué clase fue
       const { data: entrega, error: errEnt } = await supabase
         .from('entregas_actividades')
         .select('*, clases(titulo)')
@@ -1115,7 +1112,6 @@ async guardarCalificacionDesdePanel(entregaId) {
 
       if (errEnt) throw errEnt;
 
-      // 2. Actualizar nota y devolución
       const { error } = await supabase
         .from('entregas_actividades')
         .update({
@@ -1126,7 +1122,6 @@ async guardarCalificacionDesdePanel(entregaId) {
 
       if (error) throw error;
 
-      // 3. Crear notificación automática para el alumno
       const tituloClase = entrega.clases ? entrega.clases.titulo : 'una actividad';
       const numNota = parseFloat(notaVal);
       let estadoTxt = 'evaluado';
@@ -1151,5 +1146,11 @@ async guardarCalificacionDesdePanel(entregaId) {
       alert('Error al guardar la calificación: ' + err.message);
     }
   },
+
+  cerrarGestor() {
+    const modal = document.getElementById('modal-gestor-clases');
+    if (modal) modal.style.display = 'none';
+  }
+};
 
 window.ClasesModulo = ClasesModulo;
