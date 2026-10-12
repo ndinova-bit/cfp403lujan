@@ -393,15 +393,12 @@ const CertificadosAdmin = {
 
 window.CertificadosAdmin = CertificadosAdmin;
 
-// Cargar la nómina cuando el administrador ingresa a la pestaña 'certificados'
+// Cargar la nómina de certificados cuando se presiona el botón del menú lateral
 document.addEventListener('DOMContentLoaded', () => {
-  if (window.UI && window.UI.showTab) {
-    const originalShowTab = window.UI.showTab;
-    window.UI.showTab = function(tabId) {
-      originalShowTab(tabId);
-      if (tabId === 'certificados') {
-        CertificadosAdmin.cargarNominaCertificados();
-      }
-    };
+  const btnCertificados = document.getElementById('btn-certificados');
+  if (btnCertificados) {
+    btnCertificados.addEventListener('click', () => {
+      CertificadosAdmin.cargarNominaCertificados();
+    });
   }
 });
