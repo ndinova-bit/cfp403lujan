@@ -1,5 +1,5 @@
 /* ==========================================================================
-   js/pdf-lab.js - Generación de Certificados PDF
+   js/pdf-lab.js - Generación de Certificados PDF y Emisión por Trayecto
    ========================================================================== */
 
 async function generarCertificadoPDF_v3(trayectoJson, alumnoNombre, usuarioDni, inscripcionId) {
@@ -221,7 +221,7 @@ async function generarCertificadoPDF_v3(trayectoJson, alumnoNombre, usuarioDni, 
   }
 }
 
-// Alias para mantener compatibilidad si en el HTML llamas a emitirCertificadoPDF
+// Alias para mantener compatibilidad si en el HTML se llama a emitirCertificadoPDF
 const emitirCertificadoPDF = (opts) => {
   return generarCertificadoPDF_v3(
     opts.trayecto || opts,
@@ -230,3 +230,178 @@ const emitirCertificadoPDF = (opts) => {
     opts.inscripcionId
   );
 };
+
+/* ==========================================================================
+   Gestión de Nómina y Emisión Masiva de Certificados por Trayecto
+   ========================================================================== */
+
+const CertificadosAdmin = {
+  async cargarNominaCertificados() {
+    const contenedor = document.getElementById('contenedor-certificados-trayectos');
+    if (!contenedor) return;
+
+    contenedor.innerHTML = '<p style="color:#94a3b8; padding: 1rem;">Cargando nómina de egresados...</p>';
+
+    try {
+      const [rTrayectos, rInscripciones, rUsuarios, rModulos] = await Promise.all([
+        supabase.from('trayectos').select('*'),
+        supabase.from('inscripciones').select('*'),
+        supabase.from('usuarios').select('*'),
+        supabase.from('modulos').select('*')
+      ]);
+
+      const trayectos = rTrayectos.data || [];
+      const inscripciones = rInscripciones.data || [];
+      const usuarios = rUsuarios.data || [];
+      const modulos = rModulos.data || [];
+
+      if (trayectos.length === 0) {
+        contenedor.innerHTML = '<p style="color:#94a3b8; padding: 1rem;">No hay trayectos registrados en el sistema.</p>';
+        return;
+      }
+
+      let htmlCompleto = '';
+
+      trayectos.forEach(trayecto => {
+        const inscritosTrayecto = inscripciones.filter(i => String(i.trayecto_id) === String(trayecto.id));
+        if (inscritosTrayecto.length === 0) return;
+
+        const modsTrayecto = modulos.filter(m => String(m.trayecto_id) === String(trayecto.id));
+        trayecto.modulos = modsTrayecto;
+
+        let filasHtml = '';
+        let egresadosCount = 0;
+
+        inscritosTrayecto.forEach(ins => {
+          const usr = usuarios.find(u => String(u.usuario) === String(ins.estudiante_user)) || {};
+          const nombreCompleto = `${usr.nombre || ''} ${usr.apellido || ''}`.trim() || ins.estudiante_user;
+          const dni = usr.usuario || ins.estudiante_user;
+
+          egresadosCount++;
+
+          const jsonTrayectoEnc = encodeURIComponent(JSON.stringify(trayecto));
+          const nombreEnc = encodeURIComponent(nombreCompleto);
+
+          filasHtml += `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+              <td style="padding: 0.75rem;">
+                <strong>${nombreCompleto.toUpperCase()}</strong><br>
+                <span style="font-size: 0.78rem; color: #94a3b8;">DNI: ${dni}</span>
+              </td>
+              <td style="padding: 0.75rem;"><span style="color: #4ade80; font-weight: 700;">100% Acreditado</span></td>
+              <td style="padding: 0.75rem;"><span class="badge" style="background: rgba(34, 197, 94, 0.2); color: #4ade80; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">APROBADO</span></td>
+              <td style="padding: 0.75rem;">
+                <input type="text" id="num-eg-${ins.id}" class="form-control" placeholder="Ej: 01" value="${ins.num_egresado || ''}" style="width: 100px; padding: 0.35rem 0.5rem; font-size: 0.85rem;">
+              </td>
+              <td style="padding: 0.75rem; text-align: right;">
+                <button class="btn btn-gold" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" 
+                  onclick="generarCertificadoPDF_v3('${jsonTrayectoEnc}', '${nombreEnc}', '${dni}', '${ins.id}')">
+                  📜 Emitir PDF
+                </button>
+              </td>
+            </tr>
+          `;
+        });
+
+        if (egresadosCount > 0) {
+          htmlCompleto += `
+            <div class="card-panel" style="margin-bottom: 2rem; background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 1.25rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.75rem;">
+                <div>
+                  <h4 style="margin: 0; color: #38bdf8; font-size: 1.1rem;">📚 ${trayecto.nombre.toUpperCase()}</h4>
+                  <span style="font-size: 0.8rem; color: #94a3b8;">Ciclo Lectivo: ${trayecto.ciclo_lectivo || '2026'} | Egresados Aptos: ${egresadosCount}</span>
+                </div>
+                <button class="btn btn-primary" style="font-size: 0.85rem; padding: 0.45rem 0.9rem;" 
+                  onclick="CertificadosAdmin.emitirTodosPorTrayecto(${trayecto.id})">
+                  🖨️ Emitir Todos los PDF del Trayecto
+                </button>
+              </div>
+
+              <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem;">
+                  <thead>
+                    <tr style="border-bottom: 2px solid rgba(255,255,255,0.1); color: #94a3b8;">
+                      <th style="padding: 0.6rem;">Estudiante / DNI</th>
+                      <th style="padding: 0.6rem;">Acreditación</th>
+                      <th style="padding: 0.6rem;">Estado</th>
+                      <th style="padding: 0.6rem;">N° Egresado</th>
+                      <th style="padding: 0.6rem; text-align: right;">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${filasHtml}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          `;
+        }
+      });
+
+      contenedor.innerHTML = htmlCompleto || '<p style="color:#94a3b8; padding: 1rem;">No se encontraron estudiantes con cursadas acreditadas para emitir certificados.</p>';
+
+    } catch (err) {
+      console.error('Error al cargar nómina de certificados:', err);
+      contenedor.innerHTML = '<p style="color:#f87171; padding: 1rem;">Error al cargar la nómina de estudiantes.</p>';
+    }
+  },
+
+  async emitirTodosPorTrayecto(trayectoId) {
+    try {
+      const [rTrayectos, rInscripciones, rUsuarios, rModulos] = await Promise.all([
+        supabase.from('trayectos').select('*').eq('id', trayectoId).single(),
+        supabase.from('inscripciones').select('*').eq('trayecto_id', trayectoId),
+        supabase.from('usuarios').select('*'),
+        supabase.from('modulos').select('*').eq('trayecto_id', trayectoId)
+      ]);
+
+      const trayecto = rTrayectos.data;
+      const inscripciones = rInscripciones.data || [];
+      const usuarios = rUsuarios.data || [];
+      trayecto.modulos = rModulos.data || [];
+
+      if (!trayecto || inscripciones.length === 0) {
+        alert('No hay egresados para emitir en este trayecto.');
+        return;
+      }
+
+      const { value: fEgreso } = await Swal.fire({
+        title: 'Fecha de Egreso en Lote',
+        input: 'text',
+        inputValue: '27 de Noviembre de 2026',
+        inputLabel: `Ingrese la Fecha de Egreso para los ${inscripciones.length} certificados:`,
+        showCancelButton: true
+      });
+      if (!fEgreso) return;
+
+      for (const ins of inscripciones) {
+        const usr = usuarios.find(u => String(u.usuario) === String(ins.estudiante_user)) || {};
+        const nombreCompleto = `${usr.nombre || ''} ${usr.apellido || ''}`.trim() || ins.estudiante_user;
+
+        const jsonTrayectoEnc = encodeURIComponent(JSON.stringify(trayecto));
+        const nombreEnc = encodeURIComponent(nombreCompleto);
+
+        await generarCertificadoPDF_v3(jsonTrayectoEnc, nombreEnc, usr.usuario || ins.estudiante_user, ins.id);
+      }
+
+    } catch (err) {
+      console.error('Error al emitir en lote:', err);
+      alert('Error en emisión en lote: ' + err.message);
+    }
+  }
+};
+
+window.CertificadosAdmin = CertificadosAdmin;
+
+// Cargar la nómina cuando el administrador ingresa a la pestaña 'certificados'
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.UI && window.UI.showTab) {
+    const originalShowTab = window.UI.showTab;
+    window.UI.showTab = function(tabId) {
+      originalShowTab(tabId);
+      if (tabId === 'certificados') {
+        CertificadosAdmin.cargarNominaCertificados();
+      }
+    };
+  }
+});
