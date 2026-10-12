@@ -177,7 +177,7 @@ const Trayectos = {
     }
   },
 
-renderizarTrayectos() {
+  renderizarTrayectos() {
     const contenedores = [
       document.getElementById('lista-trayectos-cards'),
       document.getElementById('lista-trayectos-admin'),
@@ -365,7 +365,6 @@ renderizarTrayectos() {
 
       contenedor.appendChild(grid);
     });
-  },
   },
 
   async editarTrayecto(id) {
