@@ -369,9 +369,7 @@ const ClasesModulo = {
       const hoy = new Date();
       hoy.setHours(0,0,0,0);
 
-      // FILTRADO INTELIGENTE DE PUBLICACIONES:
       const publicacionesMostrar = clases.filter(c => {
-        // Si el estudiante tiene un destinatario específico y no coincide, NO la ve
         if (esEstudiante && c.estudiante_user && String(c.estudiante_user) !== userEstudiante) {
           return false;
         }
@@ -428,33 +426,39 @@ const ClasesModulo = {
           const miEntrega = entregasGlobales.find(e => Number(e.clase_id) === Number(c.id) && String(e.estudiante_user) === userEstudiante);
           
           let estadoEntregaHTML = '';
+          let bloqueadoPorNota = false;
+
           if (miEntrega) {
             const numNota = parseFloat(miEntrega.nota);
-            if (!isNaN(numNota)) {
-              if (numNota >= 70) {
+            const tieneNota = miEntrega.nota !== null && miEntrega.nota !== undefined && miEntrega.nota !== '';
+
+            if (tieneNota) {
+              bloqueadoPorNota = true; // OPCIÓN 2: SI TIENE CALIFICACIÓN SE BLOQUEA LA EDICIÓN
+              
+              if (!isNaN(numNota) && numNota >= 70) {
                 estadoEntregaHTML = `
-                  <div style="font-size:0.82rem; color:#4ade80; margin-bottom:0.4rem; background:rgba(34,197,94,0.1); padding:0.5rem; border-radius:6px; border:1px solid rgba(34,197,94,0.3);">
-                    🏆 <strong>Calificación:</strong> ${numNota}% — <span style="font-weight:bold;">✅ Módulo / TP Acreditado</span>
-                    <br><a href="${miEntrega.url_entrega}" target="_blank" style="color:#38bdf8; text-decoration:underline;">Ver Trabajo Enviado</a>
+                  <div style="font-size:0.82rem; color:#4ade80; margin-bottom:0.4rem; background:rgba(34,197,94,0.1); padding:0.6rem; border-radius:6px; border:1px solid rgba(34,197,94,0.3);">
+                    🏆 <strong>Calificación:</strong> ${numNota}% — <span style="font-weight:bold;">✅ MÓDULO ACREDITADO</span>
+                    <br><a href="${miEntrega.url_entrega}" target="_blank" style="color:#38bdf8; text-decoration:underline; display:inline-block; margin-top:0.2rem;">Ver Archivo Enviado</a>
                     ${miEntrega.comentario_docente ? `<br>💬 <strong>Devolución:</strong> ${miEntrega.comentario_docente}` : ''}
                   </div>
                 `;
               } else {
-                // Alerta explícita de NO ACREDITADO
                 estadoEntregaHTML = `
                   <div style="font-size:0.82rem; color:#f87171; margin-bottom:0.4rem; background:rgba(239,68,68,0.15); padding:0.6rem; border-radius:6px; border:1px solid rgba(239,68,68,0.4);">
-                    ⚠️ <strong>Calificación:</strong> ${numNota}% — <strong style="color:#f87171;">MÓDULO NO ACREDITADO (&lt;70%)</strong>
-                    <br><em>Requiere realizar la reentrega o resolver el trabajo recuperatorio asignado por el docente.</em>
-                    <br><a href="${miEntrega.url_entrega}" target="_blank" style="color:#38bdf8; text-decoration:underline; display:inline-block; margin-top:0.2rem;">Ver Entrega Anterior</a>
+                    ⚠️ <strong>Calificación:</strong> ${miEntrega.nota}% — <strong style="color:#f87171;">MÓDULO NO ACREDITADO (&lt;70%)</strong>
+                    <br><em>Esta entrega ha sido evaluada y cerrada. Si el docente asigna un trabajo recuperatorio, te aparecerá como una tarea nueva.</em>
+                    <br><a href="${miEntrega.url_entrega}" target="_blank" style="color:#38bdf8; text-decoration:underline; display:inline-block; margin-top:0.2rem;">Ver Entrega Evaluada</a>
                     ${miEntrega.comentario_docente ? `<br>💬 <strong>Devolución Docente:</strong> ${miEntrega.comentario_docente}` : ''}
                   </div>
                 `;
               }
             } else {
+              // Enviado pero sin corregir (Puede modificar el enlace libremente)
               estadoEntregaHTML = `
                 <div style="font-size:0.82rem; color:#facc15; margin-bottom:0.4rem; background:rgba(250,204,21,0.1); padding:0.5rem; border-radius:6px; border:1px solid rgba(250,204,21,0.3);">
-                  ⏳ <strong>Trabajo Enviado:</strong> Pendiente de corrección por el docente.
-                  <br><a href="${miEntrega.url_entrega}" target="_blank" style="color:#38bdf8; text-decoration:underline;">Ver Archivo Enviado</a>
+                  ⏳ <strong>Trabajo Enviado:</strong> Pendiente de corrección por el docente. <em>(Podés corregir o reemplazar tu enlace antes de que sea calificado).</em>
+                  <br><a href="${miEntrega.url_entrega}" target="_blank" style="color:#38bdf8; text-decoration:underline; display:inline-block; margin-top:0.2rem;">Ver Archivo Enviado</a>
                 </div>
               `;
             }
@@ -471,12 +475,18 @@ const ClasesModulo = {
               <div style="margin-top:0.8rem; padding:0.8rem; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
                 <strong style="display:block; font-size:0.82rem; color:#facc15; margin-bottom:0.4rem;">📤 Estado de Entrega:</strong>
                 ${estadoEntregaHTML}
-                <div style="display:flex; gap:0.5rem; margin-top:0.3rem;">
-                  <input type="url" id="input-entrega-${c.id}" placeholder="Pegá el link a tu trabajo (Google Drive, PDF)" value="${miEntrega ? miEntrega.url_entrega : ''}" style="flex:1; padding:0.4rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px; font-size:0.82rem;">
-                  <button type="button" onclick="ClasesModulo.enviarEntregaEstudiante(${c.id})" style="padding:0.4rem 0.8rem; background:#0284c7; color:#fff; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:0.8rem;">
-                    ${miEntrega ? 'Reenviar / Recuperatorio' : 'Enviar Entrega'}
-                  </button>
-                </div>
+                ${!bloqueadoPorNota ? `
+                  <div style="display:flex; gap:0.5rem; margin-top:0.3rem;">
+                    <input type="url" id="input-entrega-${c.id}" placeholder="Pegá el link a tu trabajo (Google Drive, PDF)" value="${miEntrega ? miEntrega.url_entrega : ''}" style="flex:1; padding:0.4rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px; font-size:0.82rem;">
+                    <button type="button" onclick="ClasesModulo.enviarEntregaEstudiante(${c.id})" style="padding:0.4rem 0.8rem; background:#0284c7; color:#fff; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:0.8rem;">
+                      ${miEntrega ? 'Actualizar Enlace' : 'Enviar Entrega'}
+                    </button>
+                  </div>
+                ` : `
+                  <div style="margin-top:0.3rem; font-size:0.75rem; color:#94a3b8; font-style:italic;">
+                    🔒 Formulario cerrado por evaluación docente completada.
+                  </div>
+                `}
               </div>
             `;
           }
@@ -536,18 +546,23 @@ const ClasesModulo = {
     try {
       const { data: existe } = await supabase
         .from('entregas_actividades')
-        .select('id')
+        .select('id, nota')
         .eq('clase_id', claseId)
         .eq('estudiante_user', String(idEstudiante))
         .single();
 
       if (existe) {
+        if (existe.nota !== null && existe.nota !== undefined && existe.nota !== '') {
+          alert('🔒 Esta entrega ya ha sido calificada por el docente y no puede modificarse.');
+          return;
+        }
+
         const { error } = await supabase
           .from('entregas_actividades')
           .update({ url_entrega: url, created_at: new Date() })
           .eq('id', existe.id);
         if (error) throw error;
-        alert('✅ Entrega/Recuperatorio actualizado correctamente.');
+        alert('✅ Enlace actualizado correctamente.');
       } else {
         const { error } = await supabase
           .from('entregas_actividades')
