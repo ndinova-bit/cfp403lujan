@@ -234,8 +234,8 @@ const Trayectos = {
         card.style.flexDirection = 'column';
         card.style.justifyContent = 'space-between';
 
-        // Tanto docentes como estudiantes pueden hacer clic en la tarjeta dentro de la plataforma
-        if (!esVistaPublica && (esDocente || esEstudiante)) {
+        // Administradores, Docentes y Estudiantes pueden hacer clic para abrir el gestor
+        if (!esVistaPublica && (esDocente || esEstudiante || isAdmin)) {
           card.style.cursor = 'pointer';
           card.onclick = () => ClasesModulo.abrirGestor(trayecto.id, trayecto.nombre.replace(/'/g, "\\'"));
         }
@@ -266,7 +266,7 @@ const Trayectos = {
           </span>
         `;
 
-        if (esVistaPublica && !esDocente && !esEstudiante) {
+        if (esVistaPublica && !esDocente && !esEstudiante && !isAdmin) {
           card.innerHTML = `
             <div>
               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
