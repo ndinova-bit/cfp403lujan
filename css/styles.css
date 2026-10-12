@@ -1273,12 +1273,11 @@ main,
    OCULTAR COMPONENTES PÚBLICOS EN EL DASHBOARD
    ========================================== */
 
-/* Cuando el dashboard (#app-screen) está visible, oculta el landing y el header/footer público */
-body:has(#app-screen[style*="display: flex"]),
-body:has(#app-screen:not([style*="display: none"])) #landing-screen,
-body:has(#app-screen:not([style*="display: none"])) .public-landing,
-body:has(#app-screen:not([style*="display: none"])) header.main-header,
-body:has(#app-screen:not([style*="display: none"])) footer.main-footer {
+/* Cuando el dashboard está activo, oculta únicamente el landing público sin pisar el login */
+body.in-dashboard #landing-screen,
+body.in-dashboard .public-landing,
+body.in-dashboard header.main-header,
+body.in-dashboard footer.main-footer {
   display: none !important;
 }
 
