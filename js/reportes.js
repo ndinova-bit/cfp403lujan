@@ -1,4 +1,5 @@
 const ReportesModulo = {
+  // Exportar cualquier tabla visible a archivo CSV/Excel
   exportarExcelTabla(idTabla, nombreArchivo = 'Sabana_Notas.csv') {
     const tabla = document.getElementById(idTabla) || document.querySelector('table');
     if (!tabla) {
@@ -22,32 +23,55 @@ const ReportesModulo = {
     link.click();
   },
 
+  // Copia de seguridad integral en JSON (Todas las tablas de Supabase)
   async descargarBackupCompletoJSON() {
     try {
-      const [rClases, rEntregas, rInscripciones, rExcepciones, rAsistencias] = await Promise.all([
+      const [
+        rUsuarios,
+        rTrayectos,
+        rModulos,
+        rClases,
+        rInscripciones,
+        rEntregas,
+        rAsistencias,
+        rExcepciones,
+        rNotificaciones
+      ] = await Promise.all([
+        supabase.from('usuarios').select('*'),
+        supabase.from('trayectos').select('*'),
+        supabase.from('modulos').select('*'),
         supabase.from('clases').select('*'),
-        supabase.from('entregas_actividades').select('*'),
         supabase.from('inscripciones').select('*'),
+        supabase.from('entregas_actividades').select('*'),
+        supabase.from('asistencias').select('*'),
         supabase.from('excepciones_estudiantes').select('*'),
-        supabase.from('asistencias').select('*')
+        supabase.from('notificaciones').select('*')
       ]);
 
       const backup = {
         fecha_backup: new Date().toISOString(),
+        usuarios: rUsuarios.data || [],
+        trayectos: rTrayectos.data || [],
+        modulos: rModulos.data || [],
         clases: rClases.data || [],
-        entregas_actividades: rEntregas.data || [],
         inscripciones: rInscripciones.data || [],
+        entregas_actividades: rEntregas.data || [],
+        asistencias: rAsistencias.data || [],
         excepciones_estudiantes: rExcepciones.data || [],
-        asistencias: rAsistencias.data || []
+        notificaciones: rNotificaciones.data || []
       };
 
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backup, null, 2));
       const downloadAnchor = document.createElement('a');
+      const fechaHoy = new Date().toISOString().split('T')[0];
+
       downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `Backup_Plataforma_${new Date().toISOString().split('T')[0]}.json`);
+      downloadAnchor.setAttribute("download", `Backup_Plataforma_${fechaHoy}.json`);
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
+
+      alert('✅ Copia de seguridad integral descargada en JSON.');
 
     } catch (err) {
       console.error('Error al generar backup:', err);
