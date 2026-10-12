@@ -428,19 +428,50 @@ const ClasesModulo = {
           let estadoEntregaHTML = '';
           let bloqueadoPorNota = false;
 
-          if (miEntrega) {
+if (miEntrega) {
             const numNota = parseFloat(miEntrega.nota);
             const tieneNota = miEntrega.nota !== null && miEntrega.nota !== undefined && miEntrega.nota !== '';
 
             if (tieneNota) {
-              bloqueadoPorNota = true; // OPCIÓN 2: SI TIENE CALIFICACIÓN SE BLOQUEA LA EDICIÓN
+              bloqueadoPorNota = true;
               
               if (!isNaN(numNota) && numNota >= 70) {
+                // Lanzar confeti si acaba de ver la nota aprobada
+                if (window.confetti && !sessionStorage.getItem(`confetti_visto_${c.id}`)) {
+                  sessionStorage.setItem(`confetti_visto_${c.id}`, 'true');
+                  setTimeout(() => {
+                    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                  }, 300);
+                }
+
+                // Definir Insignia y Mensaje según el puntaje
+                let medalla = '🥇';
+                let tituloMedalla = '¡Desempeño Sobresaliente!';
+                let colorGlow = '#facc15';
+
+                if (numNota < 80) {
+                  medalla = '🥉';
+                  tituloMedalla = '¡Objetivo Logrado!';
+                  colorGlow = '#cd7f32';
+                } else if (numNota < 90) {
+                  medalla = '🥈';
+                  tituloMedalla = '¡Gran Trabajo!';
+                  colorGlow = '#c0c0c0';
+                }
+
                 estadoEntregaHTML = `
-                  <div style="font-size:0.82rem; color:#4ade80; margin-bottom:0.4rem; background:rgba(34,197,94,0.1); padding:0.6rem; border-radius:6px; border:1px solid rgba(34,197,94,0.3);">
-                    🏆 <strong>Calificación:</strong> ${numNota}% — <span style="font-weight:bold;">✅ MÓDULO ACREDITADO</span>
-                    <br><a href="${miEntrega.url_entrega}" target="_blank" style="color:#38bdf8; text-decoration:underline; display:inline-block; margin-top:0.2rem;">Ver Archivo Enviado</a>
-                    ${miEntrega.comentario_docente ? `<br>💬 <strong>Devolución:</strong> ${miEntrega.comentario_docente}` : ''}
+                  <div style="font-size:0.85rem; color:#4ade80; margin-bottom:0.4rem; background:linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(16,185,129,0.05) 100%); padding:0.8rem 1rem; border-radius:8px; border:1px solid rgba(34,197,94,0.4); box-shadow:0 4px 12px rgba(34,197,94,0.1); position:relative; overflow:hidden;">
+                    <div style="display:flex; align-items:center; gap:0.8rem; margin-bottom:0.4rem;">
+                      <span style="font-size:2rem; filter:drop-shadow(0 0 8px ${colorGlow}); flex-shrink:0;">${medalla}</span>
+                      <div>
+                        <strong style="color:#f8fafc; font-size:0.95rem; display:block;">${tituloMedalla}</strong>
+                        <span style="color:#4ade80; font-weight:700; font-size:1rem;">Calificación: ${numNota}% — ✅ MÓDULO ACREDITADO</span>
+                      </div>
+                    </div>
+                    <div style="border-top:1px solid rgba(255,255,255,0.08); padding-top:0.4rem; margin-top:0.4rem;">
+                      <a href="${miEntrega.url_entrega}" target="_blank" style="color:#38bdf8; text-decoration:underline; font-weight:600;">🔗 Ver Trabajo Enviado</a>
+                      ${miEntrega.comentario_docente ? `<br><span style="color:#cbd5e1; display:inline-block; margin-top:0.3rem;">💬 <strong>Devolución Docente:</strong> <em>"${miEntrega.comentario_docente}"</em></span>` : ''}
+                    </div>
                   </div>
                 `;
               } else {
@@ -454,7 +485,6 @@ const ClasesModulo = {
                 `;
               }
             } else {
-              // Enviado pero sin corregir (Puede modificar el enlace libremente)
               estadoEntregaHTML = `
                 <div style="font-size:0.82rem; color:#facc15; margin-bottom:0.4rem; background:rgba(250,204,21,0.1); padding:0.5rem; border-radius:6px; border:1px solid rgba(250,204,21,0.3);">
                   ⏳ <strong>Trabajo Enviado:</strong> Pendiente de corrección por el docente. <em>(Podés corregir o reemplazar tu enlace antes de que sea calificado).</em>
