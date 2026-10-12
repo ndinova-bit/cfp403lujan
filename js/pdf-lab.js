@@ -90,14 +90,12 @@ async function generarCertificadoPDF_v3(trayectoJson, alumnoNombre, usuarioDni, 
       }
     }
 
+    // --- CORRECCIÓN DE CENTRADO EXACTO DEL NOMBRE ---
+    const { width: pageWidth } = frente.getSize();
     const tamanoNombre = 14;
-    const xInicioLineaNombre = 130;
-    const xFinLineaNombre = 532;
-    const centroLineaNombre = xInicioLineaNombre + (xFinLineaNombre - xInicioLineaNombre) / 2;
-    
     const textoAlumno = alumno.toUpperCase();
     const anchoTextoAlumno = fuenteBold.widthOfTextAtSize(textoAlumno, tamanoNombre);
-    const xNombreCentrado = centroLineaNombre - (anchoTextoAlumno / 2);
+    const xNombreCentrado = (pageWidth - anchoTextoAlumno) / 2;
 
     frente.drawText(textoAlumno, { x: xNombreCentrado, y: 232, size: tamanoNombre, font: fuenteBold, color: colorNegro });
     frente.drawText(dniFormateado, { x: 115, y: 207, size: 12, font: fuenteRegular, color: colorNegro });
@@ -456,13 +454,13 @@ const CertificadosAdmin = {
           }
         }
 
-        // --- CONSTRUIR FRENTE ---
+        // --- CONSTRUIR FRENTE CON NOMBRE CENTRADO ---
+        const { width: pageWidth } = frente.getSize();
         const tamanoNombre = 14;
-        const centroLineaNombre = 130 + (532 - 130) / 2;
         const textoAlumno = alumnoNombre.toUpperCase();
         const anchoTextoAlumno = fuenteBold.widthOfTextAtSize(textoAlumno, tamanoNombre);
         
-        frente.drawText(textoAlumno, { x: centroLineaNombre - (anchoTextoAlumno / 2), y: 232, size: tamanoNombre, font: fuenteBold, color: colorNegro });
+        frente.drawText(textoAlumno, { x: (pageWidth - anchoTextoAlumno) / 2, y: 232, size: tamanoNombre, font: fuenteBold, color: colorNegro });
         frente.drawText(dniFormateado, { x: 115, y: 207, size: 12, font: fuenteRegular, color: colorNegro });
         dibujaRenglonPunteado(frente, (trayecto.nombre || '').toUpperCase(), 91, 182, 400, fuenteRegular, 12);
         frente.drawText(String(hsReloj), { x: 425, y: 182, size: 12, font: fuenteRegular, color: colorNegro });
