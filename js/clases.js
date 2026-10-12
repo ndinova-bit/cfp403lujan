@@ -1153,6 +1153,89 @@ const ClasesModulo = {
     }
   },
 
+  async importarEstudiantesCSV(archivoCSV) {
+    if (!archivoCSV) return;
+
+    const trayectoId = this.trayectoActualId;
+    if (!trayectoId) {
+      alert('⚠️ Seleccioná un trayecto para vincular la nómina de estudiantes.');
+      return;
+    }
+
+    const lector = new FileReader();
+    lector.readAsText(archivoCSV);
+
+    lector.onload = async (e) => {
+      const contenido = e.target.result;
+      const filas = contenido.split('\n').map(f => f.trim()).filter(f => f.length > 0);
+
+      if (filas.length <= 1) {
+        alert('El archivo CSV está vacío o solo contiene encabezados.');
+        return;
+      }
+
+      const encabezados = filas[0].toLowerCase().split(',').map(h => h.trim());
+      const idxDni = encabezados.indexOf('dni');
+      const idxNombre = encabezados.indexOf('nombre');
+      const idxApellido = encabezados.indexOf('apellido');
+      const idxEmail = encabezados.indexOf('email');
+
+      if (idxDni === -1) {
+        alert('❌ Error: El archivo CSV debe incluir obligatoriamente la columna "dni".');
+        return;
+      }
+
+      let procesados = 0;
+      let errores = 0;
+
+      for (let i = 1; i < filas.length; i++) {
+        const cols = filas[i].split(',').map(c => c.trim());
+        const dni = cols[idxDni];
+        const nombre = idxNombre !== -1 ? cols[idxNombre] : '';
+        const apellido = idxApellido !== -1 ? cols[idxApellido] : '';
+        const email = idxEmail !== -1 ? cols[idxEmail] : '';
+
+        if (!dni) continue;
+
+        try {
+          // 1. Registrar usuario con contraseña por defecto = DNI
+          const { error: errUser } = await supabase
+            .from('usuarios')
+            .upsert([{
+              usuario: String(dni),
+              dni: String(dni),
+              pass: typeof CryptoJS !== 'undefined' ? CryptoJS.SHA256(String(dni)).toString() : String(dni),
+              nombre: nombre,
+              apellido: apellido,
+              email: email,
+              rol: 'estudiante',
+              estado: 'ACTIVO'
+            }], { onConflict: 'usuario' });
+
+          if (errUser) throw errUser;
+
+          // 2. Vincular alumno directamente al trayecto actual
+          const { error: errInsc } = await supabase
+            .from('inscripciones')
+            .upsert([{
+              trayecto_id: Number(trayectoId),
+              estudiante_user: String(dni)
+            }], { onConflict: 'trayecto_id,estudiante_user' });
+
+          if (errInsc) throw errInsc;
+
+          procesados++;
+        } catch (err) {
+          console.error(`Error al procesar DNI ${dni}:`, err);
+          errores++;
+        }
+      }
+
+      alert(`✅ Proceso finalizado: ${procesados} estudiantes inscriptos correctamente al trayecto.${errores > 0 ? ` (${errores} errores)` : ''}`);
+      await this.cargarSabanaEstudiantes();
+    };
+  },
+
   cerrarGestor() {
     const modal = document.getElementById('modal-gestor-clases');
     if (modal) modal.style.display = 'none';
