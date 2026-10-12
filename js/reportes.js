@@ -144,7 +144,7 @@ const ReportesModulo = {
             window.location.reload();
           }
 
-        } catch (err) {
+       } catch (err) {
           console.error('Error al restaurar backup:', err);
           alert('❌ Error al procesar la restauración: ' + err.message);
         }
