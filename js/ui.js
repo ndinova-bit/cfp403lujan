@@ -3,6 +3,7 @@
    Archivo: js/ui.js
    ========================================================================== */
 
+
 const UI = {
   // Muestra la vista pública inicial
   showLanding() {
