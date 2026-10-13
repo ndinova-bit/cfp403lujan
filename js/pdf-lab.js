@@ -2,7 +2,6 @@
    js/pdf-lab.js - Generación e Impresión de Certificados PDF
    ========================================================================== */
 
-
 async function generarCertificadoPDF_v3(trayectoJson, alumnoNombre, usuarioDni, inscripcionId) {
   try {
     const trayecto = typeof trayectoJson === 'object' ? trayectoJson : JSON.parse(decodeURIComponent(trayectoJson));
