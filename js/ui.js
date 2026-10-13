@@ -244,12 +244,15 @@ const DashboardAdmin = {
         inscripciones = inscripciones.filter(i => idsTrayectosCiclo.includes(String(i.trayecto_id)));
       }
 
-      // 3. Calcular totales
+// 3. Calcular totales
       const cantTrayectos = trayectos.length;
       const cantInscriptos = inscripciones.length;
       
+      // Considera APROBADO/APTO si tiene estado 'APROBADO', acreditado true, o si ya tiene N° de Egresado asignado
       const cantAprobados = inscripciones.filter(i => 
-        i.estado === 'APROBADO' || i.acreditado === true || String(i.porcentaje || '').includes('100')
+        (i.estado && String(i.estado).toUpperCase() === 'APROBADO') || 
+        i.acreditado === true || 
+        (i.num_egresado && String(i.num_egresado).trim() !== '')
       ).length;
 
       const cantCertificados = inscripciones.filter(i => 
@@ -257,7 +260,7 @@ const DashboardAdmin = {
       ).length;
 
       const cantDesaprobados = inscripciones.filter(i => 
-        i.estado === 'DESAPROBADO' || i.estado === 'AUSENTE'
+        i.estado && (String(i.estado).toUpperCase() === 'DESAPROBADO' || String(i.estado).toUpperCase() === 'AUSENTE')
       ).length;
 
       // 4. Inyectar números en las tarjetas KPI
@@ -287,10 +290,17 @@ const DashboardAdmin = {
             <tbody>
         `;
 
-        trayectos.forEach(t => {
+trayectos.forEach(t => {
           const insT = inscripciones.filter(i => String(i.trayecto_id) === String(t.id));
           const inscrip = insT.length;
-          const aprob = insT.filter(i => i.estado === 'APROBADO' || i.acreditado === true || String(i.porcentaje || '').includes('100')).length;
+          
+          // Contabiliza aprobado si tiene el estado 'APROBADO', acreditado true, o si ya tiene N° de egresado asignado
+          const aprob = insT.filter(i => 
+            (i.estado && String(i.estado).toUpperCase() === 'APROBADO') || 
+            i.acreditado === true || 
+            (i.num_egresado && String(i.num_egresado).trim() !== '')
+          ).length;
+          
           const pct = inscrip > 0 ? Math.round((aprob / inscrip) * 100) : 0;
 
           htmlTabla += `
