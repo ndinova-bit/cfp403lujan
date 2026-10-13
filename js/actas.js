@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MÓDULO DE FICHAS DE CURSO / ACTAS DE EXAMEN (PASO 4 INTEGRADO)
+   MÓDULO DE FICHAS DE CURSO / ACTA DE EXAMEN OFICIAL (CFP N° 403)
    Archivo: js/actas.js
    ========================================================================== */
 
@@ -7,59 +7,35 @@ const ActasModulo = {
   trayectoSeleccionado: null,
 
   /**
-   * Conversión automática de notas numéricas a letras (Reemplaza función VBA/Excel)
-   * @param {string|number} nota 
-   * @returns {string} Nota expresada en palabras
+   * Conversión de nota numérica a texto en mayúsculas (Función númeroatexto del Excel)
    */
   numeroATexto(nota) {
-    if (nota === null || nota === undefined || nota === '' || nota === '-') return '-';
-    
-    // Normalizar texto o número
+    if (nota === null || nota === undefined || nota === '' || nota === '-') return '';
     const num = parseInt(String(nota).trim(), 10);
-    
     const equivalencias = {
-      1: 'UNO',
-      2: 'DOS',
-      3: 'TRES',
-      4: 'CUATRO',
-      5: 'CINCO',
-      6: 'SEIS',
-      7: 'SIETE',
-      8: 'OCHO',
-      9: 'NUEVE',
-      10: 'DIEZ'
+      1: 'UNO', 2: 'DOS', 3: 'TRES', 4: 'CUATRO', 5: 'CINCO',
+      6: 'SEIS', 7: 'SIETE', 8: 'OCHO', 9: 'NUEVE', 10: 'DIEZ'
     };
-
     return equivalencias[num] || String(nota).toUpperCase();
   },
 
-  /**
-   * Inicialización del módulo al seleccionar la pestaña
-   */
   async inicializar() {
     this.poblarCiclos();
     await this.cargarTrayectosActas();
   },
 
-  /**
-   * Carga el selector de ciclos lectivos
-   */
   poblarCiclos() {
     const select = document.getElementById('filtro-ciclo-actas');
     if (!select) return;
 
     const anioActual = new Date().getFullYear();
     let html = '';
-    
     for (let anio = anioActual + 1; anio >= 2024; anio--) {
       html += `<option value="${anio}" ${anio === anioActual ? 'selected' : ''}>Ciclo Lectivo ${anio}</option>`;
     }
     select.innerHTML = html;
   },
 
-  /**
-   * Carga la lista de trayectos pertenecientes al ciclo lectivo seleccionado
-   */
   async cargarTrayectosActas() {
     const contenedor = document.getElementById('contenedor-modulo-actas');
     const selectCiclo = document.getElementById('filtro-ciclo-actas');
@@ -67,7 +43,7 @@ const ActasModulo = {
 
     if (!contenedor) return;
 
-    contenedor.innerHTML = '<p style="color: #94a3b8; font-size: 0.9rem;">Cargando trayectos y actas...</p>';
+    contenedor.innerHTML = '<p style="color: #94a3b8; font-size: 0.9rem;">Cargando trayectos...</p>';
 
     try {
       const { data: trayectos, error } = await supabase
@@ -80,17 +56,15 @@ const ActasModulo = {
 
       if (!trayectos || trayectos.length === 0) {
         contenedor.innerHTML = `
-          <div style="text-align: center; padding: 2.5rem; background: rgba(15,23,42,0.4); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-            <p style="color: #94a3b8; margin: 0; font-size: 0.95rem;">No hay trayectos ni actas registradas para el Ciclo Lectivo ${ciclo}.</p>
+          <div style="text-align: center; padding: 2.5rem; background: rgba(15,23,42,0.4); border-radius: 8px;">
+            <p style="color: #94a3b8; margin: 0;">No hay trayectos ni actas para el Ciclo Lectivo ${ciclo}.</p>
           </div>
         `;
         return;
       }
 
-      // Renderizar solapas horizontales de trayectos
-      let html = `
-        <div style="display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 1.25rem;">
-      `;
+      // Solapas de Trayectos
+      let html = `<div style="display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 1.25rem;">`;
 
       trayectos.forEach((t, idx) => {
         const esActivo = idx === 0;
@@ -109,18 +83,15 @@ const ActasModulo = {
       contenedor.innerHTML = html;
 
       if (this.trayectoSeleccionado) {
-        await this.renderizarActa(this.trayectoSeleccionado);
+        await this.renderizarActaOficial(this.trayectoSeleccionado);
       }
 
     } catch (err) {
       console.error('Error al cargar actas:', err);
-      contenedor.innerHTML = '<p style="color: #f87171; font-size: 0.9rem;">Error al cargar las fichas de curso.</p>';
+      contenedor.innerHTML = '<p style="color: #f87171;">Error al cargar las actas.</p>';
     }
   },
 
-  /**
-   * Cambia la solapa activa del trayecto
-   */
   async seleccionarTrayecto(trayectoId, elementoBoton) {
     if (elementoBoton) {
       document.querySelectorAll('.btn-tab-trayecto').forEach(btn => {
@@ -131,148 +102,200 @@ const ActasModulo = {
       elementoBoton.classList.add('btn-gold');
     }
 
-    try {
-      const { data: trayecto, error } = await supabase
-        .from('trayectos')
-        .select('*, modulos(*)')
-        .eq('id', trayectoId)
-        .single();
+    const { data: trayecto } = await supabase
+      .from('trayectos')
+      .select('*, modulos(*)')
+      .eq('id', trayectoId)
+      .single();
 
-      if (error) throw error;
-
-      if (trayecto) {
-        this.trayectoSeleccionado = trayecto;
-        await this.renderizarActa(trayecto);
-      }
-    } catch (err) {
-      console.error('Error al seleccionar trayecto:', err);
+    if (trayecto) {
+      this.trayectoSeleccionado = trayecto;
+      await this.renderizarActaOficial(trayecto);
     }
   },
 
   /**
-   * Renderiza la planilla del acta oficial con hasta 10 módulos
+   * Renderizado réplica de la planilla oficial "ACTA EXAMEN" (hasta 10 Módulos)
    */
-  async renderizarActa(trayecto) {
+  async renderizarActaOficial(trayecto) {
     const vistaDetalle = document.getElementById('vista-acta-detalle');
     if (!vistaDetalle) return;
 
-    vistaDetalle.innerHTML = '<p style="color: #94a3b8; font-size: 0.9rem;">Cargando nómina y calificaciones por módulo...</p>';
+    vistaDetalle.innerHTML = '<p style="color: #94a3b8;">Generando Planilla de Acta Oficial...</p>';
 
     try {
-      // Cargar inscriptos en este trayecto
-      const { data: inscripciones, error } = await supabase
+      const { data: inscripciones } = await supabase
         .from('inscripciones')
         .select('*')
         .eq('trayecto_id', trayecto.id);
 
-      if (error) throw error;
-
       const alumnos = inscripciones || [];
       const modulos = trayecto.modulos || [];
-      const cantModulos = Math.min(modulos.length || 1, 10); // Límite máximo de 10 módulos
+      
+      // AJUSTE: Permite hasta 10 Módulos (ACTA I a ACTA X)
+      const cantModulos = Math.min(Math.max(modulos.length, 1), 10);
 
-      let html = `
-        <div style="background: rgba(15, 23, 42, 0.6); padding: 1.25rem; border-radius: 8px; margin-bottom: 1.25rem; border: 1px solid rgba(255,255,255,0.08);">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
-            <div>
-              <h4 style="margin: 0 0 0.25rem 0; color: #38bdf8; font-size: 1.05rem;">CFP N° 403 "OSCAR SMITH" - Luján (Lavalle 740)</h4>
-              <p style="margin: 0; font-size: 0.85rem; color: #cbd5e1;">
-                <strong>Curso / Trayecto:</strong> ${trayecto.nombre} | <strong>Resolución:</strong> ${trayecto.resolucion || 'S/D'}
-              </p>
-            </div>
-            <span style="font-size: 0.8rem; background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 0.35rem 0.75rem; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.3); font-weight: 600;">
-              Módulos Activos: ${cantModulos} / 10
-            </span>
+      const alumnosPorPagina = 30;
+      const totalPaginas = Math.max(Math.ceil(alumnos.length / alumnosPorPagina), 1);
+
+      let htmlContenido = `
+        <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <span style="color: #cbd5e1; font-size: 0.9rem;">Impresión oficial con formato institucional de 30 estudiantes por hoja.</span>
+          <div style="display: flex; gap: 0.5rem;">
+            <button type="button" class="btn btn-gold" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+            <button type="button" class="btn btn-secondary" onclick="ReportesModulo.exportarExcelTabla('tabla-acta-oficial-1', 'Acta_Examen_${trayecto.nombre.replaceAll(' ', '_')}.csv')">📥 Exportar CSV</button>
           </div>
         </div>
-
-        <div style="overflow-x: auto; background: #0f172a; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
-          <table id="tabla-acta-oficial" style="width: 100%; border-collapse: collapse; font-size: 0.82rem; text-align: left;">
-            <thead>
-              <tr style="background: #1e293b; color: #94a3b8; border-bottom: 2px solid rgba(255,255,255,0.1);">
-                <th style="padding: 0.75rem; text-align: center; border-right: 1px solid rgba(255,255,255,0.05);">N° Eg.</th>
-                <th style="padding: 0.75rem; text-align: center; border-right: 1px solid rgba(255,255,255,0.05);">Orden</th>
-                <th style="padding: 0.75rem; border-right: 1px solid rgba(255,255,255,0.05);">Apellido y Nombres</th>
       `;
 
-      // Columnas dobles de Módulos (Nota y Texto)
-      for (let i = 1; i <= cantModulos; i++) {
-        const nombreMod = modulos[i - 1] ? (modulos[i - 1].nombre || `MÓDULO ${i}`) : `MÓDULO ${i}`;
-        html += `<th style="padding: 0.75rem; text-align: center; border-right: 1px solid rgba(255,255,255,0.05);" colspan="2" title="${nombreMod}">ACTA ${i}</th>`;
-      }
+      // Renderizar páginas de 30 estudiantes
+      for (let pag = 0; pag < totalPaginas; pag++) {
+        const alumnosPagina = alumnos.slice(pag * alumnosPorPagina, (pag + 1) * alumnosPorPagina);
+        const hoy = new Date();
 
-      html += `
-              </tr>
-              <tr style="background: #0f172a; color: #64748b; font-size: 0.72rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                <th style="border-right: 1px solid rgba(255,255,255,0.05);"></th>
-                <th style="border-right: 1px solid rgba(255,255,255,0.05);"></th>
-                <th style="border-right: 1px solid rgba(255,255,255,0.05);"></th>
-      `;
+        htmlContenido += `
+          <!-- CONTENEDOR DE HOJA OFICIAL (Fondo blanco, formato impreso) -->
+          <div class="hoja-acta-oficial" style="background: #ffffff; color: #000000; padding: 20px; border-radius: 4px; font-family: 'Inter', Arial, sans-serif; box-shadow: 0 4px 15px rgba(0,0,0,0.3); margin-bottom: 2rem; border: 1px solid #ccc; overflow-x: auto;">
+            
+            <!-- ENCABEZADO SUPERIOR DGCyE -->
+            <div style="text-align: center; font-size: 11px; font-weight: bold; border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 10px;">
+              Dirección General de Cultura y Educación - Dirección de Formación Profesional
+            </div>
 
-      for (let i = 1; i <= cantModulos; i++) {
-        html += `
-          <th style="text-align: center; padding: 0.3rem;">Num</th>
-          <th style="text-align: center; padding: 0.3rem; border-right: 1px solid rgba(255,255,255,0.05);">Letras</th>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <h3 style="margin: 0; font-size: 14px; font-weight: bold; color: #000;">CFP N° 403 "OSCAR SMITH"</h3>
+              <h2 style="margin: 0; font-size: 16px; font-weight: bold; text-decoration: underline; color: #000;">ACTA DE EXAMEN</h2>
+            </div>
+
+            <!-- TEXTO FORMAL DEL ACTA -->
+            <div style="font-size: 11px; line-height: 1.4; margin-bottom: 12px; text-align: justify;">
+              En dependencias del Centro de Formación Profesional N° 403 de la localidad de Luján domicilio en <strong>Lavalle 740</strong>, 
+              a los <u>&nbsp; ${hoy.getDate()} &nbsp;</u> días del mes de <u>&nbsp; ${hoy.toLocaleString('es-AR', { month: 'long' })} &nbsp;</u> del año <u>&nbsp; ${hoy.getFullYear()} &nbsp;</u> 
+              se reúne la Comisión Examinadora, con el objetivo de llevar a cabo la evaluación final a los alumnos del curso cuya Especialidad y N° están detallados en la presente, llegando al resultado que se consigna a continuación:
+              <br><br>
+              <strong>ESPECIALIDAD:</strong> <u>&nbsp; ${trayecto.nombre.toUpperCase()} &nbsp;</u> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+              <strong>CURSO Nº:</strong> <u>&nbsp; ${trayecto.id} &nbsp;</u>
+            </div>
+
+            <!-- TABLA PRINCIPAL DE NOTAS -->
+            <table id="tabla-acta-oficial-${pag+1}" style="width: 100%; border-collapse: collapse; font-size: 9.5px; color: #000; border: 1px solid #000;">
+              <thead>
+                <tr style="background: #f0f0f0; text-align: center; font-weight: bold;">
+                  <td rowspan="2" style="border: 1px solid #000; width: 55px; padding: 3px;">N°<br>Egresado</td>
+                  <td rowspan="2" style="border: 1px solid #000; width: 22px; padding: 3px;">N°</td>
+                  <td rowspan="2" style="border: 1px solid #000; text-align: left; padding: 3px; min-width: 150px;">APELLIDO Y NOMBRES</td>
         `;
-      }
 
-      html += `</tr></thead><tbody>`;
+        for (let m = 1; m <= cantModulos; m++) {
+          htmlContenido += `<td colspan="2" style="border: 1px solid #000; padding: 2px;">ACTA ${this.romano(m)}</td>`;
+        }
 
-      if (alumnos.length === 0) {
-        html += `
-          <tr>
-            <td colspan="${3 + (cantModulos * 2)}" style="text-align: center; padding: 2.5rem; color: #94a3b8;">
-              No hay estudiantes inscriptos en este trayecto.
-            </td>
-          </tr>
+        htmlContenido += `
+                  <td rowspan="2" style="border: 1px solid #000; width: 70px; padding: 3px;">DOCUMENTO<br>DNI N°</td>
+                </tr>
+                <tr style="background: #fcfcfc; text-align: center; font-size: 8.5px; font-weight: bold;">
         `;
-      } else {
-        alumnos.forEach((al, idx) => {
-          const numEg = al.num_egresado || al.numero_egresado || '-';
-          const nombreAlumno = al.estudiante_nombre || al.estudiante_user || `Estudiante #${idx + 1}`;
-          
-          // Nota registrada o valor por defecto
-          const notaDefecto = al.nota || '8';
 
-          html += `
-            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-              <td style="padding: 0.6rem; text-align: center; font-weight: 700; color: #fde047; border-right: 1px solid rgba(255,255,255,0.05);">${numEg}</td>
-              <td style="padding: 0.6rem; text-align: center; color: #94a3b8; border-right: 1px solid rgba(255,255,255,0.05);">${idx + 1}</td>
-              <td style="padding: 0.6rem; color: #f8fafc; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.05);">${nombreAlumno}</td>
-          `;
+        for (let m = 1; m <= cantModulos; m++) {
+          htmlContenido += `<td style="border: 1px solid #000; width: 22px;">N°</td><td style="border: 1px solid #000; width: 50px;">NUMERO</td>`;
+        }
 
-          // Generación de columnas de notas numéricas y convertidas a texto
-          for (let m = 1; m <= cantModulos; m++) {
-            const notaTexto = ActasModulo.numeroATexto(notaDefecto);
-            html += `
-              <td style="padding: 0.6rem; text-align: center; color: #4ade80; font-weight: 700;">${notaDefecto}</td>
-              <td style="padding: 0.6rem; text-align: center; color: #cbd5e1; font-size: 0.75rem; border-right: 1px solid rgba(255,255,255,0.05);">${notaTexto}</td>
+        htmlContenido += `</tr></thead><tbody>`;
+
+        // Llenar filas (30 por hoja)
+        let aprobadosContador = 0;
+        let desaprobadosContador = 0;
+        let ausentesContador = 0;
+
+        for (let i = 0; i < 30; i++) {
+          const alumno = alumnosPagina[i];
+          const numOrden = (pag * alumnosPorPagina) + (i + 1);
+
+          if (alumno) {
+            const numEg = alumno.num_egresado || alumno.numero_egresado || '';
+            const nombreCompleto = (alumno.estudiante_nombre || alumno.estudiante_user || '').toUpperCase();
+            const dniVal = alumno.estudiante_dni || alumno.estudiante_user || '';
+            const notaVal = alumno.nota || '8';
+            const notaTexto = this.numeroATexto(notaVal);
+
+            if (parseInt(notaVal, 10) >= 7) aprobadosContador++;
+            else if (notaVal === '-') ausentesContador++;
+            else desaprobadosContador++;
+
+            htmlContenido += `
+              <tr style="height: 18px; text-align: center;">
+                <td style="border: 1px solid #000; font-weight: bold;">${numEg}</td>
+                <td style="border: 1px solid #000;">${numOrden}</td>
+                <td style="border: 1px solid #000; text-align: left; padding-left: 4px; font-weight: 500;">${nombreCompleto}</td>
             `;
-          }
 
-          html += `</tr>`;
-        });
+            for (let m = 1; m <= cantModulos; m++) {
+              htmlContenido += `
+                <td style="border: 1px solid #000; font-weight: bold;">${notaVal}</td>
+                <td style="border: 1px solid #000; font-size: 8px;">${notaTexto}</td>
+              `;
+            }
+
+            htmlContenido += `<td style="border: 1px solid #000;">${dniVal}</td></tr>`;
+
+          } else {
+            // Filas vacías para completar los 30 renglones oficiales de la hoja
+            htmlContenido += `
+              <tr style="height: 18px;">
+                <td style="border: 1px solid #000;"></td>
+                <td style="border: 1px solid #000; text-align: center; color: #888;">${numOrden}</td>
+                <td style="border: 1px solid #000;"></td>
+            `;
+            for (let m = 1; m <= cantModulos; m++) {
+              htmlContenido += `<td style="border: 1px solid #000;"></td><td style="border: 1px solid #000;"></td>`;
+            }
+            htmlContenido += `<td style="border: 1px solid #000;"></td></tr>`;
+          }
+        }
+
+        htmlContenido += `</tbody></table>`;
+
+        // PIE DE HOJA (Cuadro de Resumen Estadístico y Bloque de Firmas)
+        htmlContenido += `
+          <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 9.5px;">
+            <div>
+              <p style="margin: 0; font-size: 8.5px; font-style: italic;">* Se considerará aprobado con un mínimo de 70 puntos.</p>
+              <br>
+              <!-- BLOQUE DE FIRMAS -->
+              <div style="display: flex; gap: 30px; margin-top: 20px; text-align: center;">
+                <div>______________________<br><strong>Vocal 1</strong></div>
+                <div>______________________<br><strong>Presidente</strong></div>
+                <div>______________________<br><strong>Director</strong></div>
+                <div>______________________<br><strong>Inspector</strong></div>
+              </div>
+            </div>
+
+            <!-- CUADRO ESTADÍSTICO DE RESULTADOS -->
+            <table style="border-collapse: collapse; font-size: 9px; border: 1px solid #000; width: 135px; text-align: left;">
+              <tr><td style="border: 1px solid #000; padding: 2px 4px;">Inscriptos:</td><td style="border: 1px solid #000; padding: 2px 4px; font-weight: bold; text-align: right;">${alumnosPagina.length}</td></tr>
+              <tr><td style="border: 1px solid #000; padding: 2px 4px;">Examinados:</td><td style="border: 1px solid #000; padding: 2px 4px; font-weight: bold; text-align: right;">${alumnosPagina.length - ausentesContador}</td></tr>
+              <tr><td style="border: 1px solid #000; padding: 2px 4px;">Ausentes:</td><td style="border: 1px solid #000; padding: 2px 4px; font-weight: bold; text-align: right;">${ausentesContador}</td></tr>
+              <tr><td style="border: 1px solid #000; padding: 2px 4px;">Desaprobados:</td><td style="border: 1px solid #000; padding: 2px 4px; font-weight: bold; text-align: right;">${desaprobadosContador}</td></tr>
+              <tr style="background: #f0f0f0;"><td style="border: 1px solid #000; padding: 2px 4px; font-weight: bold;">APROBADOS:</td><td style="border: 1px solid #000; padding: 2px 4px; font-weight: bold; text-align: right;">${aprobadosContador}</td></tr>
+            </table>
+          </div>
+
+          </div> <!-- FIN HOJA OFICIAL -->
+        `;
       }
 
-      html += `</tbody></table></div>`;
-
-      // Botón de Exportación a Excel/CSV usando ReportesModulo
-      html += `
-        <div style="margin-top: 1.25rem; display: flex; justify-content: flex-end;">
-          <button type="button" class="btn btn-gold" style="padding: 0.6rem 1.2rem; font-weight: 600;" onclick="ReportesModulo.exportarExcelTabla('tabla-acta-oficial', 'Acta_Examen_${trayecto.nombre.replaceAll(' ', '_')}.csv')">
-            📥 Exportar Acta Oficial a Excel / CSV
-          </button>
-        </div>
-      `;
-
-      vistaDetalle.innerHTML = html;
+      vistaDetalle.innerHTML = htmlContenido;
 
     } catch (err) {
-      console.error('Error al renderizar la planilla del acta:', err);
-      vistaDetalle.innerHTML = '<p style="color: #f87171; font-size: 0.9rem;">Error al cargar los datos del acta.</p>';
+      console.error('Error al renderizar el acta oficial:', err);
+      vistaDetalle.innerHTML = '<p style="color: #f87171;">Error al generar el acta oficial.</p>';
     }
+  },
+
+  romano(n) {
+    const map = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+    return map[n - 1] || String(n);
   }
 };
 
-// Exportación global
 window.ActasModulo = ActasModulo;
