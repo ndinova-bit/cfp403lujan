@@ -22,8 +22,19 @@ async function generarCertificadoPDF_v3(trayectoJson, alumnoNombre, usuarioDni, 
       numEgresadoDef = egVal;
     }
 
+    // 1. Preguntar Fecha de Emisión (Frente del Certificado)
+    const { value: fEmision } = await Swal.fire({
+      title: 'Fecha de Emisión (Frente)',
+      input: 'text',
+      inputValue: '13 de Octubre de 2026',
+      inputLabel: 'Ingrese la Fecha de Emisión (día, mes y año para el frente):',
+      showCancelButton: true
+    });
+    if (!fEmision) return;
+
+    // 2. Preguntar Fecha de Egreso (Reverso del Certificado)
     const { value: fEgreso } = await Swal.fire({
-      title: 'Fecha de Egreso',
+      title: 'Fecha de Egreso (Reverso)',
       input: 'text',
       inputValue: '27 de Noviembre de 2026',
       inputLabel: 'Ingrese Fecha de Egreso para el acta:',
@@ -55,7 +66,6 @@ async function generarCertificadoPDF_v3(trayectoJson, alumnoNombre, usuarioDni, 
     }
 
     let hsReloj = trayecto.horas || '60';
-    let fechaEmision = trayecto.fecha_entrega || '23 de Septiembre de 2026';
 
     const resBytes = await fetch('./plantilla.pdf');
     if (!resBytes.ok) throw new Error('No se encontró plantilla.pdf en el servidor.');
@@ -80,9 +90,10 @@ async function generarCertificadoPDF_v3(trayectoJson, alumnoNombre, usuarioDni, 
       }
     }
 
-    let diaE = '23', mesE = 'Septiembre', anioE = '26';
-    if (fechaEmision) {
-      const partesF = fechaEmision.split('de');
+    // Procesar fecha ingresada para el Frente
+    let diaE = '13', mesE = 'Octubre', anioE = '26';
+    if (fEmision) {
+      const partesF = fEmision.split('de');
       if (partesF.length === 3) {
         diaE = partesF[0].trim();
         mesE = partesF[1].trim();
@@ -90,7 +101,7 @@ async function generarCertificadoPDF_v3(trayectoJson, alumnoNombre, usuarioDni, 
       }
     }
 
-    // --- CORRECCIÓN DE CENTRADO EXACTO DEL NOMBRE ---
+    // --- CENTRADO GEOMÉTRICO DEL NOMBRE ---
     const { width: pageWidth } = frente.getSize();
     const tamanoNombre = 14;
     const textoAlumno = alumno.toUpperCase();
@@ -239,7 +250,6 @@ const emitirCertificadoPDF = (opts) => {
    ========================================================================== */
 
 const CertificadosAdmin = {
-  // Guardar persistentemente el N° de Egresado en Supabase al editar la casilla
   async guardarNumEgresado(inscripcionId, valor) {
     try {
       const { error } = await supabase
@@ -368,7 +378,7 @@ const CertificadosAdmin = {
     }
   },
 
-  // Generación en lote dividida en 2 archivos PDF independientes: Frentes y Reversos
+  // Generación en lote dividida en 2 archivos PDF independientes
   async emitirTodosPorTrayecto(trayectoId) {
     try {
       const [rTrayectos, rInscripciones, rUsuarios, rModulos] = await Promise.all([
@@ -388,12 +398,22 @@ const CertificadosAdmin = {
         return;
       }
 
-      // Pregunta la fecha una única vez
+      // 1. Preguntar Fecha de Emisión del Frente para el lote
+      const { value: fEmision } = await Swal.fire({
+        title: 'Fecha de Emisión en Lote (Frente)',
+        input: 'text',
+        inputValue: '13 de Octubre de 2026',
+        inputLabel: `Ingrese la Fecha de Emisión para los ${inscripciones.length} certificados de ${trayecto.nombre}:`,
+        showCancelButton: true
+      });
+      if (!fEmision) return;
+
+      // 2. Preguntar Fecha de Egreso del Reverso para el lote
       const { value: fEgreso } = await Swal.fire({
-        title: 'Fecha de Egreso en Lote',
+        title: 'Fecha de Egreso en Lote (Reverso)',
         input: 'text',
         inputValue: '27 de Noviembre de 2026',
-        inputLabel: `Ingrese la Fecha de Egreso para los ${inscripciones.length} certificados de ${trayecto.nombre}:`,
+        inputLabel: `Ingrese la Fecha de Egreso para el acta de los ${inscripciones.length} certificados:`,
         showCancelButton: true
       });
       if (!fEgreso) return;
@@ -402,7 +422,6 @@ const CertificadosAdmin = {
       if (!resBytes.ok) throw new Error('No se encontró plantilla.pdf en el servidor.');
       const plantillaBytes = await resBytes.arrayBuffer();
 
-      // Creamos dos documentos PDF separados
       const pdfFrentes = await PDFLib.PDFDocument.create();
       const pdfReversos = await PDFLib.PDFDocument.create();
 
@@ -443,10 +462,9 @@ const CertificadosAdmin = {
         }
 
         let hsReloj = trayecto.horas || '60';
-        let fechaEmision = trayecto.fecha_entrega || '23 de Septiembre de 2026';
-        let diaE = '23', mesE = 'Septiembre', anioE = '26';
-        if (fechaEmision) {
-          const partesF = fechaEmision.split('de');
+        let diaE = '13', mesE = 'Octubre', anioE = '26';
+        if (fEmision) {
+          const partesF = fEmision.split('de');
           if (partesF.length === 3) {
             diaE = partesF[0].trim();
             mesE = partesF[1].trim();
@@ -454,7 +472,7 @@ const CertificadosAdmin = {
           }
         }
 
-        // --- CONSTRUIR FRENTE CON NOMBRE CENTRADO ---
+        // --- CONSTRUIR FRENTE ---
         const { width: pageWidth } = frente.getSize();
         const tamanoNombre = 14;
         const textoAlumno = alumnoNombre.toUpperCase();
@@ -572,12 +590,11 @@ const CertificadosAdmin = {
         }
       }
 
-      // 1. Abrir/Descargar PDF Lote de Frentes
+      // Abrir PDFs Lote de Frentes y Reversos
       const pdfFrentesBytes = await pdfFrentes.save();
       const blobFrentes = new Blob([pdfFrentesBytes], { type: 'application/pdf' });
       window.open(URL.createObjectURL(blobFrentes), '_blank');
 
-      // 2. Abrir/Descargar PDF Lote de Reversos
       const pdfReversosBytes = await pdfReversos.save();
       const blobReversos = new Blob([pdfReversosBytes], { type: 'application/pdf' });
       window.open(URL.createObjectURL(blobReversos), '_blank');
