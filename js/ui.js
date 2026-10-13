@@ -3,7 +3,6 @@
    Archivo: js/ui.js
    ========================================================================== */
 
-
 const UI = {
   // Muestra la vista pública inicial
   showLanding() {
@@ -100,11 +99,13 @@ const UI = {
     const btnNuevoTrayecto = document.getElementById('btn-nuevo-trayecto');
     const btnCertificados = document.getElementById('btn-certificados');
     const btnUsuarios = document.getElementById('btn-usuarios');
+    const btnActas = document.getElementById('btn-actas'); // <-- NUEVO BOTÓN AGREGADO
 
     if (btnDashboard) btnDashboard.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
     if (btnNuevoTrayecto) btnNuevoTrayecto.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
     if (btnCertificados) btnCertificados.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
     if (btnUsuarios) btnUsuarios.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
+    if (btnActas) btnActas.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important'); // <-- VISIBILIDAD DE ACTAS
 
     document.querySelectorAll('.admin-only').forEach(el => {
       el.style.setProperty('display', isAdmin ? (el.tagName === 'BUTTON' ? 'inline-flex' : 'block') : 'none', 'important');
@@ -123,7 +124,7 @@ const UI = {
     const perfil = perfilRaw ? JSON.parse(perfilRaw) : {};
     const isAdmin = (perfil.rol || '').toLowerCase().trim() === 'admin';
 
-    if (!isAdmin && (tabId === 'dashboard' || tabId === 'nuevo-trayecto' || tabId === 'certificados' || tabId === 'usuarios')) {
+    if (!isAdmin && (tabId === 'dashboard' || tabId === 'nuevo-trayecto' || tabId === 'certificados' || tabId === 'usuarios' || tabId === 'actas')) {
       tabId = 'trayectos';
     }
 
@@ -150,6 +151,7 @@ const UI = {
       const titles = {
         'dashboard': 'Dashboard',
         'trayectos': isAdmin ? 'Trayectos Formativos' : 'Mis Trayectos Formativos',
+        'actas': 'Fichas de Curso / Actas de Examen', // <-- TÍTULO DE LA SECCIÓN
         'nuevo-trayecto': 'Cargar Trayecto',
         'certificados': 'Emitir Certificados',
         'usuarios': 'Usuarios y Roles'
@@ -159,6 +161,10 @@ const UI = {
 
     if (tabId === 'usuarios' && window.UsuariosAdmin) {
       window.UsuariosAdmin.cargarUsuarios();
+    }
+
+    if (tabId === 'actas' && window.ActasModulo) {
+      window.ActasModulo.inicializar(); // <-- INICIALIZACIÓN DE ACTAS
     }
 
     if (tabId === 'trayectos') {
@@ -183,7 +189,7 @@ const UI = {
     }
   },
 
-// Agrega una fila de módulo en el formulario
+  // Agrega una fila de módulo en el formulario
   agregarFilaModulo() {
     const contenedor = document.getElementById('contenedor-modulos');
     if (!contenedor) return;
@@ -245,7 +251,7 @@ const DashboardAdmin = {
         inscripciones = inscripciones.filter(i => idsTrayectosCiclo.includes(String(i.trayecto_id)));
       }
 
-     // 3. Criterio de Aprobado / Apto
+      // 3. Criterio de Aprobado / Apto
       const esAprobado = (i) => {
         const est = String(i.estado || '').toUpperCase();
         if (est === 'DESAPROBADO' || est === 'AUSENTE') return false;
