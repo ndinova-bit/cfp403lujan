@@ -407,6 +407,15 @@ const CertificadosAdmin = {
         return;
       }
 
+      // Ordenar lote alfabéticamente por Apellido y Nombre antes de generar el PDF
+      inscripciones.sort((a, b) => {
+        const usrA = usuarios.find(u => String(u.usuario) === String(a.estudiante_user)) || {};
+        const usrB = usuarios.find(u => String(u.usuario) === String(b.estudiante_user)) || {};
+        const nombreA = `${usrA.apellido || ''} ${usrA.nombre || ''}`.trim().toLowerCase();
+        const nombreB = `${usrB.apellido || ''} ${usrB.nombre || ''}`.trim().toLowerCase();
+        return nombreA.localeCompare(nombreB);
+      });
+
       // 1. Preguntar Fecha de Emisión del Frente para el lote
       const { value: fEmision } = await Swal.fire({
         title: 'Fecha de Emisión en Lote (Frente)',
