@@ -182,7 +182,7 @@ const UI = {
     }
   },
 
-  // Agrega una fila de módulo en el formulario
+// Agrega una fila de módulo en el formulario
   agregarFilaModulo() {
     const contenedor = document.getElementById('contenedor-modulos');
     if (!contenedor) return;
@@ -210,3 +210,117 @@ const UI = {
 };
 
 window.UI = UI;
+
+/* ==========================================================================
+   LÓGICA DINÁMICA DEL DASHBOARD ANALÍTICO (SUPABASE)
+   ========================================================================== */
+
+const DashboardAdmin = {
+  async cargarEstadisticas() {
+    const selectCiclo = document.getElementById('filtro-ciclo-dashboard');
+    const cicloSeleccionado = selectCiclo ? selectCiclo.value : '2026';
+
+    const elTrayectos = document.getElementById('stat-count-trayectos');
+    const elInscriptos = document.getElementById('stat-count-inscriptos');
+    const elAprobados = document.getElementById('stat-count-aprobados');
+    const elCertificados = document.getElementById('stat-count-certificados');
+    const elDesaprobados = document.getElementById('stat-count-desaprobados');
+    const elDesglose = document.getElementById('desglose-trayectos-dashboard');
+
+    try {
+      // 1. Traer datos desde Supabase
+      const [rTrayectos, rInscripciones] = await Promise.all([
+        supabase.from('trayectos').select('*'),
+        supabase.from('inscripciones').select('*')
+      ]);
+
+      let trayectos = rTrayectos.data || [];
+      let inscripciones = rInscripciones.data || [];
+
+      // 2. Filtrar por Ciclo Lectivo
+      if (cicloSeleccionado !== 'TODOS') {
+        trayectos = trayectos.filter(t => String(t.ciclo_lectivo || '2026') === String(cicloSeleccionado));
+        const idsTrayectosCiclo = trayectos.map(t => String(t.id));
+        inscripciones = inscripciones.filter(i => idsTrayectosCiclo.includes(String(i.trayecto_id)));
+      }
+
+      // 3. Calcular totales
+      const cantTrayectos = trayectos.length;
+      const cantInscriptos = inscripciones.length;
+      
+      const cantAprobados = inscripciones.filter(i => 
+        i.estado === 'APROBADO' || i.acreditado === true || String(i.porcentaje || '').includes('100')
+      ).length;
+
+      const cantCertificados = inscripciones.filter(i => 
+        i.num_egresado && String(i.num_egresado).trim() !== ''
+      ).length;
+
+      const cantDesaprobados = inscripciones.filter(i => 
+        i.estado === 'DESAPROBADO' || i.estado === 'AUSENTE'
+      ).length;
+
+      // 4. Inyectar números en las tarjetas KPI
+      if (elTrayectos) elTrayectos.textContent = cantTrayectos;
+      if (elInscriptos) elInscriptos.textContent = cantInscriptos;
+      if (elAprobados) elAprobados.textContent = cantAprobados;
+      if (elCertificados) elCertificados.textContent = cantCertificados;
+      if (elDesaprobados) elDesaprobados.textContent = cantDesaprobados;
+
+      // 5. Renderizar la tabla de desglose
+      if (elDesglose) {
+        if (trayectos.length === 0) {
+          elDesglose.innerHTML = '<p style="color: #94a3b8; font-size: 0.85rem; padding: 0.5rem;">No hay trayectos registrados para este ciclo lectivo.</p>';
+          return;
+        }
+
+        let htmlTabla = `
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); color: #94a3b8;">
+                <th style="padding: 0.5rem;">Trayecto</th>
+                <th style="padding: 0.5rem; text-align: center;">Inscriptos</th>
+                <th style="padding: 0.5rem; text-align: center;">Aprobados</th>
+                <th style="padding: 0.5rem; text-align: right;">Rendimiento</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        trayectos.forEach(t => {
+          const insT = inscripciones.filter(i => String(i.trayecto_id) === String(t.id));
+          const inscrip = insT.length;
+          const aprob = insT.filter(i => i.estado === 'APROBADO' || i.acreditado === true || String(i.porcentaje || '').includes('100')).length;
+          const pct = inscrip > 0 ? Math.round((aprob / inscrip) * 100) : 0;
+
+          htmlTabla += `
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+              <td style="padding: 0.6rem 0.5rem; font-weight: 600; color: #f8fafc;">${(t.nombre || 'Sin Nombre').toUpperCase()}</td>
+              <td style="padding: 0.6rem 0.5rem; text-align: center;">${inscrip}</td>
+              <td style="padding: 0.6rem 0.5rem; text-align: center; color: #4ade80;">${aprob}</td>
+              <td style="padding: 0.6rem 0.5rem; text-align: right; color: #fde047; font-weight: 700;">${pct}%</td>
+            </tr>
+          `;
+        });
+
+        htmlTabla += '</tbody></table>';
+        elDesglose.innerHTML = htmlTabla;
+      }
+
+    } catch (err) {
+      console.error('Error al calcular métricas del Dashboard:', err);
+    }
+  }
+};
+
+window.DashboardAdmin = DashboardAdmin;
+
+// Cargar estadísticas automáticamente al iniciar o al presionar la pestaña Dashboard
+document.addEventListener('DOMContentLoaded', () => {
+  const btnDashboard = document.getElementById('btn-dashboard');
+  if (btnDashboard) {
+    btnDashboard.addEventListener('click', () => DashboardAdmin.cargarEstadisticas());
+  }
+  // Carga inicial tras refrescar pantalla
+  setTimeout(() => DashboardAdmin.cargarEstadisticas(), 500);
+});
