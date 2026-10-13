@@ -244,11 +244,16 @@ const DashboardAdmin = {
         inscripciones = inscripciones.filter(i => idsTrayectosCiclo.includes(String(i.trayecto_id)));
       }
 
-      // 3. Criterio de Aprobado / Apto
+     // 3. Criterio de Aprobado / Apto
       const esAprobado = (i) => {
         const est = String(i.estado || '').toUpperCase();
         if (est === 'DESAPROBADO' || est === 'AUSENTE') return false;
-        return true; // Todos los inscriptos activos en la nómina son aptos/aprobados
+
+        const tieneNumEgresado = i.num_egresado && String(i.num_egresado).trim() !== '';
+        const notaNum = parseFloat(String(i.nota || i.porcentaje || '0').replace('%', ''));
+        const notaAprobada = !isNaN(notaNum) && notaNum >= 70;
+
+        return tieneNumEgresado || est === 'APROBADO' || est === 'ACREDITADO' || i.acreditado === true || notaAprobada;
       };
 
       const cantTrayectos = trayectos.length;
