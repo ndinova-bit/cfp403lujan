@@ -503,53 +503,9 @@
               </button>
             </div>
 
-            <!-- Contenedor donde se renderizan las tarjetas/tablas por Trayecto -->
+           <!-- Contenedor donde se renderizan las tarjetas/tablas por Trayecto -->
             <div id="contenedor-certificados-trayectos">
               <!-- Carga dinámica desde js/pdf-lab.js -->
-            </div>
-          </div>
-        </section>
-
-            <!-- TABLA DE ESTUDIANTES PARA ASIGNACIÓN DE N° DE EGRESADO -->
-            <div style="overflow-x: auto; margin-top: 1rem;">
-              <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
-                <thead>
-                  <tr style="border-bottom: 2px solid rgba(255,255,255,0.1); color: #94a3b8;">
-                    <th style="padding: 0.75rem;">Estudiante / DNI</th>
-                    <th style="padding: 0.75rem;">Trayecto Formativo</th>
-                    <th style="padding: 0.75rem;">Nota Final</th>
-                    <th style="padding: 0.75rem;">Estado</th>
-                    <th style="padding: 0.75rem;">N° de Egresado</th>
-                    <th style="padding: 0.75rem; text-align: right;">Acción</th>
-                  </tr>
-                </thead>
-                <tbody id="tabla-nomina-certificados">
-                  <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                    <td style="padding: 0.75rem;">
-                      <strong>NICOLAS DINOVA</strong><br>
-                      <span style="font-size: 0.78rem; color: #94a3b8;">DNI: 92828993</span>
-                    </td>
-                    <td style="padding: 0.75rem;">Programación Web</td>
-                    <td style="padding: 0.75rem;"><span style="color: #4ade80; font-weight: 700;">85%</span></td>
-                    <td style="padding: 0.75rem;"><span class="badge" style="background: rgba(34, 197, 94, 0.2); color: #4ade80; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">APROBADO</span></td>
-                    <td style="padding: 0.75rem;">
-                      <input type="text" id="egresado-92828993" class="form-control" placeholder="Ej: EG-2026-001" value="EG-2026-001" style="width: 140px; padding: 0.4rem;">
-                    </td>
-                    <td style="padding: 0.75rem; text-align: right;">
-                      <button class="btn btn-gold" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" 
-                        onclick="emitirCertificadoPDF({
-                          estudianteNombre: 'NICOLAS DINOVA',
-                          estudianteDNI: '92828993',
-                          trayectoNombre: 'Programación Web',
-                          horas: '350',
-                          numEgresado: document.getElementById('egresado-92828993').value
-                        })">
-                        📜 Emitir PDF
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
             </div>
           </div>
         </section>
