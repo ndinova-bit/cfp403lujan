@@ -244,24 +244,25 @@ const DashboardAdmin = {
         inscripciones = inscripciones.filter(i => idsTrayectosCiclo.includes(String(i.trayecto_id)));
       }
 
-// 3. Calcular totales
+      // 3. Criterio de Aprobado / Apto
+      const esAprobado = (i) => {
+        const est = String(i.estado || '').toUpperCase();
+        if (est === 'DESAPROBADO' || est === 'AUSENTE') return false;
+        return true; // Todos los inscriptos activos en la nómina son aptos/aprobados
+      };
+
       const cantTrayectos = trayectos.length;
       const cantInscriptos = inscripciones.length;
+      const cantAprobados = inscripciones.filter(esAprobado).length;
       
-      // Considera APROBADO/APTO si tiene estado 'APROBADO', acreditado true, o si ya tiene N° de Egresado asignado
-      const cantAprobados = inscripciones.filter(i => 
-        (i.estado && String(i.estado).toUpperCase() === 'APROBADO') || 
-        i.acreditado === true || 
-        (i.num_egresado && String(i.num_egresado).trim() !== '')
-      ).length;
-
       const cantCertificados = inscripciones.filter(i => 
         i.num_egresado && String(i.num_egresado).trim() !== ''
       ).length;
 
-      const cantDesaprobados = inscripciones.filter(i => 
-        i.estado && (String(i.estado).toUpperCase() === 'DESAPROBADO' || String(i.estado).toUpperCase() === 'AUSENTE')
-      ).length;
+      const cantDesaprobados = inscripciones.filter(i => {
+        const est = String(i.estado || '').toUpperCase();
+        return est === 'DESAPROBADO' || est === 'AUSENTE';
+      }).length;
 
       // 4. Inyectar números en las tarjetas KPI
       if (elTrayectos) elTrayectos.textContent = cantTrayectos;
@@ -270,7 +271,7 @@ const DashboardAdmin = {
       if (elCertificados) elCertificados.textContent = cantCertificados;
       if (elDesaprobados) elDesaprobados.textContent = cantDesaprobados;
 
-      // 5. Renderizar la tabla de desglose
+      // 5. Renderizar la tabla de desglose por trayecto
       if (elDesglose) {
         if (trayectos.length === 0) {
           elDesglose.innerHTML = '<p style="color: #94a3b8; font-size: 0.85rem; padding: 0.5rem;">No hay trayectos registrados para este ciclo lectivo.</p>';
@@ -290,17 +291,10 @@ const DashboardAdmin = {
             <tbody>
         `;
 
-trayectos.forEach(t => {
+        trayectos.forEach(t => {
           const insT = inscripciones.filter(i => String(i.trayecto_id) === String(t.id));
           const inscrip = insT.length;
-          
-          // Contabiliza aprobado si tiene el estado 'APROBADO', acreditado true, o si ya tiene N° de egresado asignado
-          const aprob = insT.filter(i => 
-            (i.estado && String(i.estado).toUpperCase() === 'APROBADO') || 
-            i.acreditado === true || 
-            (i.num_egresado && String(i.num_egresado).trim() !== '')
-          ).length;
-          
+          const aprob = insT.filter(esAprobado).length;
           const pct = inscrip > 0 ? Math.round((aprob / inscrip) * 100) : 0;
 
           htmlTabla += `
