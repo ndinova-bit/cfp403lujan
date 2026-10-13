@@ -304,6 +304,15 @@ const CertificadosAdmin = {
         let filasHtml = '';
         let egresadosCount = 0;
 
+        // Ordenar estudiantes alfabéticamente por Apellido y Nombre
+        inscritosTrayecto.sort((a, b) => {
+          const usrA = usuarios.find(u => String(u.usuario) === String(a.estudiante_user)) || {};
+          const usrB = usuarios.find(u => String(u.usuario) === String(b.estudiante_user)) || {};
+          const nombreA = `${usrA.apellido || ''} ${usrA.nombre || ''}`.trim().toLowerCase();
+          const nombreB = `${usrB.apellido || ''} ${usrB.nombre || ''}`.trim().toLowerCase();
+          return nombreA.localeCompare(nombreB);
+        });
+
         inscritosTrayecto.forEach(ins => {
           const usr = usuarios.find(u => String(u.usuario) === String(ins.estudiante_user)) || {};
           const nombreCompleto = `${usr.nombre || ''} ${usr.apellido || ''}`.trim() || ins.estudiante_user;
