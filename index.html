@@ -301,26 +301,33 @@
         </div>
       </div>
 
-      <nav class="sidebar-nav">
-        <button id="btn-dashboard" class="nav-item-btn active" onclick="UI.showTab('dashboard')">
-          <span class="icon">📊</span> Dashboard
-        </button>
-        <button id="btn-trayectos" class="nav-item-btn" onclick="UI.showTab('trayectos')">
-          <span class="icon">📚</span> Trayectos Formativos
-        </button>
-        <button id="btn-nuevo-trayecto" class="nav-item-btn admin-only" onclick="UI.showTab('nuevo-trayecto')">
-          <span class="icon">➕</span> Cargar Trayecto
-        </button>
-        <button id="btn-certificados" class="nav-item-btn admin-only" onclick="UI.showTab('certificados')">
-          <span class="icon">📜</span> Emitir Certificados
-        </button>
-        <button id="btn-usuarios" class="nav-item-btn admin-only" onclick="UI.showTab('usuarios')">
-          <span class="icon">👥</span> Usuarios y Roles
-        </button>
-        <button id="btn-backups" class="nav-item-btn admin-only" onclick="UI.showTab('backups')">
-          <span class="icon">💾</span> Base de Datos
-        </button>
-      </nav>
+<!-- index.html (Navegación Sidebar) -->
+<nav class="sidebar-nav">
+  <button id="btn-dashboard" class="nav-item-btn active" onclick="UI.showTab('dashboard')">
+    <span class="icon">📊</span> Dashboard
+  </button>
+  <button id="btn-trayectos" class="nav-item-btn" onclick="UI.showTab('trayectos')">
+    <span class="icon">📚</span> Trayectos Formativos
+  </button>
+
+  <!-- NUEVO BOTÓN: FICHAS DE CURSO / ACTAS DE EXAMEN -->
+  <button id="btn-actas" class="nav-item-btn admin-only" onclick="UI.showTab('actas')">
+    <span class="icon">📋</span> Fichas / Actas de Examen
+  </button>
+
+  <button id="btn-nuevo-trayecto" class="nav-item-btn admin-only" onclick="UI.showTab('nuevo-trayecto')">
+    <span class="icon">➕</span> Cargar Trayecto
+  </button>
+  <button id="btn-certificados" class="nav-item-btn admin-only" onclick="UI.showTab('certificados')">
+    <span class="icon">📜</span> Emitir Certificados
+  </button>
+  <button id="btn-usuarios" class="nav-item-btn admin-only" onclick="UI.showTab('usuarios')">
+    <span class="icon">👥</span> Usuarios y Roles
+  </button>
+  <button id="btn-backups" class="nav-item-btn admin-only" onclick="UI.showTab('backups')">
+    <span class="icon">💾</span> Base de Datos
+  </button>
+</nav>
 
       <button class="btn btn-danger" style="margin-top: auto; width: 100%;" onclick="Auth.cerrarSesion()">
         🚪 Cerrar Sesión
@@ -541,7 +548,7 @@
           </div>
         </section>
 
-        <!-- VISTA 4: CERTIFICADOS POR TRAYECTO (ADMIN) -->
+<!-- VISTA 4: CERTIFICADOS POR TRAYECTO (ADMIN) -->
         <section id="certificados" class="section-tab admin-only" style="display: none;">
           <div class="card-panel">
             <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
@@ -559,6 +566,31 @@
            <!-- Contenedor donde se renderizan las tarjetas/tablas por Trayecto -->
             <div id="contenedor-certificados-trayectos">
               <!-- Carga dinámica desde js/pdf-lab.js -->
+            </div>
+          </div>
+        </section>
+
+        <!-- VISTA NUEVA: FICHAS DE CURSO / ACTAS DE EXAMEN -->
+        <section id="actas" class="section-tab admin-only" style="display: none;">
+          <div class="card-panel">
+            <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+              <div>
+                <h3 style="margin: 0; font-size: 1.25rem;">📋 Fichas de Curso / Actas de Examen</h3>
+                <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #94a3b8;">
+                  Consolidado de calificaciones por módulo y actas oficiales de examen.
+                </p>
+              </div>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <label for="filtro-ciclo-actas" style="font-size: 0.85rem; font-weight: 600; color: #94a3b8;">Ciclo Lectivo:</label>
+                <select id="filtro-ciclo-actas" class="form-control custom-select" style="width: auto; padding: 0.4rem 0.8rem;" onchange="ActasModulo.cargarTrayectosActas()">
+                  <!-- Se completa dinámicamente desde js/actas.js -->
+                </select>
+              </div>
+            </div>
+
+            <!-- Contenedor dinámico donde se renderizan las solapas por trayecto y la planilla del acta -->
+            <div id="contenedor-modulo-actas" style="margin-top: 1.25rem;">
+              <!-- Generado por js/actas.js -->
             </div>
           </div>
         </section>
@@ -745,5 +777,6 @@
   <script src="js/asistencias.js?v=50001" defer></script>
   <script src="js/reportes.js?v=50001" defer></script>
   <script src="js/notificaciones.js?v=50001" defer></script>
+  <script src="js/actas.js?v=50001" defer></script>
 </body>
 </html>
