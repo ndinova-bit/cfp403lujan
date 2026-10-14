@@ -1219,15 +1219,13 @@ async importarEstudiantesCSV(archivoCSV) {
         if (!dni) continue;
 
         try {
-          // Genera la clave cifrada con CryptoJS
           const passHasheada = CryptoJS.SHA256(String(dni)).toString();
 
-          // 1. Registrar usuario en la tabla de usuarios
+          // 1. Registrar usuario sin el campo 'dni' que no existe en la tabla
           const { error: errUser } = await supabase
             .from('usuarios')
             .upsert({
               usuario: String(dni),
-              dni: String(dni),
               pass: passHasheada,
               nombre: String(nombre),
               apellido: String(apellido),
