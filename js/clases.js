@@ -65,9 +65,16 @@ const ClasesModulo = {
     this.trayectoActualId = trayectoId;
     this.claseEditandoId = null;
 
-    const sesionRaw = localStorage.getItem('usuario_actual') || localStorage.getItem('usuario_logueado') || sessionStorage.getItem('usuario_logueado');
-    const perfil = sesionRaw ? JSON.parse(sesionRaw) : {};
-    const esEstudiante = String(perfil.rol || '').toLowerCase().trim() === 'estudiante';
+    // ✅ Detección precisa de perfil utilizando el helper unificado de Trayectos
+    const perfil = (typeof Trayectos !== 'undefined' && Trayectos.obtenerPerfilActual)
+      ? Trayectos.obtenerPerfilActual()
+      : (() => {
+          const sesionRaw = localStorage.getItem('usuario_actual') || localStorage.getItem('usuario_logueado') || sessionStorage.getItem('usuario_logueado');
+          return sesionRaw ? JSON.parse(sesionRaw) : {};
+        })();
+
+    const rolNorm = String(perfil.rol || '').toLowerCase().trim();
+    const esEstudiante = rolNorm === 'estudiante';
 
     let modal = document.getElementById('modal-gestor-clases');
     if (!modal) {
@@ -326,8 +333,13 @@ const ClasesModulo = {
     if (!contenedor) return;
 
     try {
-      const sesionRaw = localStorage.getItem('usuario_actual') || localStorage.getItem('usuario_logueado') || sessionStorage.getItem('usuario_logueado');
-      const perfil = sesionRaw ? JSON.parse(sesionRaw) : {};
+      const perfil = (typeof Trayectos !== 'undefined' && Trayectos.obtenerPerfilActual)
+        ? Trayectos.obtenerPerfilActual()
+        : (() => {
+            const sesionRaw = localStorage.getItem('usuario_actual') || localStorage.getItem('usuario_logueado') || sessionStorage.getItem('usuario_logueado');
+            return sesionRaw ? JSON.parse(sesionRaw) : {};
+          })();
+
       const userEstudiante = String(perfil.usuario || perfil.dni || perfil.id);
 
       const { data: clases, error } = await supabase
@@ -569,8 +581,13 @@ const ClasesModulo = {
       return;
     }
 
-    const sesionRaw = localStorage.getItem('usuario_actual') || localStorage.getItem('usuario_logueado') || sessionStorage.getItem('usuario_logueado');
-    const perfil = sesionRaw ? JSON.parse(sesionRaw) : {};
+    const perfil = (typeof Trayectos !== 'undefined' && Trayectos.obtenerPerfilActual)
+      ? Trayectos.obtenerPerfilActual()
+      : (() => {
+          const sesionRaw = localStorage.getItem('usuario_actual') || localStorage.getItem('usuario_logueado') || sessionStorage.getItem('usuario_logueado');
+          return sesionRaw ? JSON.parse(sesionRaw) : {};
+        })();
+
     const idEstudiante = perfil.usuario || perfil.dni || perfil.id;
 
     if (!idEstudiante) {
