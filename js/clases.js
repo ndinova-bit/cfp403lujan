@@ -1219,36 +1219,37 @@ async importarEstudiantesCSV(archivoCSV) {
         if (!dni) continue;
 
         try {
-          // 1. Registrar usuario sin enviar campos opcionales no existentes
-          const datosUsuario = {
-            usuario: String(dni),
-            dni: String(dni),
-            pass: typeof CryptoJS !== 'undefined' ? CryptoJS.SHA256(String(dni)).toString() : String(dni),
-            nombre: nombre,
-            apellido: apellido,
-            email: email,
-            rol: 'estudiante'
-          };
+          // Genera la clave cifrada con CryptoJS
+          const passHasheada = CryptoJS.SHA256(String(dni)).toString();
 
+          // 1. Registrar usuario en la tabla de usuarios
           const { error: errUser } = await supabase
             .from('usuarios')
-            .upsert([datosUsuario], { onConflict: 'usuario' });
+            .upsert({
+              usuario: String(dni),
+              dni: String(dni),
+              pass: passHasheada,
+              nombre: String(nombre),
+              apellido: String(apellido),
+              email: String(email),
+              rol: 'estudiante'
+            }, { onConflict: 'usuario' });
 
           if (errUser) {
-            console.error(`Error Supabase Usuario [${dni}]:`, errUser);
+            console.error(`❌ Error Supabase al crear usuario DNI ${dni}:`, errUser.message, errUser.details);
             throw errUser;
           }
 
           // 2. Vincular alumno al trayecto actual
           const { error: errInsc } = await supabase
             .from('inscripciones')
-            .upsert([{
+            .upsert({
               trayecto_id: Number(trayectoId),
               estudiante_user: String(dni)
-            }], { onConflict: 'trayecto_id,estudiante_user' });
+            }, { onConflict: 'trayecto_id,estudiante_user' });
 
           if (errInsc) {
-            console.error(`Error Supabase Inscripción [${dni}]:`, errInsc);
+            console.error(`❌ Error Supabase al inscribir DNI ${dni}:`, errInsc.message, errInsc.details);
             throw errInsc;
           }
 
@@ -1263,7 +1264,7 @@ async importarEstudiantesCSV(archivoCSV) {
       await this.cargarSabanaEstudiantes();
     };
   },
-
+  
   cerrarGestor() {
     const modal = document.getElementById('modal-gestor-clases');
     if (modal) modal.style.display = 'none';
