@@ -56,15 +56,10 @@ const UI = {
 
   // Muestra la plataforma adaptada estrictamente al rol del usuario
   mostrarDashboard(perfil) {
-    if (!perfil) {
-      perfil = (typeof Auth !== 'undefined' && Auth.usuarioActual) ? Auth.usuarioActual : JSON.parse(localStorage.getItem('usuario_actual'));
-    }
-
     if (!perfil) return;
 
     if (perfil.usuario) perfil.usuario = String(perfil.usuario).split(':')[0].trim();
     if (perfil.dni) perfil.dni = String(perfil.dni).split(':')[0].trim();
-    localStorage.setItem('usuario_actual', JSON.stringify(perfil));
 
     const landing = document.getElementById('landing-screen') || document.querySelector('.public-landing');
     const login = document.getElementById('login-screen');
@@ -99,13 +94,13 @@ const UI = {
     const btnNuevoTrayecto = document.getElementById('btn-nuevo-trayecto');
     const btnCertificados = document.getElementById('btn-certificados');
     const btnUsuarios = document.getElementById('btn-usuarios');
-    const btnActas = document.getElementById('btn-actas'); // <-- NUEVO BOTÓN AGREGADO
+    const btnActas = document.getElementById('btn-actas');
 
     if (btnDashboard) btnDashboard.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
     if (btnNuevoTrayecto) btnNuevoTrayecto.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
     if (btnCertificados) btnCertificados.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
     if (btnUsuarios) btnUsuarios.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
-    if (btnActas) btnActas.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important'); // <-- VISIBILIDAD DE ACTAS
+    if (btnActas) btnActas.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
 
     document.querySelectorAll('.admin-only').forEach(el => {
       el.style.setProperty('display', isAdmin ? (el.tagName === 'BUTTON' ? 'inline-flex' : 'block') : 'none', 'important');
@@ -118,11 +113,22 @@ const UI = {
     }
   },
 
-  // Cambia entre secciones dentro del Panel
+  // Cambia entre secciones dentro del Panel validando permisos reales
   async showTab(tabId) {
-    const perfilRaw = localStorage.getItem('usuario_actual');
-    const perfil = perfilRaw ? JSON.parse(perfilRaw) : {};
-    const isAdmin = (perfil.rol || '').toLowerCase().trim() === 'admin';
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      this.showLoginScreen();
+      return;
+    }
+
+    // Consultar rol verificado en el servidor
+    const { data: perfil } = await supabase
+      .from('profiles')
+      .select('rol')
+      .eq('id', session.user.id)
+      .single();
+
+    const isAdmin = (perfil?.rol || '').toLowerCase().trim() === 'admin';
 
     if (!isAdmin && (tabId === 'dashboard' || tabId === 'nuevo-trayecto' || tabId === 'certificados' || tabId === 'usuarios' || tabId === 'actas')) {
       tabId = 'trayectos';
@@ -151,7 +157,7 @@ const UI = {
       const titles = {
         'dashboard': 'Dashboard',
         'trayectos': isAdmin ? 'Trayectos Formativos' : 'Mis Trayectos Formativos',
-        'actas': 'Fichas de Curso / Actas de Examen', // <-- TÍTULO DE LA SECCIÓN
+        'actas': 'Fichas de Curso / Actas de Examen',
         'nuevo-trayecto': 'Cargar Trayecto',
         'certificados': 'Emitir Certificados',
         'usuarios': 'Usuarios y Roles'
@@ -164,7 +170,7 @@ const UI = {
     }
 
     if (tabId === 'actas' && window.ActasModulo) {
-      window.ActasModulo.inicializar(); // <-- INICIALIZACIÓN DE ACTAS
+      window.ActasModulo.inicializar();
     }
 
     if (tabId === 'trayectos') {
@@ -217,6 +223,48 @@ const UI = {
 };
 
 window.UI = UI;
+
+/* ==========================================================================
+   VERIFICACIÓN ESTRICTA DE SESIÓN AL INICIAR LA APLICACIÓN
+   ========================================================================== */
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const btnDashboard = document.getElementById('btn-dashboard');
+  if (btnDashboard) {
+    btnDashboard.addEventListener('click', () => DashboardAdmin.cargarEstadisticas());
+  }
+
+  // 1. Validar sesión activa en Supabase Auth
+  const { data: { session }, error } = await supabase.auth.getSession();
+
+  if (!session || error) {
+    localStorage.removeItem('usuario_actual');
+    UI.showLanding();
+    return;
+  }
+
+  // 2. Traer perfil REAL validado desde la base de datos (tabla 'profiles')
+  const { data: perfilValido, errorPerfil } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', session.user.id)
+    .single();
+
+  if (errorPerfil || !perfilValido) {
+    await supabase.auth.signOut();
+    localStorage.removeItem('usuario_actual');
+    UI.showLanding();
+    return;
+  }
+
+  // 3. Renderizar plataforma con el perfil validado por el servidor
+  if (window.AuthModulo) {
+    window.AuthModulo.usuarioActual = perfilValido;
+  }
+  
+  UI.mostrarDashboard(perfilValido);
+  setTimeout(() => DashboardAdmin.cargarEstadisticas(), 500);
+});
 
 /* ==========================================================================
    LÓGICA DINÁMICA DEL DASHBOARD ANALÍTICO (SUPABASE)
@@ -330,13 +378,3 @@ const DashboardAdmin = {
 };
 
 window.DashboardAdmin = DashboardAdmin;
-
-// Cargar estadísticas automáticamente al iniciar o al presionar la pestaña Dashboard
-document.addEventListener('DOMContentLoaded', () => {
-  const btnDashboard = document.getElementById('btn-dashboard');
-  if (btnDashboard) {
-    btnDashboard.addEventListener('click', () => DashboardAdmin.cargarEstadisticas());
-  }
-  // Carga inicial tras refrescar pantalla
-  setTimeout(() => DashboardAdmin.cargarEstadisticas(), 500);
-});
