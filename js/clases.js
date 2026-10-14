@@ -1219,9 +1219,11 @@ async importarEstudiantesCSV(archivoCSV) {
         if (!dni) continue;
 
         try {
-          const passHasheada = CryptoJS.SHA256(String(dni)).toString();
+          const passHasheada = (typeof CryptoJS !== 'undefined' && CryptoJS.SHA256)
+            ? CryptoJS.SHA256(String(dni)).toString()
+            : String(dni);
 
-          // 1. Registrar usuario sin el campo 'dni' que no existe en la tabla
+          // 1. Registrar o actualizar usuario en la tabla 'usuarios'
           const { error: errUser } = await supabase
             .from('usuarios')
             .upsert({
@@ -1234,21 +1236,30 @@ async importarEstudiantesCSV(archivoCSV) {
             }, { onConflict: 'usuario' });
 
           if (errUser) {
-            console.error(`❌ Error Supabase al crear usuario DNI ${dni}:`, errUser.message, errUser.details);
+            console.error(`❌ Error Supabase Usuario [${dni}]:`, errUser.message, errUser.details);
             throw errUser;
           }
 
-          // 2. Vincular alumno al trayecto actual
-          const { error: errInsc } = await supabase
+          // 2. Verificar e inscribir alumno al trayecto sin forzar onConflict
+          const { data: inscExistente } = await supabase
             .from('inscripciones')
-            .upsert({
-              trayecto_id: Number(trayectoId),
-              estudiante_user: String(dni)
-            }, { onConflict: 'trayecto_id,estudiante_user' });
+            .select('id')
+            .eq('trayecto_id', Number(trayectoId))
+            .eq('estudiante_user', String(dni))
+            .maybeSingle();
 
-          if (errInsc) {
-            console.error(`❌ Error Supabase al inscribir DNI ${dni}:`, errInsc.message, errInsc.details);
-            throw errInsc;
+          if (!inscExistente) {
+            const { error: errInsc } = await supabase
+              .from('inscripciones')
+              .insert([{
+                trayecto_id: Number(trayectoId),
+                estudiante_user: String(dni)
+              }]);
+
+            if (errInsc) {
+              console.error(`❌ Error Supabase Inscripción [${dni}]:`, errInsc.message, errInsc.details);
+              throw errInsc;
+            }
           }
 
           procesados++;
@@ -1261,8 +1272,7 @@ async importarEstudiantesCSV(archivoCSV) {
       alert(`✅ Proceso finalizado: ${procesados} estudiantes inscriptos correctamente al trayecto.${errores > 0 ? ` (${errores} errores)` : ''}`);
       await this.cargarSabanaEstudiantes();
     };
-  },
-  
+  },  
   cerrarGestor() {
     const modal = document.getElementById('modal-gestor-clases');
     if (modal) modal.style.display = 'none';
