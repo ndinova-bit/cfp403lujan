@@ -1,4 +1,7 @@
-// js/auth.js - Encriptación Automática en Formulario
+/* ==========================================================================
+   MÓDULO DE AUTENTICACIÓN OFICIAL (SUPABASE AUTH NATIVO)
+   Archivo: js/auth.js
+   ========================================================================== */
 
 const Auth = {
   usuarioActual: null,
@@ -8,59 +11,35 @@ const Auth = {
     return String(val).trim();
   },
 
-  // Convierte texto plano a SHA-256 garantizado
-  hashPassword(pass) {
-    if (!pass) return '';
-    if (typeof CryptoJS !== 'undefined' && CryptoJS.SHA256) {
-      return CryptoJS.SHA256(pass).toString();
-    }
-    return pass;
-  },
-
-  init() {
-    const perfilRaw = localStorage.getItem('usuario_actual');
-    if (perfilRaw) {
-      try {
-        let perfil = JSON.parse(perfilRaw);
-        this.usuarioActual = perfil;
-
-        if (typeof notify === 'function') {
-          notify('success', `¡Bienvenido/a ${perfil.nombre || perfil.usuario}!`);
-        }
-
-        if (typeof UI !== 'undefined' && typeof UI.mostrarDashboard === 'function') {
-          UI.mostrarDashboard(perfil);
-        }
-
-      } catch (e) {
-        console.error('Error recuperando sesión:', e);
-        this.cerrarSesion();
-      }
-    }
-  },
-
-  cerrarSesion() {
+  /**
+   * Cierra la sesión activa de forma segura
+   */
+  async cerrarSesion() {
     this.usuarioActual = null;
     localStorage.removeItem('usuario_actual');
-    if (typeof UI !== 'undefined' && typeof UI.mostrarLogin === 'function') {
-      UI.mostrarLogin();
+    
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn('Error al cerrar sesión en Supabase:', e);
+    }
+
+    if (typeof UI !== 'undefined' && typeof UI.showLoginScreen === 'function') {
+      UI.showLoginScreen();
     } else {
       window.location.reload();
     }
   },
 
-  solicitarRegistro: async function() {
-    console.log("Solicitando registro...");
-  },
-
+  /**
+   * Inicio de Sesión Oficial con Supabase Auth
+   */
   iniciarSesion: async function() {
-    // 1. Quitar cualquier aria-hidden bloqueante
     const loginScreenEl = document.getElementById('login-screen');
     if (loginScreenEl) loginScreenEl.removeAttribute('aria-hidden');
 
     const userValRaw = document.getElementById('login-user')?.value?.trim() || '';
     const passVal = document.getElementById('login-pass')?.value?.trim() || '';
-    const roleVal = document.getElementById('role-select')?.value || '';
 
     if (!userValRaw || !passVal) {
       if (typeof alertError === 'function') {
@@ -71,36 +50,17 @@ const Auth = {
       return;
     }
 
-    const userVal = userValRaw.toLowerCase();
-    
-    // Convertir la clave escrita a SHA-256
-    const passHash = this.hashPassword(passVal);
+    // Si ingresó solo el DNI o usuario, armamos el correo sintético oficial
+    const emailFormat = userValRaw.includes('@') ? userValRaw : `${userValRaw.toLowerCase()}@cfp403.ar`;
 
     try {
-      // 2. Traer el usuario de Supabase
-      const { data: usuarios, error } = await supabase
-        .from('usuarios')
-        .select('*')
-        .or(`usuario.eq.${userVal},email.ilike.${userVal}`);
-
-      if (error) throw error;
-
-      if (!usuarios || usuarios.length === 0) {
-        if (typeof alertError === 'function') {
-          alertError('Error al ingresar', 'Usuario, DNI o contraseña incorrectos.');
-        } else {
-          alert('Usuario, DNI o contraseña incorrectos.');
-        }
-        return;
-      }
-
-      // 3. Comparar el Hash del input contra el Hash de la DB
-      const perfil = usuarios.find(u => {
-        const dbPass = String(u.pass || '').trim();
-        return dbPass === passHash || dbPass === passVal;
+      // 1. Autenticación real mediante Supabase Auth
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: emailFormat,
+        password: passVal
       });
 
-      if (!perfil) {
+      if (error) {
         if (typeof alertError === 'function') {
           alertError('Error al ingresar', 'Usuario, DNI o contraseña incorrectos.');
         } else {
@@ -109,11 +69,25 @@ const Auth = {
         return;
       }
 
-      // 4. Validar estado y rol
-      const estado = String(perfil.estado || '').toUpperCase();
+      // 2. Traer el perfil validado desde la tabla 'profiles' (protegida por RLS)
+      const { data: perfil, errorPerfil } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+
+      if (errorPerfil || !perfil) {
+        await supabase.auth.signOut();
+        alertError('Error de perfil', 'No se encontró un perfil válido asociado a este usuario.');
+        return;
+      }
+
+      // 3. Validar estado habilitado
+      const estado = String(perfil.estado || 'ACTIVO').toUpperCase();
       const rolNorm = String(perfil.rol || '').toLowerCase().trim();
 
       if (rolNorm !== 'admin' && estado !== 'ACTIVO' && estado !== 'HABILITADO' && estado !== 'APROBADO') {
+        await supabase.auth.signOut();
         if (typeof alertError === 'function') {
           alertError('Cuenta pendiente', 'Tu cuenta está pendiente de aprobación por un administrador.');
         } else {
@@ -122,24 +96,22 @@ const Auth = {
         return;
       }
 
-      // 5. Iniciar Sesión y mostrar Dashboard
+      // 4. Iniciar sesión e impactar UI
       this.usuarioActual = perfil;
-      localStorage.setItem('usuario_actual', JSON.stringify(perfil));
 
       if (typeof notify === 'function') {
-        notify('success', `¡Bienvenido/a ${perfil.nombre || perfil.usuario}!`);
+        notify('success', `¡Bienvenido/a ${perfil.nombre || perfil.dni}!`);
       }
 
-      const loginScreen = document.getElementById('login-screen');
-      if (loginScreen) {
-        loginScreen.style.setProperty('display', 'none', 'important');
+      if (loginScreenEl) {
+        loginScreenEl.style.setProperty('display', 'none', 'important');
       }
 
       if (typeof UI !== 'undefined' && typeof UI.mostrarDashboard === 'function') {
         UI.mostrarDashboard(perfil);
       }
 
-   } catch (err) {
+    } catch (err) {
       console.error('Error Auth:', err);
       if (typeof alertError === 'function') {
         alertError('Error al ingresar', 'Credenciales inválidas o problema de conexión.');
@@ -150,22 +122,5 @@ const Auth = {
   }
 };
 
-// ==========================================================================
-// RESTAURACIÓN AUTOMÁTICA DE SESIÓN EN RECARGA (F5)
-// ==========================================================================
-document.addEventListener('DOMContentLoaded', () => {
-  const perfilRaw = localStorage.getItem('usuario_actual') || 
-                    localStorage.getItem('usuario_logueado') || 
-                    sessionStorage.getItem('usuario_logueado');
-  
-  if (perfilRaw) {
-    try {
-      const perfil = JSON.parse(perfilRaw);
-      if (perfil && perfil.rol && typeof UI !== 'undefined' && typeof UI.mostrarDashboard === 'function') {
-        UI.mostrarDashboard(perfil);
-      }
-    } catch (e) {
-      console.error('Error al restaurar la sesión:', e);
-    }
-  }
-});
+window.Auth = Auth;
+window.AuthModulo = Auth;
