@@ -1170,7 +1170,7 @@ const ClasesModulo = {
     }
   },
 
-  async importarEstudiantesCSV(archivoCSV) {
+async importarEstudiantesCSV(archivoCSV) {
     if (!archivoCSV) return;
 
     const trayectoId = this.trayectoActualId;
@@ -1211,7 +1211,6 @@ const ClasesModulo = {
         const nombre = idxNombre !== -1 ? cols[idxNombre] : '';
         const apellido = idxApellido !== -1 ? cols[idxApellido] : '';
         
-        // Si no se incluyó la columna 'email' o viene vacía, genera automáticamente DNI@gmail.com
         let email = idxEmail !== -1 ? cols[idxEmail] : '';
         if (!email && dni) {
           email = `${dni}@gmail.com`;
@@ -1220,23 +1219,27 @@ const ClasesModulo = {
         if (!dni) continue;
 
         try {
-          // 1. Registrar usuario con contraseña por defecto = DNI
+          // 1. Registrar usuario sin enviar campos opcionales no existentes
+          const datosUsuario = {
+            usuario: String(dni),
+            dni: String(dni),
+            pass: typeof CryptoJS !== 'undefined' ? CryptoJS.SHA256(String(dni)).toString() : String(dni),
+            nombre: nombre,
+            apellido: apellido,
+            email: email,
+            rol: 'estudiante'
+          };
+
           const { error: errUser } = await supabase
             .from('usuarios')
-            .upsert([{
-              usuario: String(dni),
-              dni: String(dni),
-              pass: typeof CryptoJS !== 'undefined' ? CryptoJS.SHA256(String(dni)).toString() : String(dni),
-              nombre: nombre,
-              apellido: apellido,
-              email: email,
-              rol: 'estudiante',
-              estado: 'ACTIVO'
-            }], { onConflict: 'usuario' });
+            .upsert([datosUsuario], { onConflict: 'usuario' });
 
-          if (errUser) throw errUser;
+          if (errUser) {
+            console.error(`Error Supabase Usuario [${dni}]:`, errUser);
+            throw errUser;
+          }
 
-          // 2. Vincular alumno directamente al trayecto actual
+          // 2. Vincular alumno al trayecto actual
           const { error: errInsc } = await supabase
             .from('inscripciones')
             .upsert([{
@@ -1244,7 +1247,10 @@ const ClasesModulo = {
               estudiante_user: String(dni)
             }], { onConflict: 'trayecto_id,estudiante_user' });
 
-          if (errInsc) throw errInsc;
+          if (errInsc) {
+            console.error(`Error Supabase Inscripción [${dni}]:`, errInsc);
+            throw errInsc;
+          }
 
           procesados++;
         } catch (err) {
