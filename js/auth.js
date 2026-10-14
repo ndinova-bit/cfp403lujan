@@ -50,8 +50,9 @@ const Auth = {
       return;
     }
 
-    // Si ingresó solo el DNI o usuario, armamos el correo sintético oficial
-    const emailFormat = userValRaw.includes('@') ? userValRaw : `${userValRaw.toLowerCase()}@cfp403.ar`;
+    // Normalización estricta: forzar siempre minúsculas
+    const userClean = userValRaw.toLowerCase();
+    const emailFormat = userClean.includes('@') ? userClean : `${userClean}@cfp403.ar`;
 
     try {
       // 1. Autenticación real mediante Supabase Auth
