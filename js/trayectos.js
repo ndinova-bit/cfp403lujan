@@ -60,6 +60,17 @@ const Trayectos = {
     }
   },
 
+  // Obtiene el perfil actual unificado (Auth u almacenamiento local)
+  obtenerPerfilActual() {
+    if (typeof Auth !== 'undefined' && Auth.usuarioActual) {
+      return Auth.usuarioActual;
+    }
+    const perfilRaw = localStorage.getItem('usuario_actual') || 
+                      localStorage.getItem('usuario_logueado') || 
+                      sessionStorage.getItem('usuario_logueado');
+    return perfilRaw ? JSON.parse(perfilRaw) : {};
+  },
+
   // Carga los trayectos filtrados
   async cargarTrayectos() {
     try {
@@ -77,10 +88,7 @@ const Trayectos = {
       // Solo leemos el perfil si el usuario está dentro de la plataforma logueado
       let perfil = {};
       if (estaEnPlataforma) {
-        const perfilRaw = localStorage.getItem('usuario_actual') || 
-                          localStorage.getItem('usuario_logueado') || 
-                          sessionStorage.getItem('usuario_logueado');
-        perfil = perfilRaw ? JSON.parse(perfilRaw) : {};
+        perfil = this.obtenerPerfilActual();
       }
 
       const rolNorm = String(perfil.rol || '').toLowerCase().trim();
@@ -187,10 +195,7 @@ const Trayectos = {
 
     if (contenedores.length === 0) return;
 
-    const perfilRaw = localStorage.getItem('usuario_actual') || 
-                      localStorage.getItem('usuario_logueado') || 
-                      sessionStorage.getItem('usuario_logueado');
-    const perfil = perfilRaw ? JSON.parse(perfilRaw) : {};
+    const perfil = this.obtenerPerfilActual();
     const rolNorm = String(perfil.rol || '').toLowerCase().trim();
     const isAdmin = rolNorm === 'admin' || rolNorm === 'administrador';
     const esDocente = rolNorm === 'docente';
