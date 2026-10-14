@@ -1223,17 +1223,18 @@ async importarEstudiantesCSV(archivoCSV) {
             ? CryptoJS.SHA256(String(dni)).toString()
             : String(dni);
 
-          // 1. Crear / actualizar en tabla 'usuarios'
-          const { error: errUser } = await supabase
-            .from('usuarios')
-            .upsert({
-              usuario: String(dni),
-              pass: passHasheada,
-              nombre: String(nombre),
-              apellido: String(apellido),
-              email: String(email),
-              rol: 'estudiante'
-            }, { onConflict: 'usuario' });
+// 1. Crear / actualizar en tabla 'usuarios' con estado ACTIVO
+const { error: errUser } = await supabase
+  .from('usuarios')
+  .upsert({
+    usuario: String(dni),
+    pass: passHasheada,
+    nombre: String(nombre),
+    apellido: String(apellido),
+    email: String(email),
+    rol: 'estudiante',
+    estado: 'ACTIVO' // 👈 Agregamos esto para que la tabla de Usuarios y Roles los muestre
+  }, { onConflict: 'usuario' });
 
           if (errUser) {
             console.error(`❌ Error Supabase Usuario [${dni}]:`, errUser.message, errUser.details);
