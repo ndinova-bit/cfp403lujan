@@ -1223,7 +1223,7 @@ async importarEstudiantesCSV(archivoCSV) {
             ? CryptoJS.SHA256(String(dni)).toString()
             : String(dni);
 
-          // 1. Registrar o actualizar usuario en la tabla 'usuarios'
+          // 1. Crear / actualizar en tabla 'usuarios'
           const { error: errUser } = await supabase
             .from('usuarios')
             .upsert({
@@ -1240,7 +1240,7 @@ async importarEstudiantesCSV(archivoCSV) {
             throw errUser;
           }
 
-          // 2. Verificar e inscribir alumno al trayecto sin forzar onConflict
+          // 2. Inscribir al trayecto
           const { data: inscExistente } = await supabase
             .from('inscripciones')
             .select('id')
@@ -1272,7 +1272,8 @@ async importarEstudiantesCSV(archivoCSV) {
       alert(`✅ Proceso finalizado: ${procesados} estudiantes inscriptos correctamente al trayecto.${errores > 0 ? ` (${errores} errores)` : ''}`);
       await this.cargarSabanaEstudiantes();
     };
-  },  
+  },
+  
   cerrarGestor() {
     const modal = document.getElementById('modal-gestor-clases');
     if (modal) modal.style.display = 'none';
