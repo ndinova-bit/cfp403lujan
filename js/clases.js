@@ -65,7 +65,7 @@ const ClasesModulo = {
     this.trayectoActualId = trayectoId;
     this.claseEditandoId = null;
 
-    // ✅ Detección precisa de perfil utilizando el helper unificado de Trayectos
+    // Detección precisa de perfil utilizando el helper unificado de Trayectos
     const perfil = (typeof Trayectos !== 'undefined' && Trayectos.obtenerPerfilActual)
       ? Trayectos.obtenerPerfilActual()
       : (() => {
@@ -1210,7 +1210,12 @@ const ClasesModulo = {
         const dni = cols[idxDni];
         const nombre = idxNombre !== -1 ? cols[idxNombre] : '';
         const apellido = idxApellido !== -1 ? cols[idxApellido] : '';
-        const email = idxEmail !== -1 ? cols[idxEmail] : '';
+        
+        // Si no se incluyó la columna 'email' o viene vacía, genera automáticamente DNI@gmail.com
+        let email = idxEmail !== -1 ? cols[idxEmail] : '';
+        if (!email && dni) {
+          email = `${dni}@gmail.com`;
+        }
 
         if (!dni) continue;
 
