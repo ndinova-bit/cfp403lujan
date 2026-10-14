@@ -184,7 +184,7 @@ const UsuariosAdmin = {
 
     // Normalizar email a minúsculas estrictas para Supabase Auth
     const emailSintetico = emailRaw ? emailRaw.toLowerCase() : `${dniVal.toLowerCase()}@cfp403.ar`;
-   const passwordTemp = `${dniVal}`; // Clave temporal predeterminada
+   const passwordTemp = `CFP403_${dniVal}`; // Clave temporal predeterminada
 
     try {
       // 1. Alta en el motor de autenticación de Supabase Auth
