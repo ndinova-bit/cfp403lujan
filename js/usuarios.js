@@ -173,7 +173,7 @@ const UsuariosAdmin = {
     const apellido = document.getElementById('usr-alta-apellido')?.value.trim().toUpperCase();
     const nombre = document.getElementById('usr-alta-nombre')?.value.trim().toUpperCase();
     const dniVal = document.getElementById('usr-alta-dni')?.value.trim();
-    const emailInput = document.getElementById('usr-alta-email')?.value.trim();
+    const emailRaw = document.getElementById('usr-alta-email')?.value.trim();
     const rol = document.getElementById('usr-alta-rol')?.value || 'estudiante';
 
     if (!nombre || !apellido || !dniVal) {
@@ -182,7 +182,8 @@ const UsuariosAdmin = {
       return;
     }
 
-    const emailSintetico = emailInput || `${dniVal}@cfp403.ar`;
+    // Normalizar email a minúsculas estrictas para Supabase Auth
+    const emailSintetico = emailRaw ? emailRaw.toLowerCase() : `${dniVal.toLowerCase()}@cfp403.ar`;
     const passwordTemp = `CFP403_${dniVal}!`; // Clave temporal predeterminada
 
     try {
@@ -209,6 +210,7 @@ const UsuariosAdmin = {
             dni: dniVal,
             nombre: nombre,
             apellido: apellido,
+            email: emailSintetico,
             rol: rol,
             estado: 'ACTIVO'
           });
