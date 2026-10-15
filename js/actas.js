@@ -124,9 +124,16 @@ const ActasModulo = {
     if (!this.trayectoSeleccionado) return;
 
     try {
-      const trayecto = this.trayectoSeleccionado;
+      // 1. Re-consultar el trayecto completo desde Supabase para garantizar traer 'certificacion_oficial'
+      const { data: trayecto, error: errTray } = await supabase
+        .from('trayectos')
+        .select('*')
+        .eq('id', this.trayectoSeleccionado.id)
+        .single();
 
-      // 1. Obtener inscripciones
+      if (errTray || !trayecto) throw errTray || new Error("No se halló el trayecto.");
+
+      // 2. Obtener inscripciones
       const { data: inscripciones, error: errInsc } = await supabase
         .from('inscripciones')
         .select('*')
@@ -139,14 +146,14 @@ const ActasModulo = {
         return;
       }
 
-      // 2. Cargar módulos del trayecto
+      // 3. Cargar módulos del trayecto
       const { data: modulos } = await supabase
         .from('modulos')
         .select('id, nombre')
         .eq('trayecto_id', Number(trayecto.id))
         .order('id', { ascending: true });
 
-      // 3. Cargar clases y entregas
+      // 4. Cargar clases y entregas
       const { data: clases } = await supabase
         .from('clases')
         .select('id, modulo_id')
@@ -162,13 +169,13 @@ const ActasModulo = {
         entregas = ent || [];
       }
 
-      // 4. Cargar asistencias
+      // 5. Cargar asistencias
       const { data: asistencias } = await supabase
         .from('asistencias')
         .select('*')
         .eq('trayecto_id', Number(trayecto.id));
 
-      // 5. Traer datos personales
+      // 6. Traer datos personales
       const listaDNIs = inscripciones.map(i => String(i.estudiante_user));
       const { data: datosUsuarios } = await supabase
         .from('usuarios')
@@ -180,7 +187,7 @@ const ActasModulo = {
         mapaUsuarios[String(u.usuario || u.dni || u.id)] = u;
       });
 
-      // 6. Armar lista de estudiantes
+      // 7. Armar lista de estudiantes
       const listaEstudiantes = inscripciones.map(ins => {
         const userKey = String(ins.estudiante_user);
         const usr = mapaUsuarios[userKey] || {};
@@ -229,7 +236,7 @@ const ActasModulo = {
 
       listaEstudiantes.sort((a, b) => a.nombreCompleto.localeCompare(b.nombreCompleto));
 
-      // 7. Cargar plantilla Excel
+      // 8. Cargar plantilla Excel
       const response = await fetch('MODELO ASISTENCIA  + NOTAS MODULOS.xlsx');
       const arrayBuffer = await response.arrayBuffer();
 
@@ -240,20 +247,17 @@ const ActasModulo = {
       const colsCalificacion = ['F', 'H', 'J', 'L', 'N', 'P', 'R', 'T', 'V', 'X'];
       const colsNumero       = ['G', 'I', 'K', 'M', 'O', 'Q', 'S', 'U', 'W', 'Y'];
 
-      const limitePorHoja = 30;
-
-      // Obtener el valor del Número de Curso (Prioridad a 'certificacion_oficial', luego 'numero_curso', luego 'id')
+      // Obtener el valor del Número de Curso guardado en Certificación Oficial
       const numCursoVal = trayecto.certificacion_oficial || trayecto.numero_curso || trayecto.numero || trayecto.id || '';
 
-      // 8. Rellenar ENCABEZADOS en TODAS las hojas existentes de la plantilla
+      // 9. ESCRIBIR ENCABEZADOS EN TODAS LAS HOJAS EXISTENTES DE LA PLANTILLA
       workbook.worksheets.forEach((sheet) => {
-        // Nombre del Trayecto / Especialidad
         sheet.getCell('R3').value = String(trayecto.nombre || '').toUpperCase();
-        // Número de Curso en Z4 (debajo de Z3 "CURSO N°")
         sheet.getCell('Z4').value = String(numCursoVal);
       });
 
-      // 9. Rellenar la nómina de estudiantes dividida por hojas de 30 alumnos
+      // 10. Rellenar la nómina de estudiantes en las hojas necesarias
+      const limitePorHoja = 30;
       const totalHojas = Math.ceil(listaEstudiantes.length / limitePorHoja);
 
       for (let h = 0; h < totalHojas; h++) {
@@ -289,7 +293,7 @@ const ActasModulo = {
         });
       }
 
-      // 10. Descargar
+      // 11. Descargar
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const link = document.createElement('a');
