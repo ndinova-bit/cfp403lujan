@@ -6,7 +6,6 @@
 const Trayectos = {
   listaTrayectos: [],
 
-  // Popula el desplegable con el año en curso dinámico
   poblarDesplegableCiclos() {
     const selectFiltro = document.getElementById('filtro-ciclo-lectivo');
     if (!selectFiltro) return;
@@ -16,7 +15,6 @@ const Trayectos = {
     const anioFin = anioActual + 10;
 
     const seleccionPrevia = selectFiltro.value;
-
     let opcionesHTML = `<option value="TODOS">Todos los Ciclos</option>`;
 
     for (let anio = anioFin; anio >= anioInicio; anio--) {
@@ -25,13 +23,9 @@ const Trayectos = {
     }
 
     selectFiltro.innerHTML = opcionesHTML;
-
-    if (seleccionPrevia) {
-      selectFiltro.value = seleccionPrevia;
-    }
+    if (seleccionPrevia) selectFiltro.value = seleccionPrevia;
   },
 
-  // Puebla el selector de docentes en el formulario de creación/edición
   async poblarComboDocentes() {
     const selectDocente = document.getElementById('trayecto-docente');
     if (!selectDocente) return;
@@ -60,7 +54,6 @@ const Trayectos = {
     }
   },
 
-  // Obtiene el perfil actual unificado (Auth u almacenamiento local)
   obtenerPerfilActual() {
     if (typeof Auth !== 'undefined' && Auth.usuarioActual) {
       return Auth.usuarioActual;
@@ -71,7 +64,6 @@ const Trayectos = {
     return perfilRaw ? JSON.parse(perfilRaw) : {};
   },
 
-  // Carga los trayectos filtrados
   async cargarTrayectos() {
     try {
       const selectCiclo = document.getElementById('filtro-ciclo-lectivo');
@@ -81,11 +73,9 @@ const Trayectos = {
 
       await this.poblarComboDocentes();
 
-      // Verificamos si estamos en la vista de la Plataforma/App o en la Landing Pública
       const appScreen = document.getElementById('app-screen');
       const estaEnPlataforma = appScreen && appScreen.style.display !== 'none';
 
-      // Solo leemos el perfil si el usuario está dentro de la plataforma logueado
       let perfil = {};
       if (estaEnPlataforma) {
         perfil = this.obtenerPerfilActual();
@@ -100,7 +90,6 @@ const Trayectos = {
 
       if (estaEnPlataforma && esEstudiante) {
         const idEstudiante = perfil.usuario || perfil.dni || perfil.id;
-
         if (!idEstudiante) {
           this.listaTrayectos = [];
           this.renderizarTrayectos();
@@ -164,7 +153,6 @@ const Trayectos = {
         this.listaTrayectos = trayectosDocente || [];
 
       } else {
-        // Oferta pública general (Landing) o vista Administrador
         let query = supabase
           .from('trayectos')
           .select(`*, modulos (*)`);
@@ -211,9 +199,7 @@ const Trayectos = {
           <div class="empty-state-card fade-in" style="text-align: center; padding: 3rem; background: rgba(30,41,59,0.5); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); grid-column: 1 / -1;">
             <div class="empty-state-icon" style="font-size: 2rem; margin-bottom: 0.5rem;">📚</div>
             <h3 class="empty-state-title" style="color: #f8fafc; margin-bottom: 0.5rem;">No hay trayectos disponibles para este ciclo lectivo</h3>
-            <p class="empty-state-text" style="color: #94a3b8;">
-              Ponate en contacto con la administración del CFP para más información.
-            </p>
+            <p class="empty-state-text" style="color: #94a3b8;">Ponate en contacto con la administración del CFP para más información.</p>
           </div>
         `;
         return;
@@ -237,7 +223,6 @@ const Trayectos = {
         card.style.flexDirection = 'column';
         card.style.justifyContent = 'space-between';
 
-        // Clic general sobre toda la tarjeta para ingresar
         if (!esVistaPublica && (esDocente || esEstudiante || isAdmin)) {
           card.style.cursor = 'pointer';
           card.onclick = () => ClasesModulo.abrirGestor(trayecto.id, trayecto.nombre.replace(/'/g, "\\'"));
@@ -249,7 +234,6 @@ const Trayectos = {
           </span>
         `;
 
-        // Botón explícito de Gestor / CSV para Admin y Docentes
         let accionGestionHTML = '';
         if (!esVistaPublica && (isAdmin || esDocente)) {
           accionGestionHTML = `
@@ -259,7 +243,6 @@ const Trayectos = {
           `;
         }
 
-        // Acciones completas para Administrador (Gestor + Editar + Eliminar)
         const accionesAdmin = (isAdmin && !esVistaPublica) ? `
           <div style="margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08); display: flex; gap: 0.5rem; justify-content: space-between; align-items: center;">
             ${accionGestionHTML}
@@ -274,7 +257,6 @@ const Trayectos = {
           </div>
         ` : '';
 
-        // Botón explícito para estudiantes
         const accionEstudiante = (!esVistaPublica && esEstudiante) ? `
           <div style="margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08);">
             <button class="btn btn-gold" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; background: #0284c7; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;" onclick="event.stopPropagation(); ClasesModulo.abrirGestor(${trayecto.id}, '${trayecto.nombre.replace(/'/g, "\\'")}')">
@@ -290,17 +272,9 @@ const Trayectos = {
                 <h3 style="color: #f8fafc; margin: 0; font-size: 1.2rem; font-weight: 600;">${trayecto.nombre}</h3>
                 ${cicloBadge}
               </div>
-
               <p style="color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.75rem; line-height: 1.4;">
                 ${trayecto.descripcion || 'Sin descripción disponible.'}
               </p>
-
-              ${trayecto.requisitos ? `
-                <div style="background: rgba(251, 191, 36, 0.08); border-left: 3px solid #fbbf24; padding: 0.5rem 0.75rem; border-radius: 4px;">
-                  <strong style="color: #fbbf24; font-size: 0.75rem; display: block;">📋 Requisitos:</strong>
-                  <span style="color: #f8fafc; font-size: 0.8rem;">${trayecto.requisitos}</span>
-                </div>
-              ` : ''}
             </div>
             ${accionesAdmin}
           `;
@@ -311,54 +285,33 @@ const Trayectos = {
               <div class="modulo-card" style="margin-top: 0.5rem; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 0.6rem 0.8rem;">
                 <strong style="color: #f8fafc; font-size: 0.85rem;">${m.nombre}</strong> 
                 <span style="color: #fbbf24; font-size: 0.75rem;">(${m.codigo || 'S/C'})</span>
-                <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.2rem;">
-                  📅 ${m.fecha_inicio || 'A definir'} | ${m.fecha_fin || 'A definir'}
-                </div>
               </div>
             `).join('');
           } else {
             modulosHTML = '<small style="color: #94a3b8;">Sin módulos asignados</small>';
           }
 
-          const cantidadModulos = trayecto.modulos ? trayecto.modulos.length : 0;
+          const numCursoMostrado = trayecto.certificacion_oficial || trayecto.certificacion || 'S/D';
 
           card.innerHTML = `
             <div>
               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
                 <div>
                   <h3 style="color: #f8fafc; margin: 0; font-size: 1.2rem; font-weight: 600;">${trayecto.nombre}</h3>
-                  <span style="font-size: 0.8rem; color: #fbbf24; font-weight: 600;">
-                    Sector: ${trayecto.sector || 'General'}
-                  </span>
                 </div>
                 ${cicloBadge}
               </div>
 
-              ${trayecto.certificacion || trayecto.resolucion ? `
-                <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.75rem; background: rgba(0,0,0,0.2); padding: 0.5rem; border-radius: 6px;">
-                  📜 <strong>Certificación:</strong> ${trayecto.certificacion || 'S/D'}<br>
-                  📑 <strong>Resolución:</strong> ${trayecto.resolucion || 'S/D'}
-                </div>
-              ` : ''}
+              <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.75rem; background: rgba(0,0,0,0.2); padding: 0.5rem; border-radius: 6px;">
+                📜 <strong>N° de Curso:</strong> ${numCursoMostrado}<br>
+                📑 <strong>Resolución:</strong> ${trayecto.resolucion || 'S/D'}
+              </div>
 
               <p style="color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.75rem; line-height: 1.4;">
                 ${trayecto.descripcion || 'Sin descripción disponible.'}
               </p>
 
-              ${trayecto.requisitos ? `
-                <div style="background: rgba(251, 191, 36, 0.08); border-left: 3px solid #fbbf24; padding: 0.5rem 0.75rem; border-radius: 4px; margin-bottom: 0.75rem;">
-                  <strong style="color: #fbbf24; font-size: 0.75rem; display: block;">📋 Requisitos:</strong>
-                  <span style="color: #f8fafc; font-size: 0.8rem;">${trayecto.requisitos}</span>
-                </div>
-              ` : ''}
-
-              <div style="font-size: 0.8rem; color: #38bdf8; font-weight: 600; margin-bottom: 0.5rem;">
-                📚 ${cantidadModulos} Módulo(s)
-              </div>
-
-              <div style="margin-top: 0.5rem;">
-                ${modulosHTML}
-              </div>
+              <div style="margin-top: 0.5rem;">${modulosHTML}</div>
             </div>
             ${accionEstudiante}
             ${accionesAdmin}
@@ -399,7 +352,7 @@ const Trayectos = {
     if (elNombre) elNombre.value = trayecto.nombre || '';
     if (elCiclo) elCiclo.value = trayecto.ciclo_lectivo || new Date().getFullYear();
     if (elSector) elSector.value = trayecto.sector || '';
-    if (elCert) elCert.value = trayecto.certificacion || '';
+    if (elCert) elCert.value = trayecto.certificacion_oficial || trayecto.certificacion || '';
     if (elRes) elRes.value = trayecto.resolucion || '';
     if (elDesc) elDesc.value = trayecto.descripcion || '';
     if (elReq) elReq.value = trayecto.requisitos || '';
@@ -421,7 +374,7 @@ const Trayectos = {
     const nombre = elNombre ? elNombre.value.trim() : '';
     const cicloVal = elCiclo ? elCiclo.value : '';
     const sector = elSector ? elSector.value.trim() : '';
-    const certificacion = elCert ? elCert.value.trim() : '';
+    const certificacionVal = elCert ? elCert.value.trim() : '';
     const resolucion = elRes ? elRes.value.trim() : '';
     const descripcion = elDesc ? elDesc.value.trim() : '';
     const requisitos = elReq ? elReq.value.trim() : '';
@@ -433,11 +386,13 @@ const Trayectos = {
     }
 
     try {
+      // MAPEAMOS AMBOS CAMPOS EN PARALELO PARA GARANTIZAR COMPATIBILIDAD
       const datosTrayecto = {
         nombre: nombre,
         ciclo_lectivo: Number(cicloVal) || new Date().getFullYear(),
         sector: sector || null,
-        certificacion: certificacion || null,
+        certificacion_oficial: certificacionVal || null,
+        certificacion: certificacionVal || null,
         resolucion: resolucion || null,
         descripcion: descripcion || null,
         requisitos: requisitos || null,
