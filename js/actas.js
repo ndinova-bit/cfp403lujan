@@ -158,14 +158,25 @@ const ActasModulo = {
         mapaUsuarios[String(u.usuario || u.dni || u.id)] = u;
       });
 
-      // 3. Armar la lista combinada y ordenarla por APELLIDO
+ // 3. Armar la lista combinada y ordenarla por APELLIDO
       const listaEstudiantes = inscripciones.map(ins => {
         const key = String(ins.estudiante_user);
         const usr = mapaUsuarios[key] || {};
         
         const apStr = (usr.apellido || '').toUpperCase().trim();
         const nomStr = (usr.nombre || '').toUpperCase().trim();
-        const nombreCompleto = apStr && nomStr ? `${apStr}, ${nomStr}` : (apStr || nomStr || `DNI: ${key}`);
+        
+        // CORRECCIÓN: Primero APELLIDO, después Nombre
+        let nombreCompleto = '';
+        if (apStr && nomStr) {
+          nombreCompleto = `${apStr}, ${nomStr}`;
+        } else if (apStr) {
+          nombreCompleto = apStr;
+        } else if (nomStr) {
+          nombreCompleto = nomStr;
+        } else {
+          nombreCompleto = `DNI: ${key}`;
+        }
 
         return {
           dni: key,
@@ -175,6 +186,7 @@ const ActasModulo = {
         };
       });
 
+      // Ordenar por Apellido/Nombre
       listaEstudiantes.sort((a, b) => a.nombreCompleto.localeCompare(b.nombreCompleto));
 
       // 4. Cargar la plantilla Excel
