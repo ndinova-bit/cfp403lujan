@@ -1219,30 +1219,44 @@ async importarEstudiantesCSV(archivoCSV) {
         if (!dni) continue;
 
         try {
-          // 1. Guardar/Actualizar perfil en la tabla 'profiles' (utilizada por Auth y Usuarios & Roles)
-          const datosPerfil = {
-            dni: String(dni),
-            nombre: nombre,
-            apellido: apellido,
-            email: email,
-            rol: 'estudiante',
-            estado: 'ACTIVO'
-          };
-
-          const { error: errProfile } = await supabase
+          // 1. Buscar si la persona ya existe en 'profiles' por DNI
+          const { data: perfilExistente } = await supabase
             .from('profiles')
-            .upsert(datosPerfil, { onConflict: 'dni' });
+            .select('id, dni')
+            .eq('dni', String(dni))
+            .maybeSingle();
 
-          if (errProfile) {
-            // Si tu tabla profiles requiere la columna 'usuario', la mandamos de fallback
-            const { error: errProfileFallback } = await supabase
+          if (perfilExistente) {
+            // Si ya existe, actualizamos sus datos personales
+            const { error: errUpd } = await supabase
               .from('profiles')
-              .upsert({ ...datosPerfil, usuario: String(dni) }, { onConflict: 'dni' });
+              .update({
+                nombre: nombre,
+                apellido: apellido,
+                email: email,
+                rol: 'estudiante',
+                estado: 'ACTIVO'
+              })
+              .eq('dni', String(dni));
 
-            if (errProfileFallback) throw errProfileFallback;
+            if (errUpd) throw errUpd;
+          } else {
+            // Si no existe, creamos el nuevo registro
+            const { error: errIns } = await supabase
+              .from('profiles')
+              .insert([{
+                dni: String(dni),
+                nombre: nombre,
+                apellido: apellido,
+                email: email,
+                rol: 'estudiante',
+                estado: 'ACTIVO'
+              }]);
+
+            if (errIns) throw errIns;
           }
 
-          // 2. Vincular alumno al trayecto actual en la tabla 'inscripciones'
+          // 2. Vincular alumno al trayecto actual en 'inscripciones'
           const { data: inscExistente } = await supabase
             .from('inscripciones')
             .select('id')
@@ -1270,7 +1284,6 @@ async importarEstudiantesCSV(archivoCSV) {
 
       alert(`✅ Proceso finalizado: ${procesados} estudiantes inscriptos correctamente.${errores > 0 ? ` (${errores} errores)` : ''}`);
       
-      // Recargar la sábana y la lista global si está instanciada
       await this.cargarSabanaEstudiantes();
       if (typeof UsuariosAdmin !== 'undefined' && typeof UsuariosAdmin.cargarUsuarios === 'function') {
         await UsuariosAdmin.cargarUsuarios();
