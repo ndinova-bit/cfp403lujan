@@ -238,52 +238,69 @@ const ActasModulo = {
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(arrayBuffer);
 
-      const worksheet = workbook.getWorksheet('ACTA EXAMEN');
+      // Mapeo riguroso de Módulos ACTA I a ACTA X (según plantilla oficial)
+      const colsCalificacion = ['F', 'H', 'J', 'L', 'N', 'P', 'R', 'T', 'V', 'X'];
+      const colsNumero       = ['G', 'I', 'K', 'M', 'O', 'Q', 'S', 'U', 'W', 'Y'];
 
-      if (!worksheet) {
-        alert("No se encontró la hoja 'ACTA EXAMEN' en la plantilla.");
-        return;
+      const limitePorHoja = 30;
+      const totalHojas = Math.ceil(listaEstudiantes.length / limitePorHoja);
+
+      for (let h = 0; h < totalHojas; h++) {
+        // Detectar o seleccionar hoja (Hoja 1 = 'ACTA EXAMEN', Hoja 2 = 'HOJA 2', etc.)
+        let nombreHoja = h === 0 ? 'ACTA EXAMEN' : `HOJA ${h + 1}`;
+        let worksheet = workbook.getWorksheet(nombreHoja);
+
+        if (!worksheet) {
+          // Fallback a buscar por índice si cambia el nombre de la hoja
+          worksheet = workbook.worksheets[h] || workbook.getWorksheet('ACTA EXAMEN');
+        }
+
+        if (!worksheet) continue;
+
+        // Encabezados
+        worksheet.getCell('O3').value = String(trayecto.nombre || '').toUpperCase();
+        worksheet.getCell('X3').value = `CURSO Nº: ${trayecto.id || ''}`;
+
+        // Obtener lote de hasta 30 estudiantes para esta hoja
+        const estudiantesHoja = listaEstudiantes.slice(h * limitePorHoja, (h + 1) * limitePorHoja);
+        const filaInicial = 8;
+
+        estudiantesHoja.forEach((al, idx) => {
+          const fila = filaInicial + idx;
+
+          // N° Egresado (Columna A)
+          worksheet.getCell(`A${fila}`).value = al.numEgresado;
+
+          // N° de Orden (Columna C)
+          worksheet.getCell(`C${fila}`).value = (h * limitePorHoja) + idx + 1;
+
+          // Apellido y Nombre (Columna D)
+          worksheet.getCell(`D${fila}`).value = al.nombreCompleto;
+
+          // DNI en Columna AA (Y 'DNI' en Columna Z)
+          worksheet.getCell(`Z${fila}`).value = 'DNI';
+          worksheet.getCell(`AA${fila}`).value = al.dni;
+
+          // Volcar las notas calculadas solo si el alumno tiene nota en ese módulo
+          al.notasModulos.forEach((notaMod, mIdx) => {
+            if (mIdx < colsCalificacion.length) {
+              const colCal = colsCalificacion[mIdx];
+              const colNum = colsNumero[mIdx];
+
+              if (notaMod !== null && notaMod !== undefined) {
+                const notaEscala10 = notaMod > 10 ? Math.round(notaMod / 10) : notaMod;
+                worksheet.getCell(`${colCal}${fila}`).value = notaEscala10;
+                worksheet.getCell(`${colNum}${fila}`).value = notaEscala10;
+              } else {
+                worksheet.getCell(`${colCal}${fila}`).value = '';
+                worksheet.getCell(`${colNum}${fila}`).value = '';
+              }
+            }
+          });
+        });
       }
 
-      // Encabezados
-      worksheet.getCell('O3').value = String(trayecto.nombre || '').toUpperCase();
-      worksheet.getCell('X3').value = `CURSO Nº: ${trayecto.id || ''}`;
-
-      // Mapeo completo de las 10 columnas (ACTA I a ACTA X)
-      const colsCalificacion = ['F', 'H', 'J', 'L', 'N', 'P', 'R', 'T', 'V', 'Z'];
-      const colsNumero       = ['G', 'I', 'K', 'M', 'O', 'Q', 'S', 'U', 'W', 'AA'];
-
-      // 8. Rellenar filas
-      const filaInicial = 8;
-
-      listaEstudiantes.forEach((al, idx) => {
-        const fila = filaInicial + idx;
-
-        worksheet.getCell(`A${fila}`).value = al.numEgresado;
-        worksheet.getCell(`C${fila}`).value = idx + 1;
-        worksheet.getCell(`D${fila}`).value = al.nombreCompleto;
-        worksheet.getCell(`X${fila}`).value = al.dni;
-
-        // Volcar las notas calculadas solo si el alumno tiene nota en ese módulo
-        al.notasModulos.forEach((notaMod, mIdx) => {
-          if (mIdx < colsCalificacion.length) {
-            const colCal = colsCalificacion[mIdx];
-            const colNum = colsNumero[mIdx];
-
-            if (notaMod !== null && notaMod !== undefined) {
-              const notaEscala10 = notaMod > 10 ? Math.round(notaMod / 10) : notaMod;
-              worksheet.getCell(`${colCal}${fila}`).value = notaEscala10;
-              worksheet.getCell(`${colNum}${fila}`).value = notaEscala10;
-            } else {
-              // Si NO tiene nota cargada, dejamos las celdas limpias
-              worksheet.getCell(`${colCal}${fila}`).value = '';
-              worksheet.getCell(`${colNum}${fila}`).value = '';
-            }
-          }
-        });
-      });
-
-      // 9. Descargar
+      // 8. Descargar
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const link = document.createElement('a');
