@@ -1208,40 +1208,41 @@ async importarEstudiantesCSV(archivoCSV) {
       for (let i = 1; i < filas.length; i++) {
         const cols = filas[i].split(',').map(c => c.trim());
         const dni = cols[idxDni];
-        const nombre = idxNombre !== -1 ? cols[idxNombre] : '';
-        const apellido = idxApellido !== -1 ? cols[idxApellido] : '';
+        const nombre = idxNombre !== -1 ? cols[idxNombre].toUpperCase() : '';
+        const apellido = idxApellido !== -1 ? cols[idxApellido].toUpperCase() : '';
         
-        let email = idxEmail !== -1 ? cols[idxEmail] : '';
+        let email = idxEmail !== -1 ? cols[idxEmail].toLowerCase() : '';
         if (!email && dni) {
-          email = `${dni}@gmail.com`;
+          email = `${dni}@cfp403.ar`;
         }
 
         if (!dni) continue;
 
         try {
-          const passHasheada = (typeof CryptoJS !== 'undefined' && CryptoJS.SHA256)
-            ? CryptoJS.SHA256(String(dni)).toString()
-            : String(dni);
+          // 1. Guardar/Actualizar perfil en la tabla 'profiles' (utilizada por Auth y Usuarios & Roles)
+          const datosPerfil = {
+            dni: String(dni),
+            nombre: nombre,
+            apellido: apellido,
+            email: email,
+            rol: 'estudiante',
+            estado: 'ACTIVO'
+          };
 
-// 1. Crear / actualizar en tabla 'usuarios' con estado ACTIVO
-const { error: errUser } = await supabase
-  .from('usuarios')
-  .upsert({
-    usuario: String(dni),
-    pass: passHasheada,
-    nombre: String(nombre),
-    apellido: String(apellido),
-    email: String(email),
-    rol: 'estudiante',
-    estado: 'ACTIVO' // 👈 Agregamos esto para que la tabla de Usuarios y Roles los muestre
-  }, { onConflict: 'usuario' });
+          const { error: errProfile } = await supabase
+            .from('profiles')
+            .upsert(datosPerfil, { onConflict: 'dni' });
 
-          if (errUser) {
-            console.error(`❌ Error Supabase Usuario [${dni}]:`, errUser.message, errUser.details);
-            throw errUser;
+          if (errProfile) {
+            // Si tu tabla profiles requiere la columna 'usuario', la mandamos de fallback
+            const { error: errProfileFallback } = await supabase
+              .from('profiles')
+              .upsert({ ...datosPerfil, usuario: String(dni) }, { onConflict: 'dni' });
+
+            if (errProfileFallback) throw errProfileFallback;
           }
 
-          // 2. Inscribir al trayecto
+          // 2. Vincular alumno al trayecto actual en la tabla 'inscripciones'
           const { data: inscExistente } = await supabase
             .from('inscripciones')
             .select('id')
@@ -1257,10 +1258,7 @@ const { error: errUser } = await supabase
                 estudiante_user: String(dni)
               }]);
 
-            if (errInsc) {
-              console.error(`❌ Error Supabase Inscripción [${dni}]:`, errInsc.message, errInsc.details);
-              throw errInsc;
-            }
+            if (errInsc) throw errInsc;
           }
 
           procesados++;
@@ -1270,8 +1268,13 @@ const { error: errUser } = await supabase
         }
       }
 
-      alert(`✅ Proceso finalizado: ${procesados} estudiantes inscriptos correctamente al trayecto.${errores > 0 ? ` (${errores} errores)` : ''}`);
+      alert(`✅ Proceso finalizado: ${procesados} estudiantes inscriptos correctamente.${errores > 0 ? ` (${errores} errores)` : ''}`);
+      
+      // Recargar la sábana y la lista global si está instanciada
       await this.cargarSabanaEstudiantes();
+      if (typeof UsuariosAdmin !== 'undefined' && typeof UsuariosAdmin.cargarUsuarios === 'function') {
+        await UsuariosAdmin.cargarUsuarios();
+      }
     };
   },
   
