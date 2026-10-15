@@ -241,19 +241,24 @@ const ActasModulo = {
       const colsNumero       = ['G', 'I', 'K', 'M', 'O', 'Q', 'S', 'U', 'W', 'Y'];
 
       const limitePorHoja = 30;
+
+      // Obtener el valor del Número de Curso (Prioridad a 'certificacion_oficial', luego 'numero_curso', luego 'id')
+      const numCursoVal = trayecto.certificacion_oficial || trayecto.numero_curso || trayecto.numero || trayecto.id || '';
+
+      // 8. Rellenar ENCABEZADOS en TODAS las hojas existentes de la plantilla
+      workbook.worksheets.forEach((sheet) => {
+        // Nombre del Trayecto / Especialidad
+        sheet.getCell('R3').value = String(trayecto.nombre || '').toUpperCase();
+        // Número de Curso en Z4 (debajo de Z3 "CURSO N°")
+        sheet.getCell('Z4').value = String(numCursoVal);
+      });
+
+      // 9. Rellenar la nómina de estudiantes dividida por hojas de 30 alumnos
       const totalHojas = Math.ceil(listaEstudiantes.length / limitePorHoja);
 
       for (let h = 0; h < totalHojas; h++) {
         let worksheet = workbook.worksheets[h];
-
         if (!worksheet) continue;
-
-        // R3: Nombre de la Especialidad / Trayecto (Cubre de R3 a Y3 en cada hoja)
-        worksheet.getCell('R3').value = String(trayecto.nombre || '').toUpperCase();
-        
-        // Z4: Número de Curso (Debajo del encabezado "CURSO N°" en Z3)
-        const numCursoVal = trayecto.certificacion_oficial || trayecto.numero_curso || trayecto.id || '';
-        worksheet.getCell('Z4').value = String(numCursoVal);
 
         const estudiantesHoja = listaEstudiantes.slice(h * limitePorHoja, (h + 1) * limitePorHoja);
         const filaInicial = 8;
@@ -284,7 +289,7 @@ const ActasModulo = {
         });
       }
 
-      // 8. Descargar
+      // 10. Descargar
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const link = document.createElement('a');
