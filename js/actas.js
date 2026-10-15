@@ -248,12 +248,12 @@ const ActasModulo = {
 
         if (!worksheet) continue;
 
-        // R3: Nombre de Especialidad / Trayecto (Cubre R3 a Y3 en cada hoja)
+        // R3: Nombre de la Especialidad / Trayecto (Cubre de R3 a Y3 en cada hoja)
         worksheet.getCell('R3').value = String(trayecto.nombre || '').toUpperCase();
         
-        // Z3: Número de Curso
+        // Z4: Número de Curso (Debajo del encabezado "CURSO N°" en Z3)
         const numCursoVal = trayecto.certificacion_oficial || trayecto.numero_curso || trayecto.id || '';
-        worksheet.getCell('Z3').value = String(numCursoVal);
+        worksheet.getCell('Z4').value = String(numCursoVal);
 
         const estudiantesHoja = listaEstudiantes.slice(h * limitePorHoja, (h + 1) * limitePorHoja);
         const filaInicial = 8;
@@ -273,9 +273,8 @@ const ActasModulo = {
               const colNum = colsNumero[mIdx];
 
               if (notaMod !== null && notaMod !== undefined) {
-                const notaEscala10 = notaMod > 10 ? Math.round(notaMod / 10) : notaMod;
-                worksheet.getCell(`${colCal}${fila}`).value = notaEscala10;
-                worksheet.getCell(`${colNum}${fila}`).value = notaEscala10;
+                worksheet.getCell(`${colCal}${fila}`).value = notaMod;
+                worksheet.getCell(`${colNum}${fila}`).value = notaMod;
               } else {
                 worksheet.getCell(`${colCal}${fila}`).value = '';
                 worksheet.getCell(`${colNum}${fila}`).value = '';
