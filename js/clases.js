@@ -789,7 +789,7 @@ const ClasesModulo = {
     }
   },
 
-  async cargarSabanaEstudiantes() {
+async cargarSabanaEstudiantes() {
     const contenedor = document.getElementById('contenedor-lista-alumnos');
     if (!contenedor) return;
 
@@ -808,10 +808,22 @@ const ClasesModulo = {
 
       const listaUsers = inscripciones.map(i => i.estudiante_user);
 
-      const { data: alumnos } = await supabase
+      // 1. Consulta a usuarios ordenando por APELLIDO
+      let { data: alumnos } = await supabase
         .from('usuarios')
         .select('*')
-        .in('usuario', listaUsers);
+        .in('usuario', listaUsers)
+        .order('apellido', { ascending: true });
+
+      // Fallback de ordenamiento por Apellido y Nombre en JS
+      if (alumnos && alumnos.length > 0) {
+        alumnos.sort((a, b) => {
+          const apA = (a.apellido || '').toUpperCase();
+          const apB = (b.apellido || '').toUpperCase();
+          if (apA !== apB) return apA.localeCompare(apB);
+          return (a.nombre || '').toUpperCase().localeCompare((b.nombre || '').toUpperCase());
+        });
+      }
 
       const { data: modulos } = await supabase
         .from('modulos')
@@ -855,7 +867,11 @@ const ClasesModulo = {
 
       let filasHTML = '';
       (alumnos || []).forEach((u, i) => {
-        const nombreCompleto = `${u.apellido || ''} ${u.nombre || ''}`.trim();
+        // Formatear como APELLIDO, Nombre
+        const apStr = (u.apellido || '').toUpperCase();
+        const nomStr = u.nombre ? (u.nombre.charAt(0).toUpperCase() + u.nombre.slice(1).toLowerCase()) : '';
+        const nombreCompleto = apStr && nomStr ? `${apStr}, ${nomStr}` : (apStr || nomStr || 'Sin Nombre');
+        
         const userKey = String(u.usuario || u.dni || u.id);
 
         let celdasNotasHTML = '';
