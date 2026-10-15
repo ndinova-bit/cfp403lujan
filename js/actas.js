@@ -126,30 +126,67 @@ const ActasModulo = {
   /**
    * Carga la plantilla original en segundo plano, la rellena y la descarga intacta
    */
-  async generarExcelOficialDesdePlantilla() {
+async generarExcelOficialDesdePlantilla() {
     if (!this.trayectoSeleccionado) return;
 
     try {
       const trayecto = this.trayectoSeleccionado;
 
-      // 1. Obtener inscripciones reales de Supabase
-      const { data: inscripciones } = await supabase
+      // 1. Obtener inscripciones reales del trayecto
+      const { data: inscripciones, error: errInsc } = await supabase
         .from('inscripciones')
         .select('*')
         .eq('trayecto_id', trayecto.id);
 
-      const alumnos = inscripciones || [];
+      if (errInsc) throw errInsc;
 
-      // 2. Cargar el archivo de plantilla original directamente desde el servidor web
-      // Asegúrate de que el archivo 'MODELO ASISTENCIA  + NOTAS MODULOS.xlsx' esté en la misma carpeta o subcarpeta
+      if (!inscripciones || inscripciones.length === 0) {
+        alert("⚠️ No hay estudiantes inscriptos en este trayecto para generar el acta.");
+        return;
+      }
+
+      // 2. Traer los datos personales completos (Nombre, Apellido, DNI) desde la tabla 'usuarios'
+      const listaDNIs = inscripciones.map(i => String(i.estudiante_user));
+      
+      const { data: datosUsuarios } = await supabase
+        .from('usuarios')
+        .select('*')
+        .in('usuario', listaDNIs);
+
+      // Mapa rápido de consulta por DNI
+      const mapaUsuarios = {};
+      (datosUsuarios || []).forEach(u => {
+        mapaUsuarios[String(u.usuario || u.dni || u.id)] = u;
+      });
+
+      // 3. Armar la lista combinada y ordenarla alfabéticamente por APELLIDO
+      const listaEstudiantes = inscripciones.map(ins => {
+        const key = String(ins.estudiante_user);
+        const usr = mapaUsuarios[key] || {};
+        
+        const apStr = (usr.apellido || '').toUpperCase().trim();
+        const nomStr = (usr.nombre || '').toUpperCase().trim();
+        const nombreCompleto = apStr && nomStr ? `${apStr}, ${nomStr}` : (apStr || nomStr || `DNI: ${key}`);
+
+        return {
+          dni: key,
+          nombreCompleto: nombreCompleto,
+          numEgresado: ins.num_egresado || ins.numero_egresado || '',
+          nota: ins.nota ? parseInt(ins.nota, 10) : 8
+        };
+      });
+
+      listaEstudiantes.sort((a, b) => a.nombreCompleto.localeCompare(b.nombreCompleto));
+
+      // 4. Cargar el archivo de plantilla original directamente desde el servidor web
       const response = await fetch('MODELO ASISTENCIA  + NOTAS MODULOS.xlsx');
       const arrayBuffer = await response.arrayBuffer();
 
-      // 3. Abrir la plantilla con ExcelJS
+      // 5. Abrir la plantilla con ExcelJS
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(arrayBuffer);
 
-      // 4. Seleccionar la hoja oficial
+      // 6. Seleccionar la hoja oficial
       const worksheet = workbook.getWorksheet('ACTA EXAMEN');
 
       if (!worksheet) {
@@ -157,39 +194,33 @@ const ActasModulo = {
         return;
       }
 
-      // 5. Rellenar Encabezados (Fila 3)
-      // Columna O (15): Especialidad | Columna X (24): Curso N°
+      // 7. Rellenar Encabezados (Fila 3)
       worksheet.getCell('O3').value = String(trayecto.nombre || '').toUpperCase();
       worksheet.getCell('X3').value = `CURSO Nº: ${trayecto.id || ''}`;
 
-      // 6. Rellenar la lista de Estudiantes (A partir de la Fila 8)
+      // 8. Rellenar la lista de Estudiantes (Fila 8 en adelante)
       const filaInicial = 8;
-      
-      // Columnas correspondientes a las notas de cada módulo (ACTA I a ACTA IX)
-      const columnasNotas = ['F', 'H', 'J', 'L', 'N', 'P', 'R', 'T', 'V'];
 
-      alumnos.forEach((al, idx) => {
+      listaEstudiantes.forEach((al, idx) => {
         const fila = filaInicial + idx;
 
         // N° Egresado (Columna A)
-        worksheet.getCell(`A${fila}`).value = al.num_egresado || al.numero_egresado || '';
+        worksheet.getCell(`A${fila}`).value = al.numEgresado;
 
         // N° de Orden (Columna C)
         worksheet.getCell(`C${fila}`).value = idx + 1;
 
         // Apellido y Nombre (Columna D)
-        const nombreCompleto = al.estudiante_nombre || al.estudiante_user || '';
-        worksheet.getCell(`D${fila}`).value = String(nombreCompleto).toUpperCase();
+        worksheet.getCell(`D${fila}`).value = al.nombreCompleto;
 
         // Cargar Nota (Columna F / Módulo 1)
-        const notaVal = al.nota ? parseInt(al.nota, 10) : 8;
-        worksheet.getCell('F' + fila).value = notaVal;
+        worksheet.getCell(`F${fila}`).value = al.nota;
 
         // Documento DNI (Columna X)
-        worksheet.getCell(`X${fila}`).value = al.estudiante_dni || '';
+        worksheet.getCell(`X${fila}`).value = al.dni;
       });
 
-      // 7. Descargar el archivo Excel listo con el nombre del trayecto
+      // 9. Descargar el archivo Excel listo con el nombre del trayecto
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const link = document.createElement('a');
@@ -199,9 +230,8 @@ const ActasModulo = {
 
     } catch (err) {
       console.error('Error al rellenar la plantilla Excel:', err);
-      alert('Asegurate de haber colocado el archivo "MODELO ASISTENCIA  + NOTAS MODULOS.xlsx" en la carpeta raíz del proyecto.');
+      alert('Ocurrió un error al procesar el acta. Verificá la consola.');
     }
   }
-};
 
 window.ActasModulo = ActasModulo;
