@@ -124,7 +124,7 @@ const ActasModulo = {
     if (!this.trayectoSeleccionado) return;
 
     try {
-      // 1. Consulta directa a Supabase para forzar traer 'certificacion_oficial'
+      // 1. Consulta directa a Supabase
       const { data: trayecto, error: errTray } = await supabase
         .from('trayectos')
         .select('*')
@@ -187,7 +187,7 @@ const ActasModulo = {
         mapaUsuarios[String(u.usuario || u.dni || u.id)] = u;
       });
 
-      // 7. Armar lista de estudiantes ordenada por APELLIDO
+      // 7. Armar lista de estudiantes
       const listaEstudiantes = inscripciones.map(ins => {
         const userKey = String(ins.estudiante_user);
         const usr = mapaUsuarios[userKey] || {};
@@ -248,10 +248,9 @@ const ActasModulo = {
       const colsNumero       = ['G', 'I', 'K', 'M', 'O', 'Q', 'S', 'U', 'W', 'Y'];
 
       const limitePorHoja = 30;
-      // Forzar al menos 3 hojas
       const totalHojasObjetivo = Math.max(3, Math.ceil(listaEstudiantes.length / limitePorHoja));
 
-      // Extraer N° de Curso de 'certificacion_oficial' o 'certificacion'
+      // N° de Curso de 'certificacion_oficial' o 'certificacion'
       const numCursoVal = String(
         trayecto.certificacion_oficial || 
         trayecto.certificacion || 
@@ -261,33 +260,30 @@ const ActasModulo = {
 
       const nombreTrayectoVal = String(trayecto.nombre || '').toUpperCase().trim();
 
-      // 9. Garantizar la creación de las 3 hojas mediante clonación idéntica
-      const hojaBase = workbook.getWorksheet(1);
+      // 9. Captura segura de la primera hoja
+      const hojaBase = workbook.worksheets[0];
 
-      while (workbook.worksheets.length < totalHojasObjetivo) {
-        const idxNueva = workbook.worksheets.length + 1;
-        const nuevaHoja = workbook.addWorksheet(`HOJA ${idxNueva}`);
+      if (hojaBase) {
+        while (workbook.worksheets.length < totalHojasObjetivo) {
+          const idxNueva = workbook.worksheets.length + 1;
+          const nuevaHoja = workbook.addWorksheet(`HOJA ${idxNueva}`);
 
-        // Copiar filas, estilos y combinaciones
-        hojaBase.eachRow({ includeEmpty: true }, (row, rNum) => {
-          const targetRow = nuevaHoja.getRow(rNum);
-          row.eachCell({ includeEmpty: true }, (cell, cNum) => {
-            targetRow.getCell(cNum).value = cell.value;
-            targetRow.getCell(cNum).style = Object.assign({}, cell.style);
+          hojaBase.eachRow({ includeEmpty: true }, (row, rNum) => {
+            const targetRow = nuevaHoja.getRow(rNum);
+            row.eachCell({ includeEmpty: true }, (cell, cNum) => {
+              targetRow.getCell(cNum).value = cell.value;
+              targetRow.getCell(cNum).style = Object.assign({}, cell.style);
+            });
+            targetRow.height = row.height;
           });
-          targetRow.height = row.height;
-        });
+        }
       }
 
       // 10. RELLENAR ENCABEZADOS Y ALUMNOS EN TODAS LAS HOJAS
       workbook.worksheets.forEach((sheet, hIdx) => {
-        // Nombre del Trayecto en la celda principal del rango R3:Y5
         sheet.getCell('R3').value = nombreTrayectoVal;
-
-        // N° de Curso en la celda principal del rango Z4:AA5
         sheet.getCell('Z4').value = numCursoVal;
 
-        // Rellenar nómina
         const estudiantesHoja = listaEstudiantes.slice(hIdx * limitePorHoja, (hIdx + 1) * limitePorHoja);
         const filaInicial = 8;
 
