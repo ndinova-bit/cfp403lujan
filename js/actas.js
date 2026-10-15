@@ -124,14 +124,14 @@ const ActasModulo = {
     if (!this.trayectoSeleccionado) return;
 
     try {
-      // 1. Re-consultar el trayecto completo desde Supabase para garantizar traer 'certificacion_oficial'
+      // 1. Consulta directa a Supabase para forzar traer el valor de 'certificacion_oficial' actualizado
       const { data: trayecto, error: errTray } = await supabase
         .from('trayectos')
         .select('*')
         .eq('id', this.trayectoSeleccionado.id)
         .single();
 
-      if (errTray || !trayecto) throw errTray || new Error("No se halló el trayecto.");
+      if (errTray || !trayecto) throw errTray || new Error("No se pudo obtener el trayecto.");
 
       // 2. Obtener inscripciones
       const { data: inscripciones, error: errInsc } = await supabase
@@ -175,7 +175,7 @@ const ActasModulo = {
         .select('*')
         .eq('trayecto_id', Number(trayecto.id));
 
-      // 6. Traer datos personales
+      // 6. Traer datos personales de usuarios
       const listaDNIs = inscripciones.map(i => String(i.estudiante_user));
       const { data: datosUsuarios } = await supabase
         .from('usuarios')
@@ -247,8 +247,8 @@ const ActasModulo = {
       const colsCalificacion = ['F', 'H', 'J', 'L', 'N', 'P', 'R', 'T', 'V', 'X'];
       const colsNumero       = ['G', 'I', 'K', 'M', 'O', 'Q', 'S', 'U', 'W', 'Y'];
 
-      // Obtener el valor del Número de Curso guardado en Certificación Oficial
-      const numCursoVal = trayecto.certificacion_oficial || trayecto.numero_curso || trayecto.numero || trayecto.id || '';
+      // N° de Curso traído del campo 'certificacion_oficial'
+      const numCursoVal = trayecto.certificacion_oficial || trayecto.numero_curso || trayecto.numero || '';
 
       // 9. ESCRIBIR ENCABEZADOS EN TODAS LAS HOJAS EXISTENTES DE LA PLANTILLA
       workbook.worksheets.forEach((sheet) => {
@@ -256,11 +256,11 @@ const ActasModulo = {
         sheet.getCell('Z4').value = String(numCursoVal);
       });
 
-      // 10. Rellenar la nómina de estudiantes en las hojas necesarias
+      // 10. Rellenar los datos de los alumnos por cada hoja (hasta 30 por hoja)
       const limitePorHoja = 30;
-      const totalHojas = Math.ceil(listaEstudiantes.length / limitePorHoja);
+      const totalHojasNomina = Math.ceil(listaEstudiantes.length / limitePorHoja);
 
-      for (let h = 0; h < totalHojas; h++) {
+      for (let h = 0; h < totalHojasNomina; h++) {
         let worksheet = workbook.worksheets[h];
         if (!worksheet) continue;
 
