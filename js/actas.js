@@ -126,7 +126,7 @@ const ActasModulo = {
   /**
    * Carga la plantilla original en segundo plano, la rellena y la descarga intacta
    */
-async generarExcelOficialDesdePlantilla() {
+  async generarExcelOficialDesdePlantilla() {
     if (!this.trayectoSeleccionado) return;
 
     try {
@@ -145,21 +145,20 @@ async generarExcelOficialDesdePlantilla() {
         return;
       }
 
-      // 2. Traer los datos personales completos (Nombre, Apellido, DNI) desde la tabla 'usuarios'
+      // 2. Traer los datos personales completos desde la tabla 'usuarios'
       const listaDNIs = inscripciones.map(i => String(i.estudiante_user));
-      
+
       const { data: datosUsuarios } = await supabase
         .from('usuarios')
         .select('*')
         .in('usuario', listaDNIs);
 
-      // Mapa rápido de consulta por DNI
       const mapaUsuarios = {};
       (datosUsuarios || []).forEach(u => {
         mapaUsuarios[String(u.usuario || u.dni || u.id)] = u;
       });
 
-      // 3. Armar la lista combinada y ordenarla alfabéticamente por APELLIDO
+      // 3. Armar la lista combinada y ordenarla por APELLIDO
       const listaEstudiantes = inscripciones.map(ins => {
         const key = String(ins.estudiante_user);
         const usr = mapaUsuarios[key] || {};
@@ -178,15 +177,13 @@ async generarExcelOficialDesdePlantilla() {
 
       listaEstudiantes.sort((a, b) => a.nombreCompleto.localeCompare(b.nombreCompleto));
 
-      // 4. Cargar el archivo de plantilla original directamente desde el servidor web
+      // 4. Cargar la plantilla Excel
       const response = await fetch('MODELO ASISTENCIA  + NOTAS MODULOS.xlsx');
       const arrayBuffer = await response.arrayBuffer();
 
-      // 5. Abrir la plantilla con ExcelJS
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(arrayBuffer);
 
-      // 6. Seleccionar la hoja oficial
       const worksheet = workbook.getWorksheet('ACTA EXAMEN');
 
       if (!worksheet) {
@@ -194,33 +191,24 @@ async generarExcelOficialDesdePlantilla() {
         return;
       }
 
-      // 7. Rellenar Encabezados (Fila 3)
+      // 5. Encabezados
       worksheet.getCell('O3').value = String(trayecto.nombre || '').toUpperCase();
       worksheet.getCell('X3').value = `CURSO Nº: ${trayecto.id || ''}`;
 
-      // 8. Rellenar la lista de Estudiantes (Fila 8 en adelante)
+      // 6. Filas de Alumnos
       const filaInicial = 8;
 
       listaEstudiantes.forEach((al, idx) => {
         const fila = filaInicial + idx;
 
-        // N° Egresado (Columna A)
         worksheet.getCell(`A${fila}`).value = al.numEgresado;
-
-        // N° de Orden (Columna C)
         worksheet.getCell(`C${fila}`).value = idx + 1;
-
-        // Apellido y Nombre (Columna D)
         worksheet.getCell(`D${fila}`).value = al.nombreCompleto;
-
-        // Cargar Nota (Columna F / Módulo 1)
         worksheet.getCell(`F${fila}`).value = al.nota;
-
-        // Documento DNI (Columna X)
         worksheet.getCell(`X${fila}`).value = al.dni;
       });
 
-      // 9. Descargar el archivo Excel listo con el nombre del trayecto
+      // 7. Descargar
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const link = document.createElement('a');
@@ -233,5 +221,6 @@ async generarExcelOficialDesdePlantilla() {
       alert('Ocurrió un error al procesar el acta. Verificá la consola.');
     }
   }
+};
 
 window.ActasModulo = ActasModulo;
