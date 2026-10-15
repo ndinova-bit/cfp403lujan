@@ -139,14 +139,14 @@ const ActasModulo = {
         return;
       }
 
-      // 2. Cargar hasta 10 módulos del trayecto
+      // 2. Cargar módulos del trayecto
       const { data: modulos } = await supabase
         .from('modulos')
         .select('id, nombre')
         .eq('trayecto_id', Number(trayecto.id))
         .order('id', { ascending: true });
 
-      // 3. Cargar clases y entregas de notas
+      // 3. Cargar clases y entregas
       const { data: clases } = await supabase
         .from('clases')
         .select('id, modulo_id')
@@ -180,7 +180,7 @@ const ActasModulo = {
         mapaUsuarios[String(u.usuario || u.dni || u.id)] = u;
       });
 
-      // 6. Armar y calcular notas por módulo para cada estudiante
+      // 6. Armar lista de estudiantes
       const listaEstudiantes = inscripciones.map(ins => {
         const userKey = String(ins.estudiante_user);
         const usr = mapaUsuarios[userKey] || {};
@@ -189,7 +189,6 @@ const ActasModulo = {
         const nomStr = (usr.nombre || '').toUpperCase().trim();
         const nombreCompleto = apStr && nomStr ? `${apStr}, ${nomStr}` : (apStr || nomStr || `DNI: ${userKey}`);
 
-        // Calcular notas por módulo (Hasta 10 Módulos)
         const notasModulos = [];
 
         (modulos || []).forEach(mod => {
@@ -228,7 +227,6 @@ const ActasModulo = {
         };
       });
 
-      // Ordenar por APELLIDO
       listaEstudiantes.sort((a, b) => a.nombreCompleto.localeCompare(b.nombreCompleto));
 
       // 7. Cargar plantilla Excel
@@ -238,7 +236,7 @@ const ActasModulo = {
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(arrayBuffer);
 
-      // Mapeo riguroso de Módulos ACTA I a ACTA X (según plantilla oficial)
+      // Mapeo Módulos
       const colsCalificacion = ['F', 'H', 'J', 'L', 'N', 'P', 'R', 'T', 'V', 'X'];
       const colsNumero       = ['G', 'I', 'K', 'M', 'O', 'Q', 'S', 'U', 'W', 'Y'];
 
@@ -246,42 +244,29 @@ const ActasModulo = {
       const totalHojas = Math.ceil(listaEstudiantes.length / limitePorHoja);
 
       for (let h = 0; h < totalHojas; h++) {
-        // Detectar o seleccionar hoja (Hoja 1 = 'ACTA EXAMEN', Hoja 2 = 'HOJA 2', etc.)
-        let nombreHoja = h === 0 ? 'ACTA EXAMEN' : `HOJA ${h + 1}`;
-        let worksheet = workbook.getWorksheet(nombreHoja);
-
-        if (!worksheet) {
-          // Fallback a buscar por índice si cambia el nombre de la hoja
-          worksheet = workbook.worksheets[h] || workbook.getWorksheet('ACTA EXAMEN');
-        }
+        let worksheet = workbook.worksheets[h];
 
         if (!worksheet) continue;
 
-        // Encabezados
-        worksheet.getCell('O3').value = String(trayecto.nombre || '').toUpperCase();
-        worksheet.getCell('X3').value = `CURSO Nº: ${trayecto.id || ''}`;
+        // R3: Nombre de Especialidad / Trayecto (Cubre R3 a Y3 en cada hoja)
+        worksheet.getCell('R3').value = String(trayecto.nombre || '').toUpperCase();
+        
+        // Z3: Número de Curso
+        const numCursoVal = trayecto.certificacion_oficial || trayecto.numero_curso || trayecto.id || '';
+        worksheet.getCell('Z3').value = String(numCursoVal);
 
-        // Obtener lote de hasta 30 estudiantes para esta hoja
         const estudiantesHoja = listaEstudiantes.slice(h * limitePorHoja, (h + 1) * limitePorHoja);
         const filaInicial = 8;
 
         estudiantesHoja.forEach((al, idx) => {
           const fila = filaInicial + idx;
 
-          // N° Egresado (Columna A)
           worksheet.getCell(`A${fila}`).value = al.numEgresado;
-
-          // N° de Orden (Columna C)
           worksheet.getCell(`C${fila}`).value = (h * limitePorHoja) + idx + 1;
-
-          // Apellido y Nombre (Columna D)
           worksheet.getCell(`D${fila}`).value = al.nombreCompleto;
-
-          // DNI en Columna AA (Y 'DNI' en Columna Z)
           worksheet.getCell(`Z${fila}`).value = 'DNI';
           worksheet.getCell(`AA${fila}`).value = al.dni;
 
-          // Volcar las notas calculadas solo si el alumno tiene nota en ese módulo
           al.notasModulos.forEach((notaMod, mIdx) => {
             if (mIdx < colsCalificacion.length) {
               const colCal = colsCalificacion[mIdx];
