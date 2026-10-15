@@ -95,9 +95,6 @@ const ActasModulo = {
     }
   },
 
-  /**
-   * Vista resumen rápida dentro del sistema
-   */
   async renderizarVistaPrevia(trayecto) {
     const vista = document.getElementById('vista-acta-detalle');
     if (!vista) return;
@@ -123,16 +120,13 @@ const ActasModulo = {
     `;
   },
 
-  /**
-   * Carga la plantilla original en segundo plano, la rellena y la descarga intacta
-   */
   async generarExcelOficialDesdePlantilla() {
     if (!this.trayectoSeleccionado) return;
 
     try {
       const trayecto = this.trayectoSeleccionado;
 
-      // 1. Obtener inscripciones reales del trayecto
+      // 1. Obtener inscripciones
       const { data: inscripciones, error: errInsc } = await supabase
         .from('inscripciones')
         .select('*')
@@ -145,9 +139,37 @@ const ActasModulo = {
         return;
       }
 
-      // 2. Traer los datos personales completos desde la tabla 'usuarios'
-      const listaDNIs = inscripciones.map(i => String(i.estudiante_user));
+      // 2. Cargar hasta 10 módulos del trayecto
+      const { data: modulos } = await supabase
+        .from('modulos')
+        .select('id, nombre')
+        .eq('trayecto_id', Number(trayecto.id))
+        .order('id', { ascending: true });
 
+      // 3. Cargar clases y entregas de notas
+      const { data: clases } = await supabase
+        .from('clases')
+        .select('id, modulo_id')
+        .eq('trayecto_id', Number(trayecto.id));
+
+      const idsClases = (clases || []).map(c => c.id);
+      let entregas = [];
+      if (idsClases.length > 0) {
+        const { data: ent } = await supabase
+          .from('entregas_actividades')
+          .select('*')
+          .in('clase_id', idsClases);
+        entregas = ent || [];
+      }
+
+      // 4. Cargar asistencias
+      const { data: asistencias } = await supabase
+        .from('asistencias')
+        .select('*')
+        .eq('trayecto_id', Number(trayecto.id));
+
+      // 5. Traer datos personales
+      const listaDNIs = inscripciones.map(i => String(i.estudiante_user));
       const { data: datosUsuarios } = await supabase
         .from('usuarios')
         .select('*')
@@ -158,38 +180,58 @@ const ActasModulo = {
         mapaUsuarios[String(u.usuario || u.dni || u.id)] = u;
       });
 
- // 3. Armar la lista combinada y ordenarla por APELLIDO
+      // 6. Armar y calcular notas por módulo para cada estudiante
       const listaEstudiantes = inscripciones.map(ins => {
-        const key = String(ins.estudiante_user);
-        const usr = mapaUsuarios[key] || {};
+        const userKey = String(ins.estudiante_user);
+        const usr = mapaUsuarios[userKey] || {};
         
         const apStr = (usr.apellido || '').toUpperCase().trim();
         const nomStr = (usr.nombre || '').toUpperCase().trim();
-        
-        // CORRECCIÓN: Primero APELLIDO, después Nombre
-        let nombreCompleto = '';
-        if (apStr && nomStr) {
-          nombreCompleto = `${apStr}, ${nomStr}`;
-        } else if (apStr) {
-          nombreCompleto = apStr;
-        } else if (nomStr) {
-          nombreCompleto = nomStr;
-        } else {
-          nombreCompleto = `DNI: ${key}`;
-        }
+        const nombreCompleto = apStr && nomStr ? `${apStr}, ${nomStr}` : (apStr || nomStr || `DNI: ${userKey}`);
+
+        // Calcular notas por módulo (Hasta 10 Módulos)
+        const notasModulos = [];
+
+        (modulos || []).forEach(mod => {
+          const clasesMod = (clases || []).filter(c => Number(c.modulo_id) === Number(mod.id)).map(c => c.id);
+          const entregasAlumnoMod = entregas.filter(e => clasesMod.includes(Number(e.clase_id)) && String(e.estudiante_user) === userKey);
+
+          let sumaAct = 0, cantAct = 0;
+          entregasAlumnoMod.forEach(e => {
+            const val = parseFloat(e.nota);
+            if (!isNaN(val)) { sumaAct += val; cantAct++; }
+          });
+          const promAct = cantAct > 0 ? (sumaAct / cantAct) : null;
+
+          const asisModUser = (asistencias || []).filter(a => (Number(a.modulo_id) === Number(mod.id) || a.modulo_id === null) && String(a.estudiante_user) === userKey);
+          const totalClasesMod = asisModUser.length;
+          const presentesMod = asisModUser.filter(a => a.estado === 'presente').length;
+          const pctAsisMod = totalClasesMod > 0 ? ((presentesMod / totalClasesMod) * 100) : null;
+
+          let notaFinalModulo = null;
+          if (promAct !== null && pctAsisMod !== null) {
+            notaFinalModulo = Math.round((promAct + pctAsisMod) / 2);
+          } else if (promAct !== null) {
+            notaFinalModulo = Math.round(promAct);
+          } else if (pctAsisMod !== null) {
+            notaFinalModulo = Math.round(pctAsisMod);
+          }
+
+          notasModulos.push(notaFinalModulo);
+        });
 
         return {
-          dni: key,
+          dni: userKey,
           nombreCompleto: nombreCompleto,
           numEgresado: ins.num_egresado || ins.numero_egresado || '',
-          nota: ins.nota ? parseInt(ins.nota, 10) : 8
+          notasModulos: notasModulos
         };
       });
 
-      // Ordenar por Apellido/Nombre
+      // Ordenar por APELLIDO
       listaEstudiantes.sort((a, b) => a.nombreCompleto.localeCompare(b.nombreCompleto));
 
-      // 4. Cargar la plantilla Excel
+      // 7. Cargar plantilla Excel
       const response = await fetch('MODELO ASISTENCIA  + NOTAS MODULOS.xlsx');
       const arrayBuffer = await response.arrayBuffer();
 
@@ -203,11 +245,15 @@ const ActasModulo = {
         return;
       }
 
-      // 5. Encabezados
+      // Encabezados
       worksheet.getCell('O3').value = String(trayecto.nombre || '').toUpperCase();
       worksheet.getCell('X3').value = `CURSO Nº: ${trayecto.id || ''}`;
 
-      // 6. Filas de Alumnos
+      // Mapeo completo de las 10 columnas (ACTA I a ACTA X)
+      const colsCalificacion = ['F', 'H', 'J', 'L', 'N', 'P', 'R', 'T', 'V', 'Z'];
+      const colsNumero       = ['G', 'I', 'K', 'M', 'O', 'Q', 'S', 'U', 'W', 'AA'];
+
+      // 8. Rellenar filas
       const filaInicial = 8;
 
       listaEstudiantes.forEach((al, idx) => {
@@ -216,11 +262,28 @@ const ActasModulo = {
         worksheet.getCell(`A${fila}`).value = al.numEgresado;
         worksheet.getCell(`C${fila}`).value = idx + 1;
         worksheet.getCell(`D${fila}`).value = al.nombreCompleto;
-        worksheet.getCell(`F${fila}`).value = al.nota;
         worksheet.getCell(`X${fila}`).value = al.dni;
+
+        // Volcar las notas calculadas solo si el alumno tiene nota en ese módulo
+        al.notasModulos.forEach((notaMod, mIdx) => {
+          if (mIdx < colsCalificacion.length) {
+            const colCal = colsCalificacion[mIdx];
+            const colNum = colsNumero[mIdx];
+
+            if (notaMod !== null && notaMod !== undefined) {
+              const notaEscala10 = notaMod > 10 ? Math.round(notaMod / 10) : notaMod;
+              worksheet.getCell(`${colCal}${fila}`).value = notaEscala10;
+              worksheet.getCell(`${colNum}${fila}`).value = notaEscala10;
+            } else {
+              // Si NO tiene nota cargada, dejamos las celdas limpias
+              worksheet.getCell(`${colCal}${fila}`).value = '';
+              worksheet.getCell(`${colNum}${fila}`).value = '';
+            }
+          }
+        });
       });
 
-      // 7. Descargar
+      // 9. Descargar
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const link = document.createElement('a');
