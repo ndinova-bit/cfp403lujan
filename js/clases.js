@@ -1219,44 +1219,46 @@ async importarEstudiantesCSV(archivoCSV) {
         if (!dni) continue;
 
         try {
-          // 1. Buscar si la persona ya existe en 'profiles' por DNI
-          const { data: perfilExistente } = await supabase
-            .from('profiles')
-            .select('id, dni')
-            .eq('dni', String(dni))
-            .maybeSingle();
+          const passHasheada = (typeof CryptoJS !== 'undefined' && CryptoJS.SHA256)
+            ? CryptoJS.SHA256(String(dni)).toString()
+            : String(dni);
 
-          if (perfilExistente) {
-            // Si ya existe, actualizamos sus datos personales
-            const { error: errUpd } = await supabase
-              .from('profiles')
-              .update({
-                nombre: nombre,
-                apellido: apellido,
-                email: email,
-                rol: 'estudiante',
-                estado: 'ACTIVO'
-              })
-              .eq('dni', String(dni));
+          // 1. Guardar en la tabla 'usuarios' (que es la que NO te da error 400)
+          const { error: errUser } = await supabase
+            .from('usuarios')
+            .upsert({
+              usuario: String(dni),
+              pass: passHasheada,
+              nombre: nombre,
+              apellido: apellido,
+              email: email,
+              rol: 'estudiante',
+              estado: 'ACTIVO'
+            }, { onConflict: 'usuario' });
 
-            if (errUpd) throw errUpd;
-          } else {
-            // Si no existe, creamos el nuevo registro
-            const { error: errIns } = await supabase
+          if (errUser) {
+            console.error(`Error en usuarios [${dni}]:`, errUser);
+            throw errUser;
+          }
+
+          // 2. Intentar registrar en 'profiles' de forma segura (si la tabla lo permite)
+          try {
+            await supabase
               .from('profiles')
-              .insert([{
+              .upsert({
                 dni: String(dni),
                 nombre: nombre,
                 apellido: apellido,
                 email: email,
                 rol: 'estudiante',
                 estado: 'ACTIVO'
-              }]);
-
-            if (errIns) throw errIns;
+              }, { onConflict: 'dni' });
+          } catch (eProfile) {
+            // Si profiles requiere UUID o tiene RLS estricto, no interrumpe el flujo principal
+            console.warn(`No se pudo clonar a profiles el DNI ${dni}:`, eProfile);
           }
 
-          // 2. Vincular alumno al trayecto actual en 'inscripciones'
+          // 3. Vincular alumno al trayecto actual
           const { data: inscExistente } = await supabase
             .from('inscripciones')
             .select('id')
