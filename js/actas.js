@@ -124,7 +124,7 @@ const ActasModulo = {
     if (!this.trayectoSeleccionado) return;
 
     try {
-      // 1. Consulta directa a Supabase para forzar traer el valor de 'certificacion_oficial' actualizado
+      // 1. Forzar consulta completa a Supabase
       const { data: trayecto, error: errTray } = await supabase
         .from('trayectos')
         .select('*')
@@ -146,7 +146,7 @@ const ActasModulo = {
         return;
       }
 
-      // 3. Cargar módulos del trayecto
+      // 3. Cargar módulos
       const { data: modulos } = await supabase
         .from('modulos')
         .select('id, nombre')
@@ -175,7 +175,7 @@ const ActasModulo = {
         .select('*')
         .eq('trayecto_id', Number(trayecto.id));
 
-      // 6. Traer datos personales de usuarios
+      // 6. Traer datos personales
       const listaDNIs = inscripciones.map(i => String(i.estudiante_user));
       const { data: datosUsuarios } = await supabase
         .from('usuarios')
@@ -187,7 +187,7 @@ const ActasModulo = {
         mapaUsuarios[String(u.usuario || u.dni || u.id)] = u;
       });
 
-      // 7. Armar lista de estudiantes
+      // 7. Armar lista de estudiantes ordenada por APELLIDO
       const listaEstudiantes = inscripciones.map(ins => {
         const userKey = String(ins.estudiante_user);
         const usr = mapaUsuarios[userKey] || {};
@@ -247,51 +247,73 @@ const ActasModulo = {
       const colsCalificacion = ['F', 'H', 'J', 'L', 'N', 'P', 'R', 'T', 'V', 'X'];
       const colsNumero       = ['G', 'I', 'K', 'M', 'O', 'Q', 'S', 'U', 'W', 'Y'];
 
-      // N° de Curso traído del campo 'certificacion_oficial'
-      const numCursoVal = trayecto.certificacion_oficial || trayecto.numero_curso || trayecto.numero || '';
-
-      // 9. ESCRIBIR ENCABEZADOS EN TODAS LAS HOJAS EXISTENTES DE LA PLANTILLA
-      workbook.worksheets.forEach((sheet) => {
-        sheet.getCell('R3').value = String(trayecto.nombre || '').toUpperCase();
-        sheet.getCell('Z4').value = String(numCursoVal);
-      });
-
-      // 10. Rellenar los datos de los alumnos por cada hoja (hasta 30 por hoja)
       const limitePorHoja = 30;
-      const totalHojasNomina = Math.ceil(listaEstudiantes.length / limitePorHoja);
+      const totalHojasNecesarias = Math.ceil(listaEstudiantes.length / limitePorHoja) || 1;
 
-      for (let h = 0; h < totalHojasNomina; h++) {
-        let worksheet = workbook.worksheets[h];
-        if (!worksheet) continue;
+      // Obtener el valor de N° de Curso
+      const numCursoVal = trayecto.certificacion_oficial || trayecto.numero_curso || trayecto.numero || '';
+      const nombreTrayectoVal = String(trayecto.nombre || '').toUpperCase();
 
-        const estudiantesHoja = listaEstudiantes.slice(h * limitePorHoja, (h + 1) * limitePorHoja);
-        const filaInicial = 8;
+      // 9. Asegurar que existan suficientes hojas en el libro duplicando la primera si hiciera falta
+      const hojaBase = workbook.getWorksheet(1);
 
-        estudiantesHoja.forEach((al, idx) => {
-          const fila = filaInicial + idx;
-
-          worksheet.getCell(`A${fila}`).value = al.numEgresado;
-          worksheet.getCell(`C${fila}`).value = (h * limitePorHoja) + idx + 1;
-          worksheet.getCell(`D${fila}`).value = al.nombreCompleto;
-          worksheet.getCell(`Z${fila}`).value = 'DNI';
-          worksheet.getCell(`AA${fila}`).value = al.dni;
-
-          al.notasModulos.forEach((notaMod, mIdx) => {
-            if (mIdx < colsCalificacion.length) {
-              const colCal = colsCalificacion[mIdx];
-              const colNum = colsNumero[mIdx];
-
-              if (notaMod !== null && notaMod !== undefined) {
-                worksheet.getCell(`${colCal}${fila}`).value = notaMod;
-                worksheet.getCell(`${colNum}${fila}`).value = notaMod;
-              } else {
-                worksheet.getCell(`${colCal}${fila}`).value = '';
-                worksheet.getCell(`${colNum}${fila}`).value = '';
-              }
-            }
+      while (workbook.worksheets.length < totalHojasNecesarias) {
+        const numNuevaHoja = workbook.worksheets.length + 1;
+        // Se puede duplicar copiando datos del worksheet base
+        const nuevaHoja = workbook.addWorksheet(`HOJA ${numNuevaHoja}`);
+        
+        // Copiar dimensiones y filas principales
+        hojaBase.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+          const targetRow = nuevaHoja.getRow(rowNumber);
+          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            targetRow.getCell(colNumber).value = cell.value;
+            targetRow.getCell(colNumber).style = Object.assign({}, cell.style);
           });
+          targetRow.height = row.height;
         });
       }
+
+      // 10. RELLENAR ENCABEZADOS Y DATOS EN TODAS LAS HOJAS
+      workbook.worksheets.forEach((sheet, hIdx) => {
+        // Escribir el Nombre del Trayecto en R3
+        const celdaR3 = sheet.getCell('R3');
+        celdaR3.value = nombreTrayectoVal;
+
+        // Escribir el N° de Curso en Z4
+        const celdaZ4 = sheet.getCell('Z4');
+        celdaZ4.value = String(numCursoVal);
+
+        // Rellenar lista de alumnos si esta hoja le corresponde
+        if (hIdx < totalHojasNecesarias) {
+          const estudiantesHoja = listaEstudiantes.slice(hIdx * limitePorHoja, (hIdx + 1) * limitePorHoja);
+          const filaInicial = 8;
+
+          estudiantesHoja.forEach((al, idx) => {
+            const fila = filaInicial + idx;
+
+            sheet.getCell(`A${fila}`).value = al.numEgresado;
+            sheet.getCell(`C${fila}`).value = (hIdx * limitePorHoja) + idx + 1;
+            sheet.getCell(`D${fila}`).value = al.nombreCompleto;
+            sheet.getCell(`Z${fila}`).value = 'DNI';
+            sheet.getCell(`AA${fila}`).value = al.dni;
+
+            al.notasModulos.forEach((notaMod, mIdx) => {
+              if (mIdx < colsCalificacion.length) {
+                const colCal = colsCalificacion[mIdx];
+                const colNum = colsNumero[mIdx];
+
+                if (notaMod !== null && notaMod !== undefined) {
+                  sheet.getCell(`${colCal}${fila}`).value = notaMod;
+                  sheet.getCell(`${colNum}${fila}`).value = notaMod;
+                } else {
+                  sheet.getCell(`${colCal}${fila}`).value = '';
+                  sheet.getCell(`${colNum}${fila}`).value = '';
+                }
+              }
+            });
+          });
+        }
+      });
 
       // 11. Descargar
       const buffer = await workbook.xlsx.writeBuffer();
