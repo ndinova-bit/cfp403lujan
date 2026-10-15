@@ -65,7 +65,6 @@ const ClasesModulo = {
     this.trayectoActualId = trayectoId;
     this.claseEditandoId = null;
 
-    // Detección precisa de perfil utilizando el helper unificado de Trayectos
     const perfil = (typeof Trayectos !== 'undefined' && Trayectos.obtenerPerfilActual)
       ? Trayectos.obtenerPerfilActual()
       : (() => {
@@ -281,7 +280,9 @@ const ClasesModulo = {
       select.innerHTML = '<option value="">🌐 Todos los Estudiantes (Público general)</option>' +
         (alumnos || []).map(u => {
           const userKey = String(u.usuario || u.dni || u.id);
-          const nombreCompleto = `${u.apellido || ''} ${u.nombre || ''}`.trim() || userKey;
+          const apStr = (u.apellido || '').toUpperCase().trim();
+          const nomStr = u.nombre ? (u.nombre.charAt(0).toUpperCase() + u.nombre.slice(1).toLowerCase()) : '';
+          const nombreCompleto = apStr && nomStr ? `${apStr}, ${nomStr}` : (apStr || nomStr || userKey);
           return `<option value="${userKey}">👤 ${nombreCompleto} (DNI: ${userKey})</option>`;
         }).join('');
 
@@ -789,7 +790,7 @@ const ClasesModulo = {
     }
   },
 
-async cargarSabanaEstudiantes() {
+  async cargarSabanaEstudiantes() {
     const contenedor = document.getElementById('contenedor-lista-alumnos');
     if (!contenedor) return;
 
@@ -818,10 +819,10 @@ async cargarSabanaEstudiantes() {
       // Fallback de ordenamiento por Apellido y Nombre en JS
       if (alumnos && alumnos.length > 0) {
         alumnos.sort((a, b) => {
-          const apA = (a.apellido || '').toUpperCase();
-          const apB = (b.apellido || '').toUpperCase();
+          const apA = (a.apellido || '').toUpperCase().trim();
+          const apB = (b.apellido || '').toUpperCase().trim();
           if (apA !== apB) return apA.localeCompare(apB);
-          return (a.nombre || '').toUpperCase().localeCompare((b.nombre || '').toUpperCase());
+          return (a.nombre || '').toUpperCase().trim().localeCompare((b.nombre || '').toUpperCase().trim());
         });
       }
 
@@ -867,8 +868,8 @@ async cargarSabanaEstudiantes() {
 
       let filasHTML = '';
       (alumnos || []).forEach((u, i) => {
-        // Formatear como APELLIDO, Nombre
-        const apStr = (u.apellido || '').toUpperCase();
+        // CORRECCIÓN: Primero APELLIDO en mayúsculas, luego Nombre en formato normal
+        const apStr = (u.apellido || '').toUpperCase().trim();
         const nomStr = u.nombre ? (u.nombre.charAt(0).toUpperCase() + u.nombre.slice(1).toLowerCase()) : '';
         const nombreCompleto = apStr && nomStr ? `${apStr}, ${nomStr}` : (apStr || nomStr || 'Sin Nombre');
         
@@ -1089,7 +1090,9 @@ async cargarSabanaEstudiantes() {
         }
 
         const alu = (alumnos || []).find(a => String(a.usuario) === String(ent.estudiante_user));
-        const nombreAlumno = alu ? `${alu.apellido || ''} ${alu.nombre || ''}`.trim() : ent.estudiante_user;
+        const apStr = (alu?.apellido || '').toUpperCase().trim();
+        const nomStr = alu?.nombre ? (alu.nombre.charAt(0).toUpperCase() + alu.nombre.slice(1).toLowerCase()) : '';
+        const nombreAlumno = apStr && nomStr ? `${apStr}, ${nomStr}` : (apStr || nomStr || ent.estudiante_user);
 
         let estadoAcreditacionHTML = '';
         const numNota = parseFloat(ent.nota);
@@ -1186,14 +1189,14 @@ async cargarSabanaEstudiantes() {
     }
   },
 
-async importarEstudiantesCSV(archivoCSV) {
+  async importarEstudiantesCSV(archivoCSV) {
     if (typeof ImportadorCSV !== 'undefined') {
       await ImportadorCSV.procesarCSV(archivoCSV, this.trayectoActualId);
     } else {
       alert('⚠️ Error: El módulo importador.js no está cargado.');
     }
   },
-  
+
   cerrarGestor() {
     const modal = document.getElementById('modal-gestor-clases');
     if (modal) modal.style.display = 'none';
