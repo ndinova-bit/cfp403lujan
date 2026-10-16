@@ -8,11 +8,27 @@ const ImportadorModulo = {
 
   abrirModal(trayectoId) {
     this.trayectoIdActual = trayectoId;
-    const input = document.getElementById('input-file-csv');
-    if (input) {
-      input.value = '';
-      input.click();
+    
+    // Crear input dinámico tipo file
+    let input = document.getElementById('input-file-csv');
+    if (!input) {
+      input = document.createElement('input');
+      input.type = 'file';
+      input.id = 'input-file-csv';
+      input.accept = '.csv';
+      input.style.display = 'none';
+      document.body.appendChild(input);
     }
+
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        this.procesarCSV(file);
+      }
+    };
+
+    input.value = '';
+    input.click();
   },
 
   async procesarCSV(file) {
@@ -28,17 +44,22 @@ const ImportadorModulo = {
     }
 
     const reader = new FileReader();
+
     reader.onload = async (e) => {
       try {
         const contenido = e.target.result;
         const lineas = contenido.split(/\r\n|\n/).filter(l => l.trim().length > 0);
 
         if (lineas.length <= 1) {
-          alertError('El archivo CSV está vacío o no contiene filas de datos.');
+          if (typeof alertError === 'function') {
+            alertError('El archivo CSV está vacío o no contiene filas de datos.');
+          } else {
+            alert('El archivo CSV está vacío o no contiene filas de datos.');
+          }
           return;
         }
 
-        // 1. Detectar delimitador (, o ;) y mapear encabezados
+        // 1. Detectar delimitador (, o ;)
         const cabeceraRaw = lineas[0].toLowerCase();
         const sep = cabeceraRaw.includes(';') ? ';' : ',';
         const colsHeader = lineas[0].split(sep).map(c => c.trim().toLowerCase().replace(/"/g, ''));
@@ -49,7 +70,11 @@ const ImportadorModulo = {
         const idxEmail = colsHeader.findIndex(c => c.includes('email') || c.includes('correo'));
 
         if (idxDni === -1) {
-          alertError('Columna DNI no encontrada en la primera fila del CSV.');
+          if (typeof alertError === 'function') {
+            alertError('Columna DNI no encontrada en la primera fila del CSV.');
+          } else {
+            alert('Columna DNI no encontrada en la primera fila del CSV.');
+          }
           return;
         }
 
@@ -64,17 +89,16 @@ const ImportadorModulo = {
           if (!dniRaw || dnisProcesados.has(dniRaw)) continue;
           dnisProcesados.add(dniRaw);
 
-          let nom = idxNombre !== -1 && valores[idxNombre] ? valores[idxNombre].toUpperCase() : '';
-          let ap = idxApellido !== -1 && valores[idxApellido] ? valores[idxApellido].toUpperCase() : '';
+          let nom = (idxNombre !== -1 && valores[idxNombre]) ? valores[idxNombre].toUpperCase() : '';
+          let ap = (idxApellido !== -1 && valores[idxApellido]) ? valores[idxApellido].toUpperCase() : '';
 
-          // Manejo si nombre y apellido vienen unificados en un campo
           if (!ap && nom.includes(',')) {
             const partes = nom.split(',');
             ap = partes[0].trim();
             nom = partes[1].trim();
           }
 
-          let emailRaw = idxEmail !== -1 && valores[idxEmail] ? valores[idxEmail].toLowerCase().replace(/\s+/g, '') : '';
+          let emailRaw = (idxEmail !== -1 && valores[idxEmail]) ? valores[idxEmail].toLowerCase().replace(/\s+/g, '') : '';
           if (!emailRaw || !emailRaw.includes('@')) {
             emailRaw = `${dniRaw}@cfp403.edu.ar`;
           }
@@ -86,27 +110,31 @@ const ImportadorModulo = {
             apellido: ap || 'SIN APELLIDO',
             email: emailRaw,
             rol: 'estudiante',
-            estado: 'aprobado', // Crucial para que aparezca en "Usuarios y Roles"
-            pass: CryptoJS.SHA256(dniRaw).toString()
+            estado: 'aprobado',
+            pass: (typeof CryptoJS !== 'undefined') ? CryptoJS.SHA256(dniRaw).toString() : dniRaw
           });
         }
 
         if (usuariosNuevosBatch.length === 0) {
-          alertError('No se encontraron registros de DNI válidos para procesar.');
+          if (typeof alertError === 'function') {
+            alertError('No se encontraron registros de DNI válidos para procesar.');
+          } else {
+            alert('No se encontraron registros de DNI válidos para procesar.');
+          }
           return;
         }
 
-        // 3. Upsert masivo de Usuarios en 1 sola consulta HTTP (En lugar de bucle)
+        // 3. Upsert masivo de Usuarios en 1 sola consulta HTTP
         const { error: errUsr } = await supabase
           .from('usuarios')
           .upsert(usuariosNuevosBatch, { onConflict: 'usuario' });
 
         if (errUsr) {
-          console.warn('Advertencia al insertar usuarios batch, reintentando por DNI:', errUsr);
+          console.warn('Advertencia usuarios:', errUsr);
           await supabase.from('usuarios').upsert(usuariosNuevosBatch, { onConflict: 'dni' });
         }
 
-        // 4. Inscripción masiva al Trayecto en 1 sola consulta HTTP
+        // 4. Inscripción masiva al Trayecto
         const inscripcionesBatch = Array.from(dnisProcesados).map(dni => ({
           trayecto_id: Number(this.trayectoIdActual),
           estudiante_user: String(dni)
@@ -119,20 +147,30 @@ const ImportadorModulo = {
         if (errInsc) console.warn('Aviso inscripciones:', errInsc);
 
         if (typeof Swal !== 'undefined') Swal.close();
-        alertSuccess(`¡Carga masiva completada! Se procesaron ${usuariosNuevosBatch.length} estudiantes en segundos.`);
+        
+        if (typeof alertSuccess === 'function') {
+          alertSuccess(`¡Carga masiva completada! Se procesaron ${usuariosNuevosBatch.length} estudiantes.`);
+        } else {
+          alert(`¡Carga masiva completada! Se procesaron ${usuariosNuevosBatch.length} estudiantes.`);
+        }
 
         // 5. Recargar vistas de la plataforma
-        if (window.ClasesModulo && window.ClasesModulo.trayectoIdActual) {
-          await ClasesModulo.cargarNominaEstudiantes();
+        if (window.ClasesModulo && typeof window.ClasesModulo.cargarNominaEstudiantes === 'function') {
+          await window.ClasesModulo.cargarNominaEstudiantes();
         }
-        if (window.UsuariosAdmin && window.UsuariosAdmin.cargarUsuarios) {
-          await UsuariosAdmin.cargarUsuarios();
+        if (window.UsuariosAdmin && typeof window.UsuariosAdmin.cargarUsuarios === 'function') {
+          await window.UsuariosAdmin.cargarUsuarios();
         }
 
       } catch (err) {
         console.error('Error durante la importación masiva:', err);
         if (typeof Swal !== 'undefined') Swal.close();
-        alertError('Ocurrió un error inesperado al importar el CSV.');
+        
+        if (typeof alertError === 'function') {
+          alertError('Ocurrió un error inesperado al importar el CSV.');
+        } else {
+          alert('Ocurrió un error inesperado al importar el CSV.');
+        }
       }
     };
 
