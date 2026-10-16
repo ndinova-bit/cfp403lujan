@@ -124,7 +124,7 @@ const ActasModulo = {
     if (!this.trayectoSeleccionado) return;
 
     try {
-      // 1. Consulta directa a Supabase
+      // 1. Consulta directa a Supabase para obtener el trayecto completo
       const { data: trayecto, error: errTray } = await supabase
         .from('trayectos')
         .select('*')
@@ -175,7 +175,7 @@ const ActasModulo = {
         .select('*')
         .eq('trayecto_id', Number(trayecto.id));
 
-      // 6. Traer datos personales
+      // 6. Traer datos personales de usuarios
       const listaDNIs = inscripciones.map(i => String(i.estudiante_user));
       const { data: datosUsuarios } = await supabase
         .from('usuarios')
@@ -243,14 +243,12 @@ const ActasModulo = {
       const workbook = new ExcelJS.Workbook();
       await workbook.xlsx.load(arrayBuffer);
 
+      const sheet = workbook.worksheets[0];
+
       // Mapeo Módulos
       const colsCalificacion = ['F', 'H', 'J', 'L', 'N', 'P', 'R', 'T', 'V', 'X'];
       const colsNumero       = ['G', 'I', 'K', 'M', 'O', 'Q', 'S', 'U', 'W', 'Y'];
 
-      const limitePorHoja = 30;
-      const totalHojasObjetivo = Math.max(3, Math.ceil(listaEstudiantes.length / limitePorHoja));
-
-      // N° de Curso de 'certificacion_oficial' o 'certificacion'
       const numCursoVal = String(
         trayecto.certificacion_oficial || 
         trayecto.certificacion || 
@@ -260,38 +258,32 @@ const ActasModulo = {
 
       const nombreTrayectoVal = String(trayecto.nombre || '').toUpperCase().trim();
 
-      // 9. Captura segura de la primera hoja
-      const hojaBase = workbook.worksheets[0];
+      // 9. ESCRIBIR ENCABEZADOS EN LAS 3 PÁGINAS VERTICALES
+      sheet.getCell('R3').value = nombreTrayectoVal;
+      sheet.getCell('Z4').value = numCursoVal;
 
-      if (hojaBase) {
-        while (workbook.worksheets.length < totalHojasObjetivo) {
-          const idxNueva = workbook.worksheets.length + 1;
-          const nuevaHoja = workbook.addWorksheet(`HOJA ${idxNueva}`);
+      sheet.getCell('R49').value = nombreTrayectoVal;
+      sheet.getCell('Z50').value = numCursoVal;
 
-          hojaBase.eachRow({ includeEmpty: true }, (row, rNum) => {
-            const targetRow = nuevaHoja.getRow(rNum);
-            row.eachCell({ includeEmpty: true }, (cell, cNum) => {
-              targetRow.getCell(cNum).value = cell.value;
-              targetRow.getCell(cNum).style = Object.assign({}, cell.style);
-            });
-            targetRow.height = row.height;
-          });
-        }
-      }
+      sheet.getCell('R96').value = nombreTrayectoVal;
+      sheet.getCell('Z97').value = numCursoVal;
 
-      // 10. RELLENAR ENCABEZADOS Y ALUMNOS EN TODAS LAS HOJAS
-      workbook.worksheets.forEach((sheet, hIdx) => {
-        sheet.getCell('R3').value = nombreTrayectoVal;
-        sheet.getCell('Z4').value = numCursoVal;
+      // 10. RELLENAR NÓMINA EN PÁGINA 1, PÁGINA 2 Y PÁGINA 3
+      const paginasConfig = [
+        { inicioFila: 8,   limiteAlumnos: 30 }, // Página 1: Alumnos 1 a 30
+        { inicioFila: 54,  limiteAlumnos: 30 }, // Página 2: Alumnos 31 a 60
+        { inicioFila: 101, limiteAlumnos: 30 }  // Página 3: Alumnos 61 a 90
+      ];
 
-        const estudiantesHoja = listaEstudiantes.slice(hIdx * limitePorHoja, (hIdx + 1) * limitePorHoja);
-        const filaInicial = 8;
+      paginasConfig.forEach((pag, pIdx) => {
+        const inicioSlice = pIdx * pag.limiteAlumnos;
+        const estudiantesPagina = listaEstudiantes.slice(inicioSlice, inicioSlice + pag.limiteAlumnos);
 
-        estudiantesHoja.forEach((al, idx) => {
-          const fila = filaInicial + idx;
+        estudiantesPagina.forEach((al, idx) => {
+          const fila = pag.inicioFila + idx;
 
           sheet.getCell(`A${fila}`).value = al.numEgresado;
-          sheet.getCell(`C${fila}`).value = (hIdx * limitePorHoja) + idx + 1;
+          sheet.getCell(`C${fila}`).value = inicioSlice + idx + 1;
           sheet.getCell(`D${fila}`).value = al.nombreCompleto;
           sheet.getCell(`Z${fila}`).value = 'DNI';
           sheet.getCell(`AA${fila}`).value = al.dni;
@@ -313,7 +305,47 @@ const ActasModulo = {
         });
       });
 
-      // 11. Descargar
+      // 11. CALCULAR Y ESCRIBIR MÉTRICAS ESTADÍSTICAS EN CADA PÁGINA
+      const totalInscriptos = listaEstudiantes.length;
+
+      // Alumnos que tienen al menos 1 nota registrada
+      const examinados = listaEstudiantes.filter(al => al.notasModulos.some(n => n !== null && n !== undefined)).length;
+
+      // Alumnos ausentes (sin evaluación)
+      const ausentes = totalInscriptos - examinados;
+
+      // Evaluamos el rendimiento en el último módulo calificado
+      let aprobados = 0;
+      let desaprobados = 0;
+
+      listaEstudiantes.forEach(al => {
+        const notasValidas = al.notasModulos.filter(n => n !== null && n !== undefined);
+        if (notasValidas.length > 0) {
+          const ultimaNota = notasValidas[notasValidas.length - 1];
+          if (ultimaNota >= 70) {
+            aprobados++;
+          } else {
+            desaprobados++;
+          }
+        }
+      });
+
+      // Mapeo de celdas del bloque de resumen por página
+      const bloquesResumen = [
+        { inscriptos: 'AA38', examinados: 'AA39', ausentes: 'AA40', desaprobados: 'AA41', aprobados: 'AA43' }, // Página 1
+        { inscriptos: 'AA84', examinados: 'AA85', ausentes: 'AA86', desaprobados: 'AA87', aprobados: 'AA89' }, // Página 2
+        { inscriptos: 'AA131', examinados: 'AA132', ausentes: 'AA133', desaprobados: 'AA134', aprobados: 'AA136' } // Página 3
+      ];
+
+      bloquesResumen.forEach(res => {
+        sheet.getCell(res.inscriptos).value = totalInscriptos;
+        sheet.getCell(res.examinados).value = examinados;
+        sheet.getCell(res.ausentes).value = ausentes;
+        sheet.getCell(res.desaprobados).value = desaprobados;
+        sheet.getCell(res.aprobados).value = aprobados;
+      });
+
+      // 12. Descargar archivo Excel
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const link = document.createElement('a');
