@@ -124,7 +124,7 @@ const ActasModulo = {
     if (!this.trayectoSeleccionado) return;
 
     try {
-      // 1. Consulta directa a Supabase para obtener el trayecto completo
+      // 1. Consulta al trayecto en Supabase
       const { data: trayecto, error: errTray } = await supabase
         .from('trayectos')
         .select('*')
@@ -146,7 +146,7 @@ const ActasModulo = {
         return;
       }
 
-      // 3. Cargar módulos
+      // 3. Cargar módulos del trayecto
       const { data: modulos } = await supabase
         .from('modulos')
         .select('id, nombre')
@@ -258,94 +258,89 @@ const ActasModulo = {
 
       const nombreTrayectoVal = String(trayecto.nombre || '').toUpperCase().trim();
 
-      // 9. ESCRIBIR ENCABEZADOS EN LAS 3 PÁGINAS VERTICALES
-      sheet.getCell('R3').value = nombreTrayectoVal;
-      sheet.getCell('Z4').value = numCursoVal;
-
-      sheet.getCell('R49').value = nombreTrayectoVal;
-      sheet.getCell('Z50').value = numCursoVal;
-
-      sheet.getCell('R96').value = nombreTrayectoVal;
-      sheet.getCell('Z97').value = numCursoVal;
-
-      // 10. RELLENAR NÓMINA EN PÁGINA 1, PÁGINA 2 Y PÁGINA 3
+      // Configuración de las 3 páginas consecutivas
       const paginasConfig = [
-        { inicioFila: 8,   limiteAlumnos: 30 }, // Página 1: Alumnos 1 a 30
-        { inicioFila: 54,  limiteAlumnos: 30 }, // Página 2: Alumnos 31 a 60
-        { inicioFila: 101, limiteAlumnos: 30 }  // Página 3: Alumnos 61 a 90
+        {
+          celdaNombre: 'R3', celdaCurso: 'Z4', inicioFila: 8, limiteAlumnos: 30,
+          resumen: { inscriptos: 'AA38', examinados: 'AA39', ausentes: 'AA40', desaprobados: 'AA41', aprobados: 'AA43' }
+        },
+        {
+          celdaNombre: 'R49', celdaCurso: 'Z50', inicioFila: 54, limiteAlumnos: 30,
+          resumen: { inscriptos: 'AA84', examinados: 'AA85', ausentes: 'AA86', desaprobados: 'AA87', aprobados: 'AA89' }
+        },
+        {
+          celdaNombre: 'R96', celdaCurso: 'Z97', inicioFila: 101, limiteAlumnos: 30,
+          resumen: { inscriptos: 'AA131', examinados: 'AA132', ausentes: 'AA133', desaprobados: 'AA134', aprobados: 'AA136' }
+        }
       ];
 
+      // 9. PROCESAR CADA PÁGINA SOLO SI CORRESPONDE A LA CANTIDAD DE ALUMNOS
       paginasConfig.forEach((pag, pIdx) => {
         const inicioSlice = pIdx * pag.limiteAlumnos;
         const estudiantesPagina = listaEstudiantes.slice(inicioSlice, inicioSlice + pag.limiteAlumnos);
 
-        estudiantesPagina.forEach((al, idx) => {
-          const fila = pag.inicioFila + idx;
+        // Solo completamos la página si existen estudiantes correspondientes a esa sección
+        if (estudiantesPagina.length > 0) {
+          // Encabezados institucionales de la página
+          sheet.getCell(pag.celdaNombre).value = nombreTrayectoVal;
+          sheet.getCell(pag.celdaCurso).value = numCursoVal;
 
-          sheet.getCell(`A${fila}`).value = al.numEgresado;
-          sheet.getCell(`C${fila}`).value = inicioSlice + idx + 1;
-          sheet.getCell(`D${fila}`).value = al.nombreCompleto;
-          sheet.getCell(`Z${fila}`).value = 'DNI';
-          sheet.getCell(`AA${fila}`).value = al.dni;
+          // Rellenar la nómina de la página
+          estudiantesPagina.forEach((al, idx) => {
+            const fila = pag.inicioFila + idx;
 
-          al.notasModulos.forEach((notaMod, mIdx) => {
-            if (mIdx < colsCalificacion.length) {
-              const colCal = colsCalificacion[mIdx];
-              const colNum = colsNumero[mIdx];
+            sheet.getCell(`A${fila}`).value = al.numEgresado;
+            sheet.getCell(`C${fila}`).value = inicioSlice + idx + 1;
+            sheet.getCell(`D${fila}`).value = al.nombreCompleto;
+            sheet.getCell(`Z${fila}`).value = 'DNI';
+            sheet.getCell(`AA${fila}`).value = al.dni;
 
-              if (notaMod !== null && notaMod !== undefined) {
-                sheet.getCell(`${colCal}${fila}`).value = notaMod;
-                sheet.getCell(`${colNum}${fila}`).value = notaMod;
+            al.notasModulos.forEach((notaMod, mIdx) => {
+              if (mIdx < colsCalificacion.length) {
+                const colCal = colsCalificacion[mIdx];
+                const colNum = colsNumero[mIdx];
+
+                if (notaMod !== null && notaMod !== undefined) {
+                  sheet.getCell(`${colCal}${fila}`).value = notaMod;
+                  sheet.getCell(`${colNum}${fila}`).value = notaMod;
+                } else {
+                  sheet.getCell(`${colCal}${fila}`).value = '';
+                  sheet.getCell(`${colNum}${fila}`).value = '';
+                }
+              }
+            });
+          });
+
+          // Métricas contadas exclusivamente para ESTA página
+          const inscriptosHoja = estudiantesPagina.length;
+          const examinadosHoja = estudiantesPagina.filter(al => al.notasModulos.some(n => n !== null && n !== undefined)).length;
+          const ausentesHoja = inscriptosHoja - examinadosHoja;
+
+          let aprobadosHoja = 0;
+          let desaprobadosHoja = 0;
+
+          estudiantesPagina.forEach(al => {
+            const notasValidas = al.notasModulos.filter(n => n !== null && n !== undefined);
+            if (notasValidas.length > 0) {
+              const ultimaNota = notasValidas[notasValidas.length - 1];
+              if (ultimaNota >= 70) {
+                aprobadosHoja++;
               } else {
-                sheet.getCell(`${colCal}${fila}`).value = '';
-                sheet.getCell(`${colNum}${fila}`).value = '';
+                desaprobadosHoja++;
               }
             }
           });
-        });
-      });
 
-      // 11. CALCULAR Y ESCRIBIR MÉTRICAS ESTADÍSTICAS EN CADA PÁGINA
-      const totalInscriptos = listaEstudiantes.length;
-
-      // Alumnos que tienen al menos 1 nota registrada
-      const examinados = listaEstudiantes.filter(al => al.notasModulos.some(n => n !== null && n !== undefined)).length;
-
-      // Alumnos ausentes (sin evaluación)
-      const ausentes = totalInscriptos - examinados;
-
-      // Evaluamos el rendimiento en el último módulo calificado
-      let aprobados = 0;
-      let desaprobados = 0;
-
-      listaEstudiantes.forEach(al => {
-        const notasValidas = al.notasModulos.filter(n => n !== null && n !== undefined);
-        if (notasValidas.length > 0) {
-          const ultimaNota = notasValidas[notasValidas.length - 1];
-          if (ultimaNota >= 70) {
-            aprobados++;
-          } else {
-            desaprobados++;
-          }
+          // Escribir los resultados en el bloque resumen correspondiente
+          sheet.getCell(pag.resumen.inscriptos).value = inscriptosHoja;
+          sheet.getCell(pag.resumen.examinados).value = examinadosHoja;
+          sheet.getCell(pag.resumen.ausentes).value = ausentesHoja;
+          sheet.getCell(pag.resumen.desaprobados).value = desaprobadosHoja;
+          sheet.getCell(pag.resumen.aprobados).value = aprobadosHoja;
         }
       });
 
-      // Mapeo de celdas del bloque de resumen por página
-      const bloquesResumen = [
-        { inscriptos: 'AA38', examinados: 'AA39', ausentes: 'AA40', desaprobados: 'AA41', aprobados: 'AA43' }, // Página 1
-        { inscriptos: 'AA84', examinados: 'AA85', ausentes: 'AA86', desaprobados: 'AA87', aprobados: 'AA89' }, // Página 2
-        { inscriptos: 'AA131', examinados: 'AA132', ausentes: 'AA133', desaprobados: 'AA134', aprobados: 'AA136' } // Página 3
-      ];
-
-      bloquesResumen.forEach(res => {
-        sheet.getCell(res.inscriptos).value = totalInscriptos;
-        sheet.getCell(res.examinados).value = examinados;
-        sheet.getCell(res.ausentes).value = ausentes;
-        sheet.getCell(res.desaprobados).value = desaprobados;
-        sheet.getCell(res.aprobados).value = aprobados;
-      });
-
-      // 12. Descargar archivo Excel
+      // 10. Descargar archivo Excel rellenado
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const link = document.createElement('a');
