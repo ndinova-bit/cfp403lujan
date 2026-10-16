@@ -3,13 +3,12 @@
    Archivo: js/importador.js
    ========================================================================== */
 
-const ImportadorModulo = {
+var ImportadorModulo = {
   trayectoIdActual: null,
 
   abrirModal(trayectoId) {
     this.trayectoIdActual = trayectoId;
     
-    // Crear input dinámico tipo file
     let input = document.getElementById('input-file-csv');
     if (!input) {
       input = document.createElement('input');
@@ -51,11 +50,8 @@ const ImportadorModulo = {
         const lineas = contenido.split(/\r\n|\n/).filter(l => l.trim().length > 0);
 
         if (lineas.length <= 1) {
-          if (typeof alertError === 'function') {
-            alertError('El archivo CSV está vacío o no contiene filas de datos.');
-          } else {
-            alert('El archivo CSV está vacío o no contiene filas de datos.');
-          }
+          if (typeof alertError === 'function') alertError('El archivo CSV está vacío o no contiene filas de datos.');
+          else alert('El archivo CSV está vacío o no contiene filas de datos.');
           return;
         }
 
@@ -70,11 +66,8 @@ const ImportadorModulo = {
         const idxEmail = colsHeader.findIndex(c => c.includes('email') || c.includes('correo'));
 
         if (idxDni === -1) {
-          if (typeof alertError === 'function') {
-            alertError('Columna DNI no encontrada en la primera fila del CSV.');
-          } else {
-            alert('Columna DNI no encontrada en la primera fila del CSV.');
-          }
+          if (typeof alertError === 'function') alertError('Columna DNI no encontrada en la primera fila del CSV.');
+          else alert('Columna DNI no encontrada en la primera fila del CSV.');
           return;
         }
 
@@ -116,11 +109,8 @@ const ImportadorModulo = {
         }
 
         if (usuariosNuevosBatch.length === 0) {
-          if (typeof alertError === 'function') {
-            alertError('No se encontraron registros de DNI válidos para procesar.');
-          } else {
-            alert('No se encontraron registros de DNI válidos para procesar.');
-          }
+          if (typeof alertError === 'function') alertError('No se encontraron registros de DNI válidos para procesar.');
+          else alert('No se encontraron registros de DNI válidos para procesar.');
           return;
         }
 
@@ -166,11 +156,8 @@ const ImportadorModulo = {
         console.error('Error durante la importación masiva:', err);
         if (typeof Swal !== 'undefined') Swal.close();
         
-        if (typeof alertError === 'function') {
-          alertError('Ocurrió un error inesperado al importar el CSV.');
-        } else {
-          alert('Ocurrió un error inesperado al importar el CSV.');
-        }
+        if (typeof alertError === 'function') alertError('Ocurrió un error inesperado al importar el CSV.');
+        else alert('Ocurrió un error inesperado al importar el CSV.');
       }
     };
 
