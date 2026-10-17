@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MÓDULO DE IMPORTACIÓN MASIVA DE ALUMNOS (CSV) - ULTRA RÁPIDO & BATCH
+   MÓDULO DE IMPORTACIÓN MASIVA DE ALUMNOS (CSV)
    Archivo: js/importador.js
    ========================================================================== */
 
@@ -46,7 +46,6 @@ var ImportadorModulo = {
           return;
         }
 
-        // 1. Detectar delimitador (, o ;)
         const cabeceraRaw = lineas[0].toLowerCase();
         const sep = cabeceraRaw.includes(';') ? ';' : ',';
         const colsHeader = lineas[0].split(sep).map(c => c.trim().toLowerCase().replace(/"/g, ''));
@@ -63,9 +62,9 @@ var ImportadorModulo = {
         }
 
         let procesadosExito = 0;
+        let erroresConteo = 0;
         const dnisProcesados = new Set();
 
-        // 2. Parsear y procesar registro por registro
         for (let i = 1; i < lineas.length; i++) {
           const valores = lineas[i].split(sep).map(v => v.trim().replace(/^"|"$/g, ''));
           const dniRaw = valores[idxDni] ? valores[idxDni].replace(/\D/g, '') : '';
@@ -88,30 +87,39 @@ var ImportadorModulo = {
           }
 
           const usuarioObj = {
-            usuario: dniRaw,
-            dni: dniRaw,
+            usuario: String(dniRaw),
+            dni: String(dniRaw),
             nombre: nom || 'ESTUDIANTE',
             apellido: ap || 'SIN APELLIDO',
             email: emailRaw,
             rol: 'estudiante',
-            estado: 'aprobado',
-            pass: (typeof CryptoJS !== 'undefined') ? CryptoJS.SHA256(dniRaw).toString() : dniRaw
+            estado: 'ACTIVO',
+            pass: (typeof CryptoJS !== 'undefined') ? CryptoJS.SHA256(dniRaw).toString() : String(dniRaw)
           };
 
-          // A) Crear o actualizar Usuario
+          // 1. Guardar o verificar usuario
           const { data: usrExiste } = await supabase
             .from('usuarios')
             .select('usuario')
-            .eq('usuario', dniRaw)
+            .eq('usuario', String(dniRaw))
             .maybeSingle();
 
+          let errorUsuario = null;
           if (usrExiste) {
-            await supabase.from('usuarios').update(usuarioObj).eq('usuario', dniRaw);
+            const { error } = await supabase.from('usuarios').update(usuarioObj).eq('usuario', String(dniRaw));
+            errorUsuario = error;
           } else {
-            await supabase.from('usuarios').insert([usuarioObj]);
+            const { error } = await supabase.from('usuarios').insert([usuarioObj]);
+            errorUsuario = error;
           }
 
-          // B) Registrar Inscripción al Trayecto
+          if (errorUsuario) {
+            console.error(`Error en usuario DNI ${dniRaw}:`, errorUsuario);
+            erroresConteo++;
+            continue; 
+          }
+
+          // 2. Vincular inscripción
           const { data: inscExiste } = await supabase
             .from('inscripciones')
             .select('id')
@@ -120,20 +128,28 @@ var ImportadorModulo = {
             .maybeSingle();
 
           if (!inscExiste) {
-            await supabase.from('inscripciones').insert([{
+            const { error: errInsc } = await supabase.from('inscripciones').insert([{
               trayecto_id: Number(this.trayectoIdActual),
               estudiante_user: String(dniRaw)
             }]);
+
+            if (errInsc) {
+              console.error(`Error en inscripcion DNI ${dniRaw}:`, errInsc);
+            }
           }
 
           procesadosExito++;
         }
 
         if (typeof Swal !== 'undefined') Swal.close();
-        
-        alert(`¡Carga masiva completada con éxito! Se importaron ${procesadosExito} estudiantes.`);
 
-        // Refrescar vistas en pantalla
+        if (erroresConteo > 0) {
+          alert(`⚠️ Proceso finalizado:\n- ${procesadosExito} usuarios importados correctamente.\n- ${erroresConteo} rebotaron por conflicto de esquema en Supabase (Revisar consola).`);
+        } else {
+          alert(`¡Carga masiva completada con éxito! Se procesaron ${procesadosExito} estudiantes.`);
+        }
+
+        // Recargar vistas
         if (window.ClasesModulo && typeof window.ClasesModulo.cargarSabanaEstudiantes === 'function') {
           await window.ClasesModulo.cargarSabanaEstudiantes();
         }
@@ -142,9 +158,9 @@ var ImportadorModulo = {
         }
 
       } catch (err) {
-        console.error('Error durante la importación masiva:', err);
+        console.error('Error crítico durante la importación:', err);
         if (typeof Swal !== 'undefined') Swal.close();
-        alert('Ocurrió un error inesperado al importar el CSV.');
+        alert('Ocurrió un error inesperado al procesar el archivo CSV.');
       }
     };
 
