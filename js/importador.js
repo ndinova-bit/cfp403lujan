@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MÓDULO DE IMPORTACIÓN MASIVA DE ALUMNOS (CSV) - DUAL SYNC (USUARIOS + PROFILES)
+   MÓDULO DE IMPORTACIÓN MASIVA DE ALUMNOS (CSV)
    Archivo: js/importador.js
    ========================================================================== */
 
@@ -27,7 +27,7 @@ var ImportadorModulo = {
     if (typeof Swal !== 'undefined') {
       Swal.fire({
         title: 'Procesando nómina...',
-        text: 'Sincronizando estudiantes en el sistema y registrando inscripciones.',
+        text: 'Sincronizando estudiantes en usuarios, profiles e inscripciones.',
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading()
       });
@@ -63,7 +63,6 @@ var ImportadorModulo = {
         }
 
         const usuariosBatch = [];
-        const profilesBatch = [];
         const dnisSet = new Set();
 
         // 2. Parsear filas del CSV
@@ -88,25 +87,11 @@ var ImportadorModulo = {
             emailRaw = `${dniRaw}@cfp403.ar`;
           }
 
-          // Objeto para tabla 'usuarios'
           usuariosBatch.push({
-            usuario: String(dniRaw),
+            dniRaw: String(dniRaw),
             nombre: nom || 'ESTUDIANTE',
             apellido: ap || 'SIN APELLIDO',
-            email: emailRaw,
-            rol: 'estudiante',
-            estado: 'ACTIVO',
-            pass: (typeof CryptoJS !== 'undefined') ? CryptoJS.SHA256(dniRaw).toString() : String(dniRaw)
-          });
-
-          // Objeto para tabla 'profiles' (utilizada por Usuarios y Roles)
-          profilesBatch.push({
-            dni: String(dniRaw),
-            nombre: nom || 'ESTUDIANTE',
-            apellido: ap || 'SIN APELLIDO',
-            email: emailRaw,
-            rol: 'estudiante',
-            estado: 'ACTIVO'
+            email: emailRaw
           });
         }
 
@@ -116,48 +101,78 @@ var ImportadorModulo = {
           return;
         }
 
-        // 3A. Guardar en la tabla 'usuarios'
-        const { error: errUsr } = await supabase
-          .from('usuarios')
-          .upsert(usuariosBatch, { onConflict: 'usuario' });
+        // 3. Procesar individualmente comprobando 'profiles' por DNI
+        for (const u of usuariosBatch) {
+          // A) Tabla 'usuarios'
+          const objUsuario = {
+            usuario: u.dniRaw,
+            nombre: u.nombre,
+            apellido: u.apellido,
+            email: u.email,
+            rol: 'estudiante',
+            estado: 'ACTIVO',
+            pass: (typeof CryptoJS !== 'undefined') ? CryptoJS.SHA256(u.dniRaw).toString() : u.dniRaw
+          };
 
-        if (errUsr) {
-          console.warn('Aviso al insertar en usuarios:', errUsr.message);
-        }
+          await supabase.from('usuarios').upsert([objUsuario], { onConflict: 'usuario' });
 
-        // 3B. Guardar en la tabla 'profiles'
-        const { error: errProf } = await supabase
-          .from('profiles')
-          .upsert(profilesBatch, { onConflict: 'dni' });
-
-        if (errProf) {
-          console.warn('Aviso al insertar en profiles:', errProf.message);
-        }
-
-        // 4. Registrar Inscripción al Trayecto
-        const inscripcionesBatch = Array.from(dnisSet).map(dni => ({
-          trayecto_id: Number(this.trayectoIdActual),
-          estudiante_user: String(dni)
-        }));
-
-        for (const item of inscripcionesBatch) {
-          const { data: existe } = await supabase
-            .from('inscripciones')
+          // B) Tabla 'profiles'
+          const { data: profExiste } = await supabase
+            .from('profiles')
             .select('id')
-            .eq('trayecto_id', item.trayecto_id)
-            .eq('estudiante_user', item.estudiante_user)
+            .eq('dni', u.dniRaw)
             .maybeSingle();
 
-          if (!existe) {
-            await supabase.from('inscripciones').insert([item]);
+          if (profExiste) {
+            // Si el perfil ya existe, actualizamos sus datos
+            await supabase
+              .from('profiles')
+              .update({
+                nombre: u.nombre,
+                apellido: u.apellido,
+                email: u.email,
+                rol: 'estudiante',
+                estado: 'ACTIVO'
+              })
+              .eq('dni', u.dniRaw);
+          } else {
+            // Si es nuevo, generamos un UUID válido para cumplir la restricción NOT NULL de 'id'
+            const nuevoUUID = (typeof crypto !== 'undefined' && crypto.randomUUID) 
+              ? crypto.randomUUID() 
+              : 'f' + Math.random().toString(36).substring(2, 11) + '-4000-8000-000000000000';
+
+            await supabase.from('profiles').insert([{
+              id: nuevoUUID,
+              dni: u.dniRaw,
+              nombre: u.nombre,
+              apellido: u.apellido,
+              email: u.email,
+              rol: 'estudiante',
+              estado: 'ACTIVO'
+            }]);
+          }
+
+          // C) Tabla 'inscripciones'
+          const { data: inscExiste } = await supabase
+            .from('inscripciones')
+            .select('id')
+            .eq('trayecto_id', Number(this.trayectoIdActual))
+            .eq('estudiante_user', u.dniRaw)
+            .maybeSingle();
+
+          if (!inscExiste) {
+            await supabase.from('inscripciones').insert([{
+              trayecto_id: Number(this.trayectoIdActual),
+              estudiante_user: u.dniRaw
+            }]);
           }
         }
 
         if (typeof Swal !== 'undefined') Swal.close();
         
-        alert(`¡Carga masiva completada con éxito! Se procesaron ${usuariosBatch.length} estudiantes.`);
+        alert(`¡Carga masiva completada con éxito! Se procesaron y sincronizaron ${usuariosBatch.length} estudiantes.`);
 
-        // Refrescar todas las vistas afectadas
+        // Refrescar vistas en pantalla
         if (window.ClasesModulo && typeof window.ClasesModulo.cargarSabanaEstudiantes === 'function') {
           await window.ClasesModulo.cargarSabanaEstudiantes();
         }
