@@ -5,6 +5,8 @@
 
 const UsuariosAdmin = {
   estaProcesando: false,
+  listaUsuarios: [],       // Cache local de usuarios
+  filtroRolActual: 'todos', // Estado del filtro: 'todos', 'personal', 'estudiante'
 
   abrirModal() {
     const modal = document.getElementById('modal-alta-usuario');
@@ -47,6 +49,14 @@ const UsuariosAdmin = {
   },
 
   /**
+   * Cambia el filtro actual de pestañas y renderiza la tabla sin recargar la BD
+   */
+  setFiltro(nuevoFiltro) {
+    this.filtroRolActual = nuevoFiltro;
+    this.renderizarTabla();
+  },
+
+  /**
    * Carga la lista de usuarios consultando la tabla segura 'profiles'
    */
   async cargarUsuarios() {
@@ -70,65 +80,117 @@ const UsuariosAdmin = {
 
       if (error) throw error;
 
-      if (!usuarios || usuarios.length === 0) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="5" style="text-align: center; padding: 2rem; color: #94a3b8;">
-              No hay usuarios registrados aún.
-            </td>
-          </tr>
-        `;
-        return;
-      }
+      this.listaUsuarios = usuarios || [];
+      this.renderizarTabla();
 
-      tbody.innerHTML = usuarios.map(u => {
-        const estadoRaw = String(u.estado || 'ACTIVO').toUpperCase();
-        const esActivo = estadoRaw === 'ACTIVO' || estadoRaw === 'HABILITADO' || estadoRaw === 'APROBADO';
-        const nombreCompleto = u.apellido ? `${u.apellido}, ${u.nombre}` : (u.nombre || 'Sin Nombre');
-        const idPrimario = u.id;
-        const dniMostrar = u.dni || 'Sin DNI';
-
-        return `
-          <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-            <td style="padding: 0.85rem 0.75rem;">
-              <strong style="color: #f8fafc; font-size: 0.95rem;">${nombreCompleto}</strong><br>
-              <span style="font-size: 0.8rem; color: #94a3b8;">DNI: ${dniMostrar}</span>
-            </td>
-            <td style="padding: 0.85rem 0.75rem; font-size: 0.85rem; color: #cbd5e1;">
-              ${u.email || `${dniMostrar}@cfp403.ar`}
-            </td>
-            <td style="padding: 0.85rem 0.75rem;">
-              <select class="form-control" style="padding: 0.3rem 0.5rem; font-size: 0.85rem; width: auto;" onchange="UsuariosAdmin.cambiarRol('${idPrimario}', this.value)">
-                <option value="estudiante" ${u.rol === 'estudiante' ? 'selected' : ''}>Estudiante</option>
-                <option value="docente" ${u.rol === 'docente' ? 'selected' : ''}>Docente</option>
-                <option value="admin" ${u.rol === 'admin' ? 'selected' : ''}>Administrador</option>
-              </select>
-            </td>
-            <td style="padding: 0.85rem 0.75rem;">
-              <span class="badge" style="background: ${esActivo ? 'rgba(34, 197, 94, 0.15)' : 'rgba(234, 179, 8, 0.15)'}; color: ${esActivo ? '#4ade80' : '#facc15'}; border: 1px solid ${esActivo ? 'rgba(34, 197, 94, 0.3)' : 'rgba(234, 179, 8, 0.3)'}; padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">
-                ${estadoRaw}
-              </span>
-            </td>
-            <td style="padding: 0.85rem 0.75rem; text-align: right; display: flex; gap: 0.4rem; justify-content: flex-end; align-items: center;">
-              ${!esActivo ? `
-                <button class="btn btn-gold" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="UsuariosAdmin.cambiarEstado('${idPrimario}', 'ACTIVO')">
-                  ✓ Aprobar
-                </button>
-              ` : `
-                <button class="btn btn-danger" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171;" onclick="UsuariosAdmin.cambiarEstado('${idPrimario}', 'PENDIENTE')">
-                  🔒 Inhabilitar
-                </button>
-              `}
-              <button title="Eliminar definitivamente" style="padding: 0.35rem 0.6rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; border-radius: 6px; cursor: pointer;" onclick="UsuariosAdmin.eliminarUsuario('${idPrimario}', '${nombreCompleto.replace(/'/g, "\\'")}')">
-                🗑️
-              </button>
-            </td>
-          </tr>
-        `;
-      }).join('');
     } catch (err) {
       console.error('Error al cargar usuarios:', err);
     }
+  },
+
+  /**
+   * Dibuja la barra de pestañas y filtra los usuarios cargados en memoria
+   */
+  renderizarTabla() {
+    const tbody = document.getElementById('tabla-usuarios');
+    if (!tbody) return;
+
+    // Inyectar o actualizar la barra de pestañas sobre la tabla
+    let contenedorFiltros = document.getElementById('usr-pestañas-filtros');
+    if (!contenedorFiltros) {
+      const tarjetaContenedora = tbody.closest('.card') || tbody.closest('div') || tbody.parentElement;
+      contenedorFiltros = document.createElement('div');
+      contenedorFiltros.id = 'usr-pestañas-filtros';
+      contenedorFiltros.style.cssText = 'display: flex; gap: 0.5rem; padding: 1rem 1rem 0.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.08); flex-wrap: wrap;';
+      if (tarjetaContenedora && tarjetaContenedora.firstChild) {
+        tarjetaContenedora.insertBefore(contenedorFiltros, tarjetaContenedora.firstChild);
+      }
+    }
+
+    if (contenedorFiltros) {
+      const cantTodos = this.listaUsuarios.length;
+      const cantPersonal = this.listaUsuarios.filter(u => u.rol !== 'estudiante').length;
+      const cantEstudiantes = this.listaUsuarios.filter(u => u.rol === 'estudiante').length;
+
+      const estiloBtnActivo = 'background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.4); padding: 0.4rem 0.85rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;';
+      const estiloBtnInactivo = 'background: rgba(255, 255, 255, 0.05); color: #94a3b8; border: 1px solid rgba(255, 255, 255, 0.1); padding: 0.4rem 0.85rem; border-radius: 6px; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.2s;';
+
+      contenedorFiltros.innerHTML = `
+        <button type="button" style="${this.filtroRolActual === 'todos' ? estiloBtnActivo : estiloBtnInactivo}" onclick="UsuariosAdmin.setFiltro('todos')">
+          👥 Todos (${cantTodos})
+        </button>
+        <button type="button" style="${this.filtroRolActual === 'personal' ? estiloBtnActivo : estiloBtnInactivo}" onclick="UsuariosAdmin.setFiltro('personal')">
+          👨‍🏫 Personal / Docentes (${cantPersonal})
+        </button>
+        <button type="button" style="${this.filtroRolActual === 'estudiante' ? estiloBtnActivo : estiloBtnInactivo}" onclick="UsuariosAdmin.setFiltro('estudiante')">
+          🎓 Estudiantes (${cantEstudiantes})
+        </button>
+      `;
+    }
+
+    // Filtrar lista según pestaña seleccionada
+    const usuariosFiltrados = this.listaUsuarios.filter(u => {
+      if (this.filtroRolActual === 'personal') return u.rol !== 'estudiante';
+      if (this.filtroRolActual === 'estudiante') return u.rol === 'estudiante';
+      return true; // 'todos'
+    });
+
+    if (usuariosFiltrados.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 2rem; color: #94a3b8;">
+            No hay usuarios en esta categoría.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = usuariosFiltrados.map(u => {
+      const estadoRaw = String(u.estado || 'ACTIVO').toUpperCase();
+      const esActivo = estadoRaw === 'ACTIVO' || estadoRaw === 'HABILITADO' || estadoRaw === 'APROBADO';
+      const nombreCompleto = u.apellido ? `${u.apellido}, ${u.nombre}` : (u.nombre || 'Sin Nombre');
+      const idPrimario = u.id;
+      const dniMostrar = u.dni || 'Sin DNI';
+
+      return `
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+          <td style="padding: 0.85rem 0.75rem;">
+            <strong style="color: #f8fafc; font-size: 0.95rem;">${nombreCompleto}</strong><br>
+            <span style="font-size: 0.8rem; color: #94a3b8;">DNI: ${dniMostrar}</span>
+          </td>
+          <td style="padding: 0.85rem 0.75rem; font-size: 0.85rem; color: #cbd5e1;">
+            ${u.email || `${dniMostrar}@cfp403.ar`}
+          </td>
+          <td style="padding: 0.85rem 0.75rem;">
+            <select class="form-control" style="padding: 0.3rem 0.5rem; font-size: 0.85rem; width: auto;" onchange="UsuariosAdmin.cambiarRol('${idPrimario}', this.value)">
+              <option value="estudiante" ${u.rol === 'estudiante' ? 'selected' : ''}>Estudiante</option>
+              <option value="docente" ${u.rol === 'docente' ? 'selected' : ''}>Docente</option>
+              <option value="admin" ${u.rol === 'admin' ? 'selected' : ''}>Administrador</option>
+            </select>
+          </td>
+          <td style="padding: 0.85rem 0.75rem;">
+            <span class="badge" style="background: ${esActivo ? 'rgba(34, 197, 94, 0.15)' : 'rgba(234, 179, 8, 0.15)'}; color: ${esActivo ? '#4ade80' : '#facc15'}; border: 1px solid ${esActivo ? 'rgba(34, 197, 94, 0.3)' : 'rgba(234, 179, 8, 0.3)'}; padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">
+              ${estadoRaw}
+            </span>
+          </td>
+          <td style="padding: 0.85rem 0.75rem; text-align: right; display: flex; gap: 0.4rem; justify-content: flex-end; align-items: center;">
+            ${!esActivo ? `
+              <button class="btn btn-gold" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="UsuariosAdmin.cambiarEstado('${idPrimario}', 'ACTIVO')">
+                ✓ Aprobar
+              </button>
+            ` : `
+              <button class="btn btn-danger" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171;" onclick="UsuariosAdmin.cambiarEstado('${idPrimario}', 'PENDIENTE')">
+                🔒 Inhabilitar
+              </button>
+            `}
+            <button title="Eliminar definitivamente" style="padding: 0.35rem 0.6rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; border-radius: 6px; cursor: pointer;" onclick="UsuariosAdmin.eliminarUsuario('${idPrimario}', '${nombreCompleto.replace(/'/g, "\\'")}')">
+              🗑️
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
   },
 
   async cargarTrayectosEnModal() {
@@ -184,7 +246,7 @@ const UsuariosAdmin = {
 
     // Normalizar email a minúsculas estrictas para Supabase Auth
     const emailSintetico = emailRaw ? emailRaw.toLowerCase() : `${dniVal.toLowerCase()}@cfp403.ar`;
-   const passwordTemp = `CFP403_${dniVal}`; // Clave temporal predeterminada
+    const passwordTemp = `CFP403_${dniVal}`; // Clave temporal predeterminada
 
     try {
       // 1. Alta en el motor de autenticación de Supabase Auth
@@ -277,6 +339,11 @@ const UsuariosAdmin = {
         .eq('id', userId);
 
       if (error) throw error;
+      
+      // Actualizar en el arreglo local
+      const idx = this.listaUsuarios.findIndex(u => u.id === userId);
+      if (idx !== -1) this.listaUsuarios[idx].rol = nuevoRol;
+      this.renderizarTabla();
     } catch (err) {
       console.error('Error al actualizar rol:', err);
     }
