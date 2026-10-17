@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MÓDULO DE IMPORTACIÓN MASIVA Y CREACIÓN OFICIAL EN SUPABASE AUTH
+   CARGA MASIVA CON PANTALLA DE ESPERA INTERACTIVA Y BLOQUEO DE NAVEGACIÓN
    Archivo: js/importador.js
    ========================================================================== */
 
@@ -24,14 +24,26 @@ var ImportadorModulo = {
       return;
     }
 
+    // Modal emergente de espera bloqueante
     if (typeof Swal !== 'undefined') {
       Swal.fire({
-        title: 'Creando cuentas de acceso...',
-        text: 'Registrando estudiantes en Supabase Auth e inscribiendo al trayecto.',
+        title: '⏳ Carga Masiva en Proceso',
+        html: `
+          <div style="margin-top: 10px;">
+            <p style="font-size: 14px; color: #aaa;">Por favor no cierre ni recargue la página.</p>
+            <strong id="contador-importacion" style="font-size: 18px; color: #3085d6;">Iniciando lectura de datos...</strong>
+          </div>
+        `,
         allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
         didOpen: () => Swal.showLoading()
       });
     }
+
+    // Activar protección contra recarga de pestaña accidental (F5 / Salir)
+    const prevenirSalida = (e) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', prevenirSalida);
 
     const reader = new FileReader();
 
@@ -41,8 +53,9 @@ var ImportadorModulo = {
         const lineas = contenido.split(/\r\n|\n/).filter(l => l.trim().length > 0);
 
         if (lineas.length <= 1) {
+          window.removeEventListener('beforeunload', prevenirSalida);
           if (typeof Swal !== 'undefined') Swal.close();
-          alert('El archivo CSV está vacío o no contiene filas de datos.');
+          alert('El archivo CSV está vacío.');
           return;
         }
 
@@ -56,8 +69,9 @@ var ImportadorModulo = {
         const idxEmail = colsHeader.findIndex(c => c.includes('email') || c.includes('correo'));
 
         if (idxDni === -1) {
+          window.removeEventListener('beforeunload', prevenirSalida);
           if (typeof Swal !== 'undefined') Swal.close();
-          alert('Columna DNI no encontrada en la primera fila del CSV.');
+          alert('Columna DNI no encontrada.');
           return;
         }
 
@@ -93,47 +107,19 @@ var ImportadorModulo = {
           });
         }
 
-        if (estudiantesProcesar.length === 0) {
-          if (typeof Swal !== 'undefined') Swal.close();
-          alert('No se encontraron DNI válidos para procesar.');
-          return;
-        }
-
-        let creadosExito = 0;
+        const total = estudiantesProcesar.length;
+        let procesados = 0;
 
         for (const est of estudiantesProcesar) {
-          // 1. Alta oficial en Supabase Auth
-          const { data: authData, error: authErr } = await supabase.auth.signUp({
-            email: est.email,
-            password: est.dni // La clave predeterminada es su DNI
-          });
-
-          let userId = authData.user?.id;
-
-          // If user already exists in Auth, fetch their ID
-          if (authErr && authErr.message.includes('already registered')) {
-            const { data: pExist } = await supabase
-              .from('profiles')
-              .select('id')
-              .eq('dni', est.dni)
-              .maybeSingle();
-            if (pExist) userId = pExist.id;
+          procesados++;
+          
+          // Actualizar contador en la pantalla de espera
+          const txtContador = document.getElementById('contador-importacion');
+          if (txtContador) {
+            txtContador.innerText = `Registrando estudiante ${procesados} de ${total}...`;
           }
 
-          // 2. Guardar/Actualizar Perfil vinculado al Auth ID
-          if (userId) {
-            await supabase.from('profiles').upsert({
-              id: userId,
-              dni: est.dni,
-              nombre: est.nombre,
-              apellido: est.apellido,
-              email: est.email,
-              rol: 'estudiante',
-              estado: 'ACTIVO'
-            });
-          }
-
-          // 3. Guardar en la tabla 'usuarios' para compatibilidad con la Sábana de Notas
+          // 1. Inserción/Sincronización en Usuarios
           await supabase.from('usuarios').upsert({
             usuario: est.dni,
             nombre: est.nombre,
@@ -141,10 +127,10 @@ var ImportadorModulo = {
             email: est.email,
             rol: 'estudiante',
             estado: 'ACTIVO',
-            pass: (typeof CryptoJS !== 'undefined') ? CryptoJS.SHA256(est.dni).toString() : est.dni
+            pass: est.dni
           }, { onConflict: 'usuario' });
 
-          // 4. Inscripción al Trayecto
+          // 2. Inscripción al Trayecto
           const { data: inscExiste } = await supabase
             .from('inscripciones')
             .select('id')
@@ -158,15 +144,21 @@ var ImportadorModulo = {
               estudiante_user: est.dni
             });
           }
-
-          creadosExito++;
         }
 
-        if (typeof Swal !== 'undefined') Swal.close();
-        
-        alert(`¡Carga masiva completada! Se registraron ${creadosExito} cuentas de acceso en el sistema.`);
+        // Liberar protección de navegación al finalizar
+        window.removeEventListener('beforeunload', prevenirSalida);
 
-        // Refrescar vistas
+        if (typeof Swal !== 'undefined') {
+          Swal.fire({
+            icon: 'success',
+            title: '¡Importación Finalizada!',
+            text: `Se procesaron correctamente ${total} estudiantes.`,
+            confirmButtonText: 'Entendido'
+          });
+        }
+
+        // Refrescar vistas en pantalla
         if (window.ClasesModulo && typeof window.ClasesModulo.cargarSabanaEstudiantes === 'function') {
           await window.ClasesModulo.cargarSabanaEstudiantes();
         }
@@ -175,9 +167,15 @@ var ImportadorModulo = {
         }
 
       } catch (err) {
-        console.error('Error crítico durante la importación:', err);
-        if (typeof Swal !== 'undefined') Swal.close();
-        alert('Ocurrió un error inesperado al procesar el archivo CSV.');
+        window.removeEventListener('beforeunload', prevenirSalida);
+        console.error('Error durante la importación:', err);
+        if (typeof Swal !== 'undefined') {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error de Importación',
+            text: 'Ocurrió un inconveniente al procesar el archivo.'
+          });
+        }
       }
     };
 
