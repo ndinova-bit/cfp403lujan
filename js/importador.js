@@ -27,7 +27,7 @@ var ImportadorModulo = {
     if (typeof Swal !== 'undefined') {
       Swal.fire({
         title: 'Procesando nómina...',
-        text: 'Importando estudiantes y registrando inscripciones en lote.',
+        text: 'Importando estudiantes y registrando inscripciones.',
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading()
       });
@@ -62,10 +62,10 @@ var ImportadorModulo = {
           return;
         }
 
-        const usuariosNuevosBatch = [];
+        let procesadosExito = 0;
         const dnisProcesados = new Set();
 
-        // 2. Parsear filas del CSV
+        // 2. Parsear y procesar registro por registro
         for (let i = 1; i < lineas.length; i++) {
           const valores = lineas[i].split(sep).map(v => v.trim().replace(/^"|"$/g, ''));
           const dniRaw = valores[idxDni] ? valores[idxDni].replace(/\D/g, '') : '';
@@ -87,7 +87,7 @@ var ImportadorModulo = {
             emailRaw = `${dniRaw}@cfp403.edu.ar`;
           }
 
-          usuariosNuevosBatch.push({
+          const usuarioObj = {
             usuario: dniRaw,
             dni: dniRaw,
             nombre: nom || 'ESTUDIANTE',
@@ -96,42 +96,44 @@ var ImportadorModulo = {
             rol: 'estudiante',
             estado: 'aprobado',
             pass: (typeof CryptoJS !== 'undefined') ? CryptoJS.SHA256(dniRaw).toString() : dniRaw
-          });
+          };
+
+          // A) Crear o actualizar Usuario
+          const { data: usrExiste } = await supabase
+            .from('usuarios')
+            .select('usuario')
+            .eq('usuario', dniRaw)
+            .maybeSingle();
+
+          if (usrExiste) {
+            await supabase.from('usuarios').update(usuarioObj).eq('usuario', dniRaw);
+          } else {
+            await supabase.from('usuarios').insert([usuarioObj]);
+          }
+
+          // B) Registrar Inscripción al Trayecto
+          const { data: inscExiste } = await supabase
+            .from('inscripciones')
+            .select('id')
+            .eq('trayecto_id', Number(this.trayectoIdActual))
+            .eq('estudiante_user', String(dniRaw))
+            .maybeSingle();
+
+          if (!inscExiste) {
+            await supabase.from('inscripciones').insert([{
+              trayecto_id: Number(this.trayectoIdActual),
+              estudiante_user: String(dniRaw)
+            }]);
+          }
+
+          procesadosExito++;
         }
-
-        if (usuariosNuevosBatch.length === 0) {
-          if (typeof Swal !== 'undefined') Swal.close();
-          alert('No se encontraron registros de DNI válidos para procesar.');
-          return;
-        }
-
-        // 3. Upsert masivo de Usuarios
-        const { error: errUsr } = await supabase
-          .from('usuarios')
-          .upsert(usuariosNuevosBatch, { onConflict: 'usuario' });
-
-        if (errUsr) {
-          console.warn('Advertencia usuarios:', errUsr);
-          await supabase.from('usuarios').upsert(usuariosNuevosBatch, { onConflict: 'dni' });
-        }
-
-        // 4. Inscripción masiva al Trayecto
-        const inscripcionesBatch = Array.from(dnisProcesados).map(dni => ({
-          trayecto_id: Number(this.trayectoIdActual),
-          estudiante_user: String(dni)
-        }));
-
-        const { error: errInsc } = await supabase
-          .from('inscripciones')
-          .upsert(inscripcionesBatch, { onConflict: 'trayecto_id,estudiante_user' });
-
-        if (errInsc) console.warn('Aviso inscripciones:', errInsc);
 
         if (typeof Swal !== 'undefined') Swal.close();
         
-        alert(`¡Carga masiva completada con éxito! Se importaron ${usuariosNuevosBatch.length} estudiantes.`);
+        alert(`¡Carga masiva completada con éxito! Se importaron ${procesadosExito} estudiantes.`);
 
-        // Refrescar vistas
+        // Refrescar vistas en pantalla
         if (window.ClasesModulo && typeof window.ClasesModulo.cargarSabanaEstudiantes === 'function') {
           await window.ClasesModulo.cargarSabanaEstudiantes();
         }
