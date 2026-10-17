@@ -87,14 +87,14 @@ var ImportadorModulo = {
             emailRaw = `${dniRaw}@cfp403.edu.ar`;
           }
 
-          // Objeto compatible exacto con el CREATE TABLE de 'usuarios'
+          // Se asigna 'ACTIVO' en mayúsculas para coincidir con el filtro de Usuarios y Roles
           usuariosBatch.push({
             usuario: String(dniRaw),
             nombre: nom || 'ESTUDIANTE',
             apellido: ap || 'SIN APELLIDO',
             email: emailRaw,
             rol: 'estudiante',
-            estado: 'aprobado',
+            estado: 'ACTIVO',
             pass: (typeof CryptoJS !== 'undefined') ? CryptoJS.SHA256(dniRaw).toString() : String(dniRaw)
           });
         }
@@ -105,7 +105,7 @@ var ImportadorModulo = {
           return;
         }
 
-        // 3. Upsert en masa a la tabla 'usuarios' usando la clave única 'usuario'
+        // 3. Upsert en la tabla 'usuarios' usando la clave única 'usuario'
         const { error: errUsr } = await supabase
           .from('usuarios')
           .upsert(usuariosBatch, { onConflict: 'usuario' });
@@ -117,30 +117,22 @@ var ImportadorModulo = {
           return;
         }
 
-        // 4. Inscripción masiva al Trayecto
+        // 4. Inscripción al Trayecto
         const inscripcionesBatch = Array.from(dnisSet).map(dni => ({
           trayecto_id: Number(this.trayectoIdActual),
           estudiante_user: String(dni)
         }));
 
-        const { error: errInsc } = await supabase
-          .from('inscripciones')
-          .upsert(inscripcionesBatch, { onConflict: 'trayecto_id,estudiante_user' });
+        for (const item of inscripcionesBatch) {
+          const { data: existe } = await supabase
+            .from('inscripciones')
+            .select('id')
+            .eq('trayecto_id', item.trayecto_id)
+            .eq('estudiante_user', item.estudiante_user)
+            .maybeSingle();
 
-        if (errInsc) {
-          // Si no hay un unique compuesto en inscripciones, hacemos un insert seguro
-          console.warn('Aviso inscripciones batch upsert, intentando insert directo:', errInsc);
-          for (const item of inscripcionesBatch) {
-            const { data: existe } = await supabase
-              .from('inscripciones')
-              .select('id')
-              .eq('trayecto_id', item.trayecto_id)
-              .eq('estudiante_user', item.estudiante_user)
-              .maybeSingle();
-
-            if (!existe) {
-              await supabase.from('inscripciones').insert([item]);
-            }
+          if (!existe) {
+            await supabase.from('inscripciones').insert([item]);
           }
         }
 
@@ -148,7 +140,7 @@ var ImportadorModulo = {
         
         alert(`¡Carga masiva completada con éxito! Se procesaron ${usuariosBatch.length} estudiantes.`);
 
-        // Refrescar vistas
+        // Refrescar vistas en pantalla
         if (window.ClasesModulo && typeof window.ClasesModulo.cargarSabanaEstudiantes === 'function') {
           await window.ClasesModulo.cargarSabanaEstudiantes();
         }
