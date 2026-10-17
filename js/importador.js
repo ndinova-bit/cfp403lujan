@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MÓDULO DE IMPORTACIÓN MASIVA DE ALUMNOS (CSV)
+   MÓDULO DE IMPORTACIÓN MASIVA Y CREACIÓN OFICIAL EN SUPABASE AUTH
    Archivo: js/importador.js
    ========================================================================== */
 
@@ -26,8 +26,8 @@ var ImportadorModulo = {
 
     if (typeof Swal !== 'undefined') {
       Swal.fire({
-        title: 'Procesando nómina...',
-        text: 'Importando estudiantes y registrando inscripciones.',
+        title: 'Creando cuentas de acceso...',
+        text: 'Registrando estudiantes en Supabase Auth e inscribiendo al trayecto.',
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading()
       });
@@ -61,7 +61,7 @@ var ImportadorModulo = {
           return;
         }
 
-        const usuariosBatch = [];
+        const estudiantesProcesar = [];
         const dnisSet = new Set();
 
         for (let i = 1; i < lineas.length; i++) {
@@ -85,57 +85,86 @@ var ImportadorModulo = {
             emailRaw = `${dniRaw}@cfp403.ar`;
           }
 
-          usuariosBatch.push({
-            usuario: String(dniRaw),
+          estudiantesProcesar.push({
+            dni: String(dniRaw),
             nombre: nom || 'ESTUDIANTE',
             apellido: ap || 'SIN APELLIDO',
-            email: emailRaw,
-            rol: 'estudiante',
-            estado: 'ACTIVO',
-            pass: (typeof CryptoJS !== 'undefined') ? CryptoJS.SHA256(dniRaw).toString() : String(dniRaw)
+            email: emailRaw
           });
         }
 
-        if (usuariosBatch.length === 0) {
+        if (estudiantesProcesar.length === 0) {
           if (typeof Swal !== 'undefined') Swal.close();
           alert('No se encontraron DNI válidos para procesar.');
           return;
         }
 
-        // 1. Guardar en 'usuarios' (El Trigger de Supabase replicará automáticamente hacia 'profiles')
-        const { error: errUsr } = await supabase
-          .from('usuarios')
-          .upsert(usuariosBatch, { onConflict: 'usuario' });
+        let creadosExito = 0;
 
-        if (errUsr) {
-          console.error('Error al insertar usuarios:', errUsr);
-          if (typeof Swal !== 'undefined') Swal.close();
-          alert(`Error en Supabase: ${errUsr.message}`);
-          return;
-        }
+        for (const est of estudiantesProcesar) {
+          // 1. Alta oficial en Supabase Auth
+          const { data: authData, error: authErr } = await supabase.auth.signUp({
+            email: est.email,
+            password: est.dni // La clave predeterminada es su DNI
+          });
 
-        // 2. Registrar Inscripción al Trayecto Formativo
-        const inscripcionesBatch = Array.from(dnisSet).map(dni => ({
-          trayecto_id: Number(this.trayectoIdActual),
-          estudiante_user: String(dni)
-        }));
+          let userId = authData.user?.id;
 
-        for (const item of inscripcionesBatch) {
-          const { data: existe } = await supabase
+          // If user already exists in Auth, fetch their ID
+          if (authErr && authErr.message.includes('already registered')) {
+            const { data: pExist } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('dni', est.dni)
+              .maybeSingle();
+            if (pExist) userId = pExist.id;
+          }
+
+          // 2. Guardar/Actualizar Perfil vinculado al Auth ID
+          if (userId) {
+            await supabase.from('profiles').upsert({
+              id: userId,
+              dni: est.dni,
+              nombre: est.nombre,
+              apellido: est.apellido,
+              email: est.email,
+              rol: 'estudiante',
+              estado: 'ACTIVO'
+            });
+          }
+
+          // 3. Guardar en la tabla 'usuarios' para compatibilidad con la Sábana de Notas
+          await supabase.from('usuarios').upsert({
+            usuario: est.dni,
+            nombre: est.nombre,
+            apellido: est.apellido,
+            email: est.email,
+            rol: 'estudiante',
+            estado: 'ACTIVO',
+            pass: (typeof CryptoJS !== 'undefined') ? CryptoJS.SHA256(est.dni).toString() : est.dni
+          }, { onConflict: 'usuario' });
+
+          // 4. Inscripción al Trayecto
+          const { data: inscExiste } = await supabase
             .from('inscripciones')
             .select('id')
-            .eq('trayecto_id', item.trayecto_id)
-            .eq('estudiante_user', item.estudiante_user)
+            .eq('trayecto_id', Number(this.trayectoIdActual))
+            .eq('estudiante_user', est.dni)
             .maybeSingle();
 
-          if (!existe) {
-            await supabase.from('inscripciones').insert([item]);
+          if (!inscExiste) {
+            await supabase.from('inscripciones').insert({
+              trayecto_id: Number(this.trayectoIdActual),
+              estudiante_user: est.dni
+            });
           }
+
+          creadosExito++;
         }
 
         if (typeof Swal !== 'undefined') Swal.close();
         
-        alert(`¡Carga masiva completada con éxito! Se procesaron ${usuariosBatch.length} estudiantes.`);
+        alert(`¡Carga masiva completada! Se registraron ${creadosExito} cuentas de acceso en el sistema.`);
 
         // Refrescar vistas
         if (window.ClasesModulo && typeof window.ClasesModulo.cargarSabanaEstudiantes === 'function') {
