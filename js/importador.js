@@ -8,17 +8,22 @@ var ImportadorModulo = {
 
   abrirModal(trayectoId) {
     this.trayectoIdActual = trayectoId;
-    
-    let input = document.getElementById('input-file-csv');
+
+    // Buscar o crear el input de archivo
+    let input = document.getElementById('input-file-csv-global');
     if (!input) {
       input = document.createElement('input');
       input.type = 'file';
-      input.id = 'input-file-csv';
+      input.id = 'input-file-csv-global';
       input.accept = '.csv';
       input.style.display = 'none';
       document.body.appendChild(input);
     }
 
+    // Limpiar manejador anterior
+    input.onchange = null;
+
+    // Asignar el nuevo manejador
     input.onchange = (e) => {
       const file = e.target.files[0];
       if (file) {
@@ -26,12 +31,20 @@ var ImportadorModulo = {
       }
     };
 
+    // Resetear valor para permitir resubir el mismo archivo
     input.value = '';
-    input.click();
+    
+    // Disparar la selección de archivo de forma directa
+    setTimeout(() => {
+      input.click();
+    }, 50);
   },
 
   async procesarCSV(file) {
-    if (!file || !this.trayectoIdActual) return;
+    if (!file || !this.trayectoIdActual) {
+      alert('⚠️ No se seleccionó un archivo válido o no se identificó el trayecto.');
+      return;
+    }
 
     if (typeof Swal !== 'undefined') {
       Swal.fire({
@@ -50,8 +63,8 @@ var ImportadorModulo = {
         const lineas = contenido.split(/\r\n|\n/).filter(l => l.trim().length > 0);
 
         if (lineas.length <= 1) {
-          if (typeof alertError === 'function') alertError('El archivo CSV está vacío o no contiene filas de datos.');
-          else alert('El archivo CSV está vacío o no contiene filas de datos.');
+          if (typeof Swal !== 'undefined') Swal.close();
+          alert('El archivo CSV está vacío o no contiene filas de datos.');
           return;
         }
 
@@ -66,8 +79,8 @@ var ImportadorModulo = {
         const idxEmail = colsHeader.findIndex(c => c.includes('email') || c.includes('correo'));
 
         if (idxDni === -1) {
-          if (typeof alertError === 'function') alertError('Columna DNI no encontrada en la primera fila del CSV.');
-          else alert('Columna DNI no encontrada en la primera fila del CSV.');
+          if (typeof Swal !== 'undefined') Swal.close();
+          alert('Columna DNI no encontrada en la primera fila del CSV.');
           return;
         }
 
@@ -109,8 +122,8 @@ var ImportadorModulo = {
         }
 
         if (usuariosNuevosBatch.length === 0) {
-          if (typeof alertError === 'function') alertError('No se encontraron registros de DNI válidos para procesar.');
-          else alert('No se encontraron registros de DNI válidos para procesar.');
+          if (typeof Swal !== 'undefined') Swal.close();
+          alert('No se encontraron registros de DNI válidos para procesar.');
           return;
         }
 
@@ -138,11 +151,7 @@ var ImportadorModulo = {
 
         if (typeof Swal !== 'undefined') Swal.close();
         
-        if (typeof alertSuccess === 'function') {
-          alertSuccess(`¡Carga masiva completada! Se procesaron ${usuariosNuevosBatch.length} estudiantes.`);
-        } else {
-          alert(`¡Carga masiva completada! Se procesaron ${usuariosNuevosBatch.length} estudiantes.`);
-        }
+        alert(`¡Carga masiva completada con éxito! Se importaron ${usuariosNuevosBatch.length} estudiantes.`);
 
         // 5. Recargar vistas de la plataforma
         if (window.ClasesModulo && typeof window.ClasesModulo.cargarNominaEstudiantes === 'function') {
@@ -155,9 +164,7 @@ var ImportadorModulo = {
       } catch (err) {
         console.error('Error durante la importación masiva:', err);
         if (typeof Swal !== 'undefined') Swal.close();
-        
-        if (typeof alertError === 'function') alertError('Ocurrió un error inesperado al importar el CSV.');
-        else alert('Ocurrió un error inesperado al importar el CSV.');
+        alert('Ocurrió un error inesperado al importar el CSV.');
       }
     };
 
