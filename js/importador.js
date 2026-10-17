@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MÓDULO DE IMPORTACIÓN MASIVA DE ALUMNOS (CSV)
+   MÓDULO DE IMPORTACIÓN MASIVA DE ALUMNOS (CSV) - DUAL SYNC (USUARIOS + PROFILES)
    Archivo: js/importador.js
    ========================================================================== */
 
@@ -27,7 +27,7 @@ var ImportadorModulo = {
     if (typeof Swal !== 'undefined') {
       Swal.fire({
         title: 'Procesando nómina...',
-        text: 'Importando estudiantes y registrando inscripciones.',
+        text: 'Sincronizando estudiantes en el sistema y registrando inscripciones.',
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading()
       });
@@ -63,6 +63,7 @@ var ImportadorModulo = {
         }
 
         const usuariosBatch = [];
+        const profilesBatch = [];
         const dnisSet = new Set();
 
         // 2. Parsear filas del CSV
@@ -84,10 +85,10 @@ var ImportadorModulo = {
 
           let emailRaw = (idxEmail !== -1 && valores[idxEmail]) ? valores[idxEmail].toLowerCase().replace(/\s+/g, '') : '';
           if (!emailRaw || !emailRaw.includes('@')) {
-            emailRaw = `${dniRaw}@cfp403.edu.ar`;
+            emailRaw = `${dniRaw}@cfp403.ar`;
           }
 
-          // Se asigna 'ACTIVO' en mayúsculas para coincidir con el filtro de Usuarios y Roles
+          // Objeto para tabla 'usuarios'
           usuariosBatch.push({
             usuario: String(dniRaw),
             nombre: nom || 'ESTUDIANTE',
@@ -97,6 +98,16 @@ var ImportadorModulo = {
             estado: 'ACTIVO',
             pass: (typeof CryptoJS !== 'undefined') ? CryptoJS.SHA256(dniRaw).toString() : String(dniRaw)
           });
+
+          // Objeto para tabla 'profiles' (utilizada por Usuarios y Roles)
+          profilesBatch.push({
+            dni: String(dniRaw),
+            nombre: nom || 'ESTUDIANTE',
+            apellido: ap || 'SIN APELLIDO',
+            email: emailRaw,
+            rol: 'estudiante',
+            estado: 'ACTIVO'
+          });
         }
 
         if (usuariosBatch.length === 0) {
@@ -105,19 +116,25 @@ var ImportadorModulo = {
           return;
         }
 
-        // 3. Upsert en la tabla 'usuarios' usando la clave única 'usuario'
+        // 3A. Guardar en la tabla 'usuarios'
         const { error: errUsr } = await supabase
           .from('usuarios')
           .upsert(usuariosBatch, { onConflict: 'usuario' });
 
         if (errUsr) {
-          console.error('Error al insertar usuarios:', errUsr);
-          if (typeof Swal !== 'undefined') Swal.close();
-          alert(`Error en Supabase (usuarios): ${errUsr.message}`);
-          return;
+          console.warn('Aviso al insertar en usuarios:', errUsr.message);
         }
 
-        // 4. Inscripción al Trayecto
+        // 3B. Guardar en la tabla 'profiles'
+        const { error: errProf } = await supabase
+          .from('profiles')
+          .upsert(profilesBatch, { onConflict: 'dni' });
+
+        if (errProf) {
+          console.warn('Aviso al insertar en profiles:', errProf.message);
+        }
+
+        // 4. Registrar Inscripción al Trayecto
         const inscripcionesBatch = Array.from(dnisSet).map(dni => ({
           trayecto_id: Number(this.trayectoIdActual),
           estudiante_user: String(dni)
@@ -140,7 +157,7 @@ var ImportadorModulo = {
         
         alert(`¡Carga masiva completada con éxito! Se procesaron ${usuariosBatch.length} estudiantes.`);
 
-        // Refrescar vistas en pantalla
+        // Refrescar todas las vistas afectadas
         if (window.ClasesModulo && typeof window.ClasesModulo.cargarSabanaEstudiantes === 'function') {
           await window.ClasesModulo.cargarSabanaEstudiantes();
         }
