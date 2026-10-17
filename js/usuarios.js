@@ -73,10 +73,9 @@ const UsuariosAdmin = {
 
     try {
       // Consulta a la tabla 'profiles' (protegida por RLS)
-      const { data: usuarios, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+     const { data: usuarios, error } = await supabase
+  .from('usuarios')
+  .select('*');
 
       if (error) throw error;
 
