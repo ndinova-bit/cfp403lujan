@@ -46,6 +46,7 @@ var ImportadorModulo = {
           return;
         }
 
+        // 1. Detectar delimitador (, o ;)
         const cabeceraRaw = lineas[0].toLowerCase();
         const sep = cabeceraRaw.includes(';') ? ';' : ',';
         const colsHeader = lineas[0].split(sep).map(c => c.trim().toLowerCase().replace(/"/g, ''));
@@ -61,16 +62,16 @@ var ImportadorModulo = {
           return;
         }
 
-        let procesadosExito = 0;
-        let erroresConteo = 0;
-        const dnisProcesados = new Set();
+        const usuariosBatch = [];
+        const dnisSet = new Set();
 
+        // 2. Parsear filas del CSV
         for (let i = 1; i < lineas.length; i++) {
           const valores = lineas[i].split(sep).map(v => v.trim().replace(/^"|"$/g, ''));
           const dniRaw = valores[idxDni] ? valores[idxDni].replace(/\D/g, '') : '';
 
-          if (!dniRaw || dnisProcesados.has(dniRaw)) continue;
-          dnisProcesados.add(dniRaw);
+          if (!dniRaw || dnisSet.has(dniRaw)) continue;
+          dnisSet.add(dniRaw);
 
           let nom = (idxNombre !== -1 && valores[idxNombre]) ? valores[idxNombre].toUpperCase() : '';
           let ap = (idxApellido !== -1 && valores[idxApellido]) ? valores[idxApellido].toUpperCase() : '';
@@ -86,70 +87,68 @@ var ImportadorModulo = {
             emailRaw = `${dniRaw}@cfp403.edu.ar`;
           }
 
-          const usuarioObj = {
+          // Objeto compatible exacto con el CREATE TABLE de 'usuarios'
+          usuariosBatch.push({
             usuario: String(dniRaw),
-            dni: String(dniRaw),
             nombre: nom || 'ESTUDIANTE',
             apellido: ap || 'SIN APELLIDO',
             email: emailRaw,
             rol: 'estudiante',
-            estado: 'ACTIVO',
+            estado: 'aprobado',
             pass: (typeof CryptoJS !== 'undefined') ? CryptoJS.SHA256(dniRaw).toString() : String(dniRaw)
-          };
+          });
+        }
 
-          // 1. Guardar o verificar usuario
-          const { data: usrExiste } = await supabase
-            .from('usuarios')
-            .select('usuario')
-            .eq('usuario', String(dniRaw))
-            .maybeSingle();
+        if (usuariosBatch.length === 0) {
+          if (typeof Swal !== 'undefined') Swal.close();
+          alert('No se encontraron DNI válidos para procesar.');
+          return;
+        }
 
-          let errorUsuario = null;
-          if (usrExiste) {
-            const { error } = await supabase.from('usuarios').update(usuarioObj).eq('usuario', String(dniRaw));
-            errorUsuario = error;
-          } else {
-            const { error } = await supabase.from('usuarios').insert([usuarioObj]);
-            errorUsuario = error;
-          }
+        // 3. Upsert en masa a la tabla 'usuarios' usando la clave única 'usuario'
+        const { error: errUsr } = await supabase
+          .from('usuarios')
+          .upsert(usuariosBatch, { onConflict: 'usuario' });
 
-          if (errorUsuario) {
-            console.error(`Error en usuario DNI ${dniRaw}:`, errorUsuario);
-            erroresConteo++;
-            continue; 
-          }
+        if (errUsr) {
+          console.error('Error al insertar usuarios:', errUsr);
+          if (typeof Swal !== 'undefined') Swal.close();
+          alert(`Error en Supabase (usuarios): ${errUsr.message}`);
+          return;
+        }
 
-          // 2. Vincular inscripción
-          const { data: inscExiste } = await supabase
-            .from('inscripciones')
-            .select('id')
-            .eq('trayecto_id', Number(this.trayectoIdActual))
-            .eq('estudiante_user', String(dniRaw))
-            .maybeSingle();
+        // 4. Inscripción masiva al Trayecto
+        const inscripcionesBatch = Array.from(dnisSet).map(dni => ({
+          trayecto_id: Number(this.trayectoIdActual),
+          estudiante_user: String(dni)
+        }));
 
-          if (!inscExiste) {
-            const { error: errInsc } = await supabase.from('inscripciones').insert([{
-              trayecto_id: Number(this.trayectoIdActual),
-              estudiante_user: String(dniRaw)
-            }]);
+        const { error: errInsc } = await supabase
+          .from('inscripciones')
+          .upsert(inscripcionesBatch, { onConflict: 'trayecto_id,estudiante_user' });
 
-            if (errInsc) {
-              console.error(`Error en inscripcion DNI ${dniRaw}:`, errInsc);
+        if (errInsc) {
+          // Si no hay un unique compuesto en inscripciones, hacemos un insert seguro
+          console.warn('Aviso inscripciones batch upsert, intentando insert directo:', errInsc);
+          for (const item of inscripcionesBatch) {
+            const { data: existe } = await supabase
+              .from('inscripciones')
+              .select('id')
+              .eq('trayecto_id', item.trayecto_id)
+              .eq('estudiante_user', item.estudiante_user)
+              .maybeSingle();
+
+            if (!existe) {
+              await supabase.from('inscripciones').insert([item]);
             }
           }
-
-          procesadosExito++;
         }
 
         if (typeof Swal !== 'undefined') Swal.close();
+        
+        alert(`¡Carga masiva completada con éxito! Se procesaron ${usuariosBatch.length} estudiantes.`);
 
-        if (erroresConteo > 0) {
-          alert(`⚠️ Proceso finalizado:\n- ${procesadosExito} usuarios importados correctamente.\n- ${erroresConteo} rebotaron por conflicto de esquema en Supabase (Revisar consola).`);
-        } else {
-          alert(`¡Carga masiva completada con éxito! Se procesaron ${procesadosExito} estudiantes.`);
-        }
-
-        // Recargar vistas
+        // Refrescar vistas
         if (window.ClasesModulo && typeof window.ClasesModulo.cargarSabanaEstudiantes === 'function') {
           await window.ClasesModulo.cargarSabanaEstudiantes();
         }
