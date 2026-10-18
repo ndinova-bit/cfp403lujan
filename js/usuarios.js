@@ -150,7 +150,7 @@ const UsuariosAdmin = {
       const esActivo = estadoRaw === 'ACTIVO' || estadoRaw === 'HABILITADO' || estadoRaw === 'APROBADO';
       const nombreCompleto = u.apellido ? `${u.apellido}, ${u.nombre}` : (u.nombre || 'Sin Nombre');
       const idPrimario = u.id;
-      const dniMostrar = u.dni || 'Sin DNI';
+      const dniMostrar = u.dni || u.usuario || 'Sin DNI';
 
       return `
         <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
