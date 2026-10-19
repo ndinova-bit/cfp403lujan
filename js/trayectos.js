@@ -66,53 +66,34 @@ const Trayectos = {
 
   async cargarTrayectos() {
     try {
-      const { data: authSession } = await supabase.auth.getSession();
-      const sessionUser = authSession?.session?.user;
-      const perfilSesion = this.obtenerPerfilActual();
-
-      const rolNorm = String(perfilSesion?.rol || '').toLowerCase().trim();
+      const perfil = this.obtenerPerfilActual();
+      const rolNorm = String(perfil?.rol || '').toLowerCase().trim();
       const isAdmin = rolNorm === 'admin' || rolNorm === 'administrador';
       const esDocente = rolNorm === 'docente';
 
-      const anioVigente = new Date().getFullYear();
       let trayectosData = [];
 
-      // 1. Vista Admin
-      if (isAdmin) {
+      // Admin térã Docente: ohechapaite umi trayectos
+      if (isAdmin || esDocente) {
         const { data, error } = await supabase.from('trayectos').select('*');
         if (error) throw error;
         trayectosData = data || [];
       } 
-      // 2. Vista Pública / Docente
-      else if (!sessionUser || esDocente) {
-        const { data, error } = await supabase
-          .from('trayectos')
-          .select('*')
-          .eq('ciclo_lectivo', anioVigente);
-        if (error) throw error;
-        trayectosData = data || [];
-      } 
-      // 3. Vista Estudiante
+      // Temimbo'e: oheka tabla 'inscripciones'-pe DNI, usuario térã email rupive
       else {
-        const dniRaw = String(perfilSesion.dni || perfilSesion.usuario || '').trim();
-        const dniLimpio = dniRaw.replace(/\D/g, '');
-        const emailUser = sessionUser.email || perfilSesion.email || '';
+        const dniRaw = String(perfil.dni || perfil.usuario || '').trim();
+        const emailRaw = String(perfil.email || '').trim().toLowerCase();
 
-        let idsTrayectos = [];
+        const { data: inscripciones, error: errInsc } = await supabase
+          .from('inscripciones')
+          .select('trayecto_id')
+          .or(`estudiante_user.eq.${dniRaw},estudiante_user.eq.${emailRaw}`);
 
-        // Consultar la tabla inscripciones buscando coincidencia por DNI o Email
-        if (dniLimpio || dniRaw || emailUser) {
-          const { data: inscripciones } = await supabase
-            .from('inscripciones')
-            .select('trayecto_id')
-            .or(`estudiante_user.eq.${dniLimpio},estudiante_user.eq.${dniRaw},estudiante_user.eq.${emailUser}`);
+        if (errInsc) console.warn('Error al buscar inscripciones:', errInsc);
 
-          if (inscripciones && inscripciones.length > 0) {
-            idsTrayectos = inscripciones.map(i => i.trayecto_id);
-          }
-        }
+        if (inscripciones && inscripciones.length > 0) {
+          const idsTrayectos = inscripciones.map(i => i.trayecto_id);
 
-        if (idsTrayectos.length > 0) {
           const { data: trayectos, error: errTray } = await supabase
             .from('trayectos')
             .select('*')
@@ -127,7 +108,7 @@ const Trayectos = {
       this.renderizarTrayectos();
 
     } catch (err) {
-      console.error('Error al cargar trayectos del usuario:', err);
+      console.error('Error al cargar trayectos:', err);
     }
   },
 
