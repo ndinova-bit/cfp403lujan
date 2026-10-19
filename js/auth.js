@@ -32,7 +32,7 @@ const Auth = {
   },
 
   /**
-   * Inicio de Sesión Oficial con Supabase Auth
+   * Inicio de Sesión Oficial con Supabase Auth (Soporte inteligente DNI / Email)
    */
   iniciarSesion: async function() {
     const loginScreenEl = document.getElementById('login-screen');
@@ -50,75 +50,106 @@ const Auth = {
       return;
     }
 
-    // Normalización estricta: forzar siempre minúsculas
     const userClean = userValRaw.toLowerCase();
-    const emailFormat = userClean.includes('@') ? userClean : `${userClean}@cfp403.ar`;
+    let candidateEmails = [];
 
-    try {
-      // 1. Autenticación real mediante Supabase Auth
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: emailFormat,
+    if (userClean.includes('@')) {
+      candidateEmails.push(userClean);
+    } else {
+      candidateEmails.push(`${userClean}@cfp403.ar`);
+
+      try {
+        const { data: dbUser } = await supabase
+          .from('usuarios')
+          .select('email')
+          .eq('usuario', userClean)
+          .maybeSingle();
+
+        if (dbUser && dbUser.email) {
+          candidateEmails.push(dbUser.email.toLowerCase());
+        }
+      } catch (e) {
+        console.warn('Error al buscar email alternativo por DNI:', e);
+      }
+    }
+
+    let authData = null;
+    let authError = null;
+
+    for (const emailToTry of candidateEmails) {
+      const res = await supabase.auth.signInWithPassword({
+        email: emailToTry,
         password: passVal
       });
 
-      if (error) {
-        if (typeof alertError === 'function') {
-          alertError('Error al ingresar', 'Usuario, DNI o contraseña incorrectos.');
-        } else {
-          alert('Usuario, DNI o contraseña incorrectos.');
-        }
-        return;
-      }
-
-      // 2. Traer el perfil validado desde la tabla 'profiles' (protegida por RLS)
-      const { data: perfil, errorPerfil } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', data.user.id)
-        .single();
-
-      if (errorPerfil || !perfil) {
-        await supabase.auth.signOut();
-        alertError('Error de perfil', 'No se encontró un perfil válido asociado a este usuario.');
-        return;
-      }
-
-      // 3. Validar estado habilitado
-      const estado = String(perfil.estado || 'ACTIVO').toUpperCase();
-      const rolNorm = String(perfil.rol || '').toLowerCase().trim();
-
-      if (rolNorm !== 'admin' && estado !== 'ACTIVO' && estado !== 'HABILITADO' && estado !== 'APROBADO') {
-        await supabase.auth.signOut();
-        if (typeof alertError === 'function') {
-          alertError('Cuenta pendiente', 'Tu cuenta está pendiente de aprobación por un administrador.');
-        } else {
-          alert('Tu cuenta está pendiente de aprobación por un administrador.');
-        }
-        return;
-      }
-
-      // 4. Iniciar sesión e impactar UI
-      this.usuarioActual = perfil;
-
-      if (typeof notify === 'function') {
-        notify('success', `¡Bienvenido/a ${perfil.nombre || perfil.dni}!`);
-      }
-
-      if (loginScreenEl) {
-        loginScreenEl.style.setProperty('display', 'none', 'important');
-      }
-
-      if (typeof UI !== 'undefined' && typeof UI.mostrarDashboard === 'function') {
-        UI.mostrarDashboard(perfil);
-      }
-
-    } catch (err) {
-      console.error('Error Auth:', err);
-      if (typeof alertError === 'function') {
-        alertError('Error al ingresar', 'Credenciales inválidas o problema de conexión.');
+      if (!res.error) {
+        authData = res.data;
+        authError = null;
+        break;
       } else {
-        alert('Credenciales inválidas o problema de conexión.');
+        authError = res.error;
       }
+    }
+
+    if (authError || !authData) {
+      if (typeof alertError === 'function') {
+        alertError('Error al ingresar', 'Usuario, DNI o contraseña incorrectos.');
+      } else {
+        alert('Usuario, DNI o contraseña incorrectos.');
+      }
+      return;
+    }
+
+    let perfil = null;
+    const { data: profileRes } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', authData.user.id)
+      .maybeSingle();
+
+    perfil = profileRes;
+
+    if (!perfil) {
+      const { data: usuarioRes } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('email', authData.user.email)
+        .maybeSingle();
+
+      perfil = usuarioRes;
+    }
+
+    if (!perfil) {
+      await supabase.auth.signOut();
+      alertError('Error de perfil', 'No se encontró un perfil válido asociado a este usuario.');
+      return;
+    }
+
+    const estado = String(perfil.estado || 'ACTIVO').toUpperCase();
+    const rolNorm = String(perfil.rol || '').toLowerCase().trim();
+
+    if (rolNorm !== 'admin' && rolNorm !== 'administrador' && estado !== 'ACTIVO' && estado !== 'HABILITADO' && estado !== 'APROBADO') {
+      await supabase.auth.signOut();
+      if (typeof alertError === 'function') {
+        alertError('Cuenta pendiente', 'Tu cuenta está pendiente de aprobación por un administrador.');
+      } else {
+        alert('Tu cuenta está pendiente de aprobación por un administrador.');
+      }
+      return;
+    }
+
+    this.usuarioActual = perfil;
+
+    if (typeof notify === 'function') {
+      notify('success', `¡Bienvenido/a ${perfil.nombre || perfil.dni || 'Usuario'}!`);
+    }
+
+    if (loginScreenEl) {
+      loginScreenEl.style.setProperty('display', 'none', 'important');
+    }
+
+    if (typeof UI !== 'undefined' && typeof UI.mostrarDashboard === 'function') {
+      UI.mostrarDashboard(perfil);
     }
   }
 };
