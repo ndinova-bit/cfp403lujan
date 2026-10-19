@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MÓDULO DE AUTENTICACIÓN OFICIAL (SUPABASE AUTH NATIVO)
+   MÓDULO DE AUTENTICACIÓN OFICIAL (DIRECTO Y RÁPIDO)
    Archivo: js/auth.js
    ========================================================================== */
 
@@ -11,9 +11,6 @@ const Auth = {
     return String(val).trim();
   },
 
-  /**
-   * Cierra la sesión activa de forma segura
-   */
   async cerrarSesion() {
     this.usuarioActual = null;
     localStorage.removeItem('usuario_actual');
@@ -21,7 +18,7 @@ const Auth = {
     try {
       await supabase.auth.signOut();
     } catch (e) {
-      console.warn('Error al cerrar sesión en Supabase:', e);
+      console.warn('Error al cerrar sesión:', e);
     }
 
     if (typeof UI !== 'undefined' && typeof UI.showLoginScreen === 'function') {
@@ -31,9 +28,6 @@ const Auth = {
     }
   },
 
-  /**
-   * Inicio de Sesión Oficial con Supabase Auth (Soporte inteligente DNI / Email)
-   */
   iniciarSesion: async function() {
     const loginScreenEl = document.getElementById('login-screen');
     if (loginScreenEl) loginScreenEl.removeAttribute('aria-hidden');
@@ -42,114 +36,81 @@ const Auth = {
     const passVal = document.getElementById('login-pass')?.value?.trim() || '';
 
     if (!userValRaw || !passVal) {
-      if (typeof alertError === 'function') {
-        alertError('Campos incompletos', 'Por favor ingresá tu usuario/DNI y contraseña.');
-      } else {
-        alert('Por favor ingresá tu usuario/DNI y contraseña.');
-      }
+      alert('Por favor ingresá tu usuario/DNI y contraseña.');
       return;
     }
 
     const userClean = userValRaw.toLowerCase();
-    let candidateEmails = [];
 
-    if (userClean.includes('@')) {
-      candidateEmails.push(userClean);
-    } else {
-      candidateEmails.push(`${userClean}@cfp403.ar`);
+    try {
+      // 1. Buscar en la tabla usuarios para obtener el mail exacto y el DNI real
+      let emailAUsar = userClean;
+      let perfilLocal = null;
 
-      try {
+      if (!userClean.includes('@')) {
         const { data: dbUser } = await supabase
           .from('usuarios')
-          .select('email')
-          .eq('usuario', userClean)
+          .select('*')
+          .or(`usuario.eq.${userClean},email.ilike.${userClean}@%`)
           .maybeSingle();
 
-        if (dbUser && dbUser.email) {
-          candidateEmails.push(dbUser.email.toLowerCase());
+        if (dbUser) {
+          perfilLocal = dbUser;
+          emailAUsar = dbUser.email ? dbUser.email.toLowerCase() : `${userClean}@cfp403.ar`;
+        } else {
+          emailAUsar = `${userClean}@cfp403.ar`;
         }
-      } catch (e) {
-        console.warn('Error al buscar email alternativo por DNI:', e);
       }
-    }
 
-    let authData = null;
-    let authError = null;
-
-    for (const emailToTry of candidateEmails) {
-      const res = await supabase.auth.signInWithPassword({
-        email: emailToTry,
+      // 2. Autenticar directo en Supabase Auth (sin reintentos lentos)
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: emailAUsar,
         password: passVal
       });
 
-      if (!res.error) {
-        authData = res.data;
-        authError = null;
-        break;
-      } else {
-        authError = res.error;
-      }
-    }
-
-    if (authError || !authData) {
-      if (typeof alertError === 'function') {
-        alertError('Error al ingresar', 'Usuario, DNI o contraseña incorrectos.');
-      } else {
+      if (authError || !authData) {
         alert('Usuario, DNI o contraseña incorrectos.');
+        return;
       }
-      return;
-    }
 
-    let perfil = null;
-    const { data: profileRes } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', authData.user.id)
-      .maybeSingle();
-
-    perfil = profileRes;
-
-    if (!perfil) {
-      const { data: usuarioRes } = await supabase
-        .from('usuarios')
-        .select('*')
-        .eq('email', authData.user.email)
-        .maybeSingle();
-
-      perfil = usuarioRes;
-    }
-
-    if (!perfil) {
-      await supabase.auth.signOut();
-      alertError('Error de perfil', 'No se encontró un perfil válido asociado a este usuario.');
-      return;
-    }
-
-    const estado = String(perfil.estado || 'ACTIVO').toUpperCase();
-    const rolNorm = String(perfil.rol || '').toLowerCase().trim();
-
-    if (rolNorm !== 'admin' && rolNorm !== 'administrador' && estado !== 'ACTIVO' && estado !== 'HABILITADO' && estado !== 'APROBADO') {
-      await supabase.auth.signOut();
-      if (typeof alertError === 'function') {
-        alertError('Cuenta pendiente', 'Tu cuenta está pendiente de aprobación por un administrador.');
-      } else {
-        alert('Tu cuenta está pendiente de aprobación por un administrador.');
+      // 3. Obtener el perfil definitivo desde la tabla usuarios
+      if (!perfilLocal) {
+        const { data: uRes } = await supabase
+          .from('usuarios')
+          .select('*')
+          .or(`email.eq.${emailAUsar},usuario.eq.${userClean}`)
+          .maybeSingle();
+        perfilLocal = uRes;
       }
-      return;
-    }
 
-    this.usuarioActual = perfil;
+      if (!perfilLocal) {
+        perfilLocal = {
+          id: authData.user.id,
+          email: emailAUsar,
+          usuario: userClean,
+          dni: userClean,
+          rol: 'estudiante'
+        };
+      }
 
-    if (typeof notify === 'function') {
-      notify('success', `¡Bienvenido/a ${perfil.nombre || perfil.dni || 'Usuario'}!`);
-    }
+      this.usuarioActual = perfilLocal;
+      localStorage.setItem('usuario_actual', JSON.stringify(perfilLocal));
 
-    if (loginScreenEl) {
-      loginScreenEl.style.setProperty('display', 'none', 'important');
-    }
+      if (typeof notify === 'function') {
+        notify('success', `¡Bienvenido/a ${perfilLocal.nombre || perfilLocal.usuario}!`);
+      }
 
-    if (typeof UI !== 'undefined' && typeof UI.mostrarDashboard === 'function') {
-      UI.mostrarDashboard(perfil);
+      if (loginScreenEl) {
+        loginScreenEl.style.setProperty('display', 'none', 'important');
+      }
+
+      if (typeof UI !== 'undefined' && typeof UI.mostrarDashboard === 'function') {
+        UI.mostrarDashboard(perfilLocal);
+      }
+
+    } catch (err) {
+      console.error('Error al iniciar sesión:', err);
+      alert('Error de conexión o credenciales inválidas.');
     }
   }
 };
