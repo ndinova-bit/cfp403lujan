@@ -64,24 +64,37 @@ const Trayectos = {
     return perfilRaw ? JSON.parse(perfilRaw) : {};
   },
 
-  async cargarTrayectos() {
+async cargarTrayectos() {
     try {
       const usuario = this.obtenerPerfilActual();
       const rolNorm = String(usuario?.rol || '').toLowerCase().trim();
       const isAdmin = rolNorm === 'admin' || rolNorm === 'administrador';
       const esDocente = rolNorm === 'docente';
 
+      // Año lectivo vigente dinámico (ej: 2026)
+      const anioVigente = new Date().getFullYear();
+
       let trayectosData = [];
 
-      // Si no hay sesión o es vista pública / admin / docente -> carga todos los trayectos
-      if (!usuario || !usuario.rol || isAdmin || esDocente) {
+      // 1. Si es Administrador: ve todos los trayectos sin filtrar ciclo
+      if (isAdmin) {
         const { data, error } = await supabase
           .from('trayectos')
           .select('*');
         if (error) throw error;
         trayectosData = data || [];
-      } else {
-        // Estudiante: buscar sus inscripciones por DNI o Usuario
+      } 
+      // 2. Si es Vista Pública o Docente: filtra estrictamente por el ciclo lectivo vigente
+      else if (!usuario || !usuario.rol || esDocente) {
+        const { data, error } = await supabase
+          .from('trayectos')
+          .select('*')
+          .eq('ciclo_lectivo', anioVigente);
+        if (error) throw error;
+        trayectosData = data || [];
+      } 
+      // 3. Si es Estudiante: busca sus inscripciones y filtra solo los trayectos del ciclo vigente
+      else {
         const dniEstudiante = String(usuario.dni || usuario.usuario || '').trim();
 
         const { data: inscripciones, error: errInsc } = await supabase
@@ -97,7 +110,8 @@ const Trayectos = {
           const { data: trayectos, error: errTray } = await supabase
             .from('trayectos')
             .select('*')
-            .in('id', idsTrayectos);
+            .in('id', idsTrayectos)
+            .eq('ciclo_lectivo', anioVigente);
 
           if (errTray) throw errTray;
           trayectosData = trayectos || [];
