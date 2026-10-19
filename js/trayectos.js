@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MÓDULO DE TRAYECTOS FORMATIVOS POR CICLO LECTIVO (ESTRICTO SIN SINTAXIS ERROR)
+   MÓDULO DE TRAYECTOS FORMATIVOS POR CICLO LECTIVO (OFICIAL Y DIRECTO)
    Archivo: js/trayectos.js
    ========================================================================== */
 
@@ -71,27 +71,43 @@ const Trayectos = {
       const isAdmin = rolNorm === 'admin' || rolNorm === 'administrador';
       const esDocente = rolNorm === 'docente';
 
+      const anioVigente = new Date().getFullYear();
       let trayectosData = [];
 
-      // Admin térã Docente: ohechapaite umi trayectos
-      if (isAdmin || esDocente) {
+      // 1. Administrador: ve todos los trayectos
+      if (isAdmin) {
         const { data, error } = await supabase.from('trayectos').select('*');
         if (error) throw error;
         trayectosData = data || [];
       } 
-      // Temimbo'e: oheka tabla 'inscripciones'-pe DNI, usuario térã email rupive
+      // 2. Vista pública inicial / Docente: muestra los cursos del ciclo lectivo vigente
+      else if (!perfil || !perfil.rol || esDocente) {
+        const { data, error } = await supabase
+          .from('trayectos')
+          .select('*')
+          .eq('ciclo_lectivo', anioVigente);
+        if (error) throw error;
+        trayectosData = data || [];
+      } 
+      // 3. Estudiante: consulta sus inscripciones por DNI, usuario o email
       else {
         const dniRaw = String(perfil.dni || perfil.usuario || '').trim();
         const emailRaw = String(perfil.email || '').trim().toLowerCase();
 
-        const { data: inscripciones, error: errInsc } = await supabase
-          .from('inscripciones')
-          .select('trayecto_id')
-          .or(`estudiante_user.eq.${dniRaw},estudiante_user.eq.${emailRaw}`);
+        let queryOr = [];
+        if (dniRaw) queryOr.push(`estudiante_user.eq.${dniRaw}`);
+        if (emailRaw) queryOr.push(`estudiante_user.eq.${emailRaw}`);
 
-        if (errInsc) console.warn('Error al buscar inscripciones:', errInsc);
+        let inscripciones = [];
+        if (queryOr.length > 0) {
+          const { data: resInsc } = await supabase
+            .from('inscripciones')
+            .select('trayecto_id')
+            .or(queryOr.join(','));
+          inscripciones = resInsc || [];
+        }
 
-        if (inscripciones && inscripciones.length > 0) {
+        if (inscripciones.length > 0) {
           const idsTrayectos = inscripciones.map(i => i.trayecto_id);
 
           const { data: trayectos, error: errTray } = await supabase
