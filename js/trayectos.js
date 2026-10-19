@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MÓDULO DE TRAYECTOS FORMATIVOS POR CICLO LECTIVO (CON EDICIÓN)
+   MÓDULO DE TRAYECTOS FORMATIVOS POR CICLO LECTIVO (CORREGIDO)
    Archivo: js/trayectos.js
    ========================================================================== */
 
@@ -65,55 +65,52 @@ const Trayectos = {
   },
 
   async cargarTrayectos() {
-  // 1. Obtener el usuario logueado en Auth
-  const usuario = Auth.usuarioActual;
-  if (!usuario) return;
+    try {
+      const usuario = this.obtenerPerfilActual();
+      const rolNorm = String(usuario?.rol || '').toLowerCase().trim();
+      const isAdmin = rolNorm === 'admin' || rolNorm === 'administrador';
+      const esDocente = rolNorm === 'docente';
 
-  const rolNorm = String(usuario.rol || '').toLowerCase().trim();
-  const isAdmin = rolNorm === 'admin' || rolNorm === 'administrador';
+      let trayectosData = [];
 
-  try {
-    let trayectosData = [];
-
-    if (isAdmin) {
-      // El administrador ve todos los trayectos
-      const { data, error } = await supabase
-        .from('trayectos')
-        .select('*');
-      if (error) throw error;
-      trayectosData = data || [];
-    } else {
-      // 2. El estudiante busca sus inscripciones usando su DNI
-      const dniEstudiante = String(usuario.dni || usuario.usuario || '').trim();
-
-      const { data: inscripciones, error: errInsc } = await supabase
-        .from('inscripciones')
-        .select('trayecto_id')
-        .eq('estudiante_user', dniEstudiante);
-
-      if (errInsc) throw errInsc;
-
-      if (inscripciones && inscripciones.length > 0) {
-        const idsTrayectos = inscripciones.map(i => i.trayecto_id);
-
-        // 3. Traer los datos de los trayectos vinculados
-        const { data: trayectos, error: errTray } = await supabase
+      // Si no hay sesión o es vista pública / admin / docente -> carga todos los trayectos
+      if (!usuario || !usuario.rol || isAdmin || esDocente) {
+        const { data, error } = await supabase
           .from('trayectos')
-          .select('*')
-          .in('id', idsTrayectos);
+          .select('*');
+        if (error) throw error;
+        trayectosData = data || [];
+      } else {
+        // Estudiante: buscar sus inscripciones por DNI o Usuario
+        const dniEstudiante = String(usuario.dni || usuario.usuario || '').trim();
 
-        if (errTray) throw errTray;
-        trayectosData = trayectos || [];
+        const { data: inscripciones, error: errInsc } = await supabase
+          .from('inscripciones')
+          .select('trayecto_id')
+          .eq('estudiante_user', dniEstudiante);
+
+        if (errInsc) throw errInsc;
+
+        if (inscripciones && inscripciones.length > 0) {
+          const idsTrayectos = inscripciones.map(i => i.trayecto_id);
+
+          const { data: trayectos, error: errTray } = await supabase
+            .from('trayectos')
+            .select('*')
+            .in('id', idsTrayectos);
+
+          if (errTray) throw errTray;
+          trayectosData = trayectos || [];
+        }
       }
+
+      this.listaTrayectos = trayectosData;
+      this.renderizarTrayectos();
+
+    } catch (err) {
+      console.error('Error al cargar trayectos del usuario:', err);
     }
-
-    // 4. Renderizar las tarjetas en pantalla
-    this.renderizarTrayectos(trayectosData);
-
-  } catch (err) {
-    console.error('Error al cargar trayectos del usuario:', err);
-  }
-}
+  },
 
   renderizarTrayectos() {
     const contenedores = [
@@ -167,7 +164,11 @@ const Trayectos = {
 
         if (!esVistaPublica && (esDocente || esEstudiante || isAdmin)) {
           card.style.cursor = 'pointer';
-          card.onclick = () => ClasesModulo.abrirGestor(trayecto.id, trayecto.nombre.replace(/'/g, "\\'"));
+          card.onclick = () => {
+            if (window.ClasesModulo && typeof ClasesModulo.abrirGestor === 'function') {
+              ClasesModulo.abrirGestor(trayecto.id, trayecto.nombre.replace(/'/g, "\\'"));
+            }
+          };
         }
 
         const cicloBadge = `
@@ -207,7 +208,7 @@ const Trayectos = {
           </div>
         ` : '';
 
-        if (esVistaPublica && !esDocente && !esEstudiante && !isAdmin) {
+        if (esVistaPublica) {
           card.innerHTML = `
             <div>
               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
@@ -328,7 +329,6 @@ const Trayectos = {
     }
 
     try {
-      // MAPEAMOS AMBOS CAMPOS EN PARALELO PARA GARANTIZAR COMPATIBILIDAD
       const datosTrayecto = {
         nombre: nombre,
         ciclo_lectivo: Number(cicloVal) || new Date().getFullYear(),
