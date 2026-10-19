@@ -71,12 +71,10 @@ async cargarTrayectos() {
       const isAdmin = rolNorm === 'admin' || rolNorm === 'administrador';
       const esDocente = rolNorm === 'docente';
 
-      // Año lectivo vigente dinámico (ej: 2026)
       const anioVigente = new Date().getFullYear();
-
       let trayectosData = [];
 
-      // 1. Si es Administrador: ve todos los trayectos sin filtrar ciclo
+      // 1. Si es Administrador: ve todos los trayectos
       if (isAdmin) {
         const { data, error } = await supabase
           .from('trayectos')
@@ -84,7 +82,7 @@ async cargarTrayectos() {
         if (error) throw error;
         trayectosData = data || [];
       } 
-      // 2. Si es Vista Pública o Docente: filtra estrictamente por el ciclo lectivo vigente
+      // 2. Si es Vista Pública o Docente: filtra por ciclo lectivo vigente
       else if (!usuario || !usuario.rol || esDocente) {
         const { data, error } = await supabase
           .from('trayectos')
@@ -93,14 +91,17 @@ async cargarTrayectos() {
         if (error) throw error;
         trayectosData = data || [];
       } 
-      // 3. Si es Estudiante: busca sus inscripciones y filtra solo los trayectos del ciclo vigente
+      // 3. Si es Estudiante: limpia el DNI (solo números) y consulta en inscripciones
       else {
-        const dniEstudiante = String(usuario.dni || usuario.usuario || '').trim();
+        // Extraer DNI quitando puntos, espacios o textos
+        const dniRaw = String(usuario.dni || usuario.usuario || usuario.estudiante_user || '').trim();
+        const dniLimpio = dniRaw.replace(/\D/g, ''); 
 
+        // Buscar coincidencia por el DNI numérico o por la cadena original
         const { data: inscripciones, error: errInsc } = await supabase
           .from('inscripciones')
           .select('trayecto_id')
-          .eq('estudiante_user', dniEstudiante);
+          .or(`estudiante_user.eq.${dniLimpio},estudiante_user.eq.${dniRaw}`);
 
         if (errInsc) throw errInsc;
 
@@ -110,8 +111,7 @@ async cargarTrayectos() {
           const { data: trayectos, error: errTray } = await supabase
             .from('trayectos')
             .select('*')
-            .in('id', idsTrayectos)
-            .eq('ciclo_lectivo', anioVigente);
+            .in('id', idsTrayectos);
 
           if (errTray) throw errTray;
           trayectosData = trayectos || [];
