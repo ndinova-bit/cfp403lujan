@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MÓDULO DE TRAYECTOS FORMATIVOS POR CICLO LECTIVO (CORREGIDO)
+   MÓDULO DE TRAYECTOS FORMATIVOS POR CICLO LECTIVO (ESTRICTO SIN SINTAXIS ERROR)
    Archivo: js/trayectos.js
    ========================================================================== */
 
@@ -64,10 +64,10 @@ const Trayectos = {
     return perfilRaw ? JSON.parse(perfilRaw) : {};
   },
 
-async cargarTrayectos() {
+  async cargarTrayectos() {
     try {
-      // 1. Obtener el usuario autenticado
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: authSession } = await supabase.auth.getSession();
+      const sessionUser = authSession?.session?.user;
       const perfilSesion = this.obtenerPerfilActual();
 
       const rolNorm = String(perfilSesion?.rol || '').toLowerCase().trim();
@@ -77,12 +77,14 @@ async cargarTrayectos() {
       const anioVigente = new Date().getFullYear();
       let trayectosData = [];
 
-      // 2. Vista Admin o Docente
+      // 1. Vista Admin
       if (isAdmin) {
         const { data, error } = await supabase.from('trayectos').select('*');
         if (error) throw error;
         trayectosData = data || [];
-      } else if (!session || esDocente) {
+      } 
+      // 2. Vista Pública / Docente
+      else if (!sessionUser || esDocente) {
         const { data, error } = await supabase
           .from('trayectos')
           .select('*')
@@ -90,29 +92,27 @@ async cargarTrayectos() {
         if (error) throw error;
         trayectosData = data || [];
       } 
-      // 3. Vista Estudiante (Búsqueda por DNI/Correo/UUID)
+      // 3. Vista Estudiante
       else {
-        // Extraer identificadores del usuario
         const dniRaw = String(perfilSesion.dni || perfilSesion.usuario || '').trim();
         const dniLimpio = dniRaw.replace(/\D/g, '');
-        const emailUser = session.user?.email || perfilSesion.email || '';
+        const emailUser = sessionUser.email || perfilSesion.email || '';
 
-        // Buscar inscripciones por DNI limpio, DNI texto o Email
-        let queryInsc = supabase.from('inscripciones').select('trayecto_id');
+        let idsTrayectos = [];
 
-        if (dniLimpio) {
-          queryInsc = queryInsc.or(`estudiante_user.eq.${dniLimpio},estudiante_user.eq.${dniRaw},estudiante_user.eq.${emailUser}`);
-        } else if (emailUser) {
-          queryInsc = queryInsc.eq('estudiante_user', emailUser);
+        // Consultar la tabla inscripciones buscando coincidencia por DNI o Email
+        if (dniLimpio || dniRaw || emailUser) {
+          const { data: inscripciones } = await supabase
+            .from('inscripciones')
+            .select('trayecto_id')
+            .or(`estudiante_user.eq.${dniLimpio},estudiante_user.eq.${dniRaw},estudiante_user.eq.${emailUser}`);
+
+          if (inscripciones && inscripciones.length > 0) {
+            idsTrayectos = inscripciones.map(i => i.trayecto_id);
+          }
         }
 
-        const { data: inscripciones, error: errInsc } = await queryInsc;
-
-        if (errInsc) throw errInsc;
-
-        if (inscripciones && inscripciones.length > 0) {
-          const idsTrayectos = inscripciones.map(i => i.trayecto_id);
-
+        if (idsTrayectos.length > 0) {
           const { data: trayectos, error: errTray } = await supabase
             .from('trayectos')
             .select('*')
@@ -129,7 +129,6 @@ async cargarTrayectos() {
     } catch (err) {
       console.error('Error al cargar trayectos del usuario:', err);
     }
-  },
   },
 
   renderizarTrayectos() {
