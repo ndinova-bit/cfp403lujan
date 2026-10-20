@@ -1353,3 +1353,11 @@ select {
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5), 
               0 0 20px rgba(234, 179, 8, 0.3) !important;
 }
+/* Reglas de Ocultación Visual por Rol */
+body[data-rol="estudiante"] .admin-only,
+body[data-rol="estudiante"] #form-cargar-clase,
+body[data-rol="estudiante"] .docente-only,
+body[data-rol="estudiante"] [id*="Cargar Nueva Clase"],
+body[data-rol="estudiante"] button:has(span:contains("Tomar Asistencia")) {
+  display: none !important;
+}
