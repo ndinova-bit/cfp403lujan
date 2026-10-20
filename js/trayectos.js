@@ -63,10 +63,23 @@ const Trayectos = {
                       sessionStorage.getItem('usuario_logueado');
     return perfilRaw ? JSON.parse(perfilRaw) : {};
   },
-
-  async cargarTrayectos() {
+   
+async cargarTrayectos() {
     try {
-      const perfil = this.obtenerPerfilActual();
+      // 1. Obtener la sesión activa directamente desde Supabase Auth (sin usar localStorage)
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      let perfil = null;
+      if (session && session.user) {
+        const userEmail = session.user.email ? session.user.email.toLowerCase() : '';
+        const { data: uRes } = await supabase
+          .from('usuarios')
+          .select('*')
+          .or(`email.ilike.${userEmail},usuario.eq.${session.user.user_metadata?.dni || ''}`)
+          .maybeSingle();
+        perfil = uRes || { email: userEmail, rol: 'estudiante' };
+      }
+
       const rolNorm = String(perfil?.rol || '').toLowerCase().trim();
       const isAdmin = rolNorm === 'admin' || rolNorm === 'administrador';
       const esDocente = rolNorm === 'docente';
@@ -74,14 +87,14 @@ const Trayectos = {
       const anioVigente = new Date().getFullYear();
       let trayectosData = [];
 
-      // 1. Administrador: ve todos los trayectos
+      // 2. Administrador: ve todos los trayectos
       if (isAdmin) {
         const { data, error } = await supabase.from('trayectos').select('*');
         if (error) throw error;
         trayectosData = data || [];
       } 
-      // 2. Vista pública inicial / Docente: muestra los cursos del ciclo lectivo vigente
-      else if (!perfil || !perfil.rol || esDocente) {
+      // 3. Visitante sin sesión o Docente: ve cursos del ciclo lectivo activo
+      else if (!perfil || esDocente) {
         const { data, error } = await supabase
           .from('trayectos')
           .select('*')
@@ -89,7 +102,7 @@ const Trayectos = {
         if (error) throw error;
         trayectosData = data || [];
       } 
-      // 3. Estudiante: consulta sus inscripciones por DNI, usuario o email
+      // 4. Estudiante: consulta sus inscripciones por DNI, usuario o Email
       else {
         const dniRaw = String(perfil.dni || perfil.usuario || '').trim();
         const emailRaw = String(perfil.email || '').trim().toLowerCase();
