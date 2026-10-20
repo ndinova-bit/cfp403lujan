@@ -69,7 +69,6 @@ const Auth = {
 
     const userValRaw = document.getElementById('login-user')?.value?.trim() || '';
     const passVal = document.getElementById('login-pass')?.value?.trim() || '';
-    const roleSelectVal = document.getElementById('role-select')?.value || 'estudiante';
 
     if (!userValRaw || !passVal) {
       alert('Por favor ingresá tu usuario/DNI y contraseña.');
@@ -86,7 +85,7 @@ const Auth = {
         const { data: dbUser } = await supabase
           .from('usuarios')
           .select('*')
-          .or(`usuario.eq.${userClean},email.ilike.${userClean}@%`)
+          .or(`usuario.eq.${userClean},dni.eq.${userClean},email.ilike.${userClean}@%`)
           .maybeSingle();
 
         if (dbUser) {
@@ -97,7 +96,7 @@ const Auth = {
         }
       }
 
-      // 1. Autenticación con Supabase Auth
+      // 1. Autenticación oficial en Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: emailAUsar,
         password: passVal
@@ -108,38 +107,30 @@ const Auth = {
         return;
       }
 
-      // 2. Obtener perfil de la tabla usuarios
+      // 2. Obtener el perfil REAL de la tabla usuarios de Supabase
       if (!perfilLocal) {
         const { data: uRes } = await supabase
           .from('usuarios')
           .select('*')
-          .or(`email.ilike.${emailAUsar},usuario.eq.${userClean}`)
+          .or(`email.ilike.${emailAUsar},usuario.eq.${userClean},dni.eq.${userClean}`)
           .maybeSingle();
         perfilLocal = uRes;
       }
 
-      // 3. Asignación/respeto del rol seleccionado o de base de datos
-      if (perfilLocal) {
-        // Si en BD no tiene rol o es estudiante, pero seleccionó Administrador en el desplegable, asigna el rol
-        if (!perfilLocal.rol || (roleSelectVal === 'admin' && perfilLocal.rol !== 'admin')) {
-          perfilLocal.rol = roleSelectVal;
-        }
-      } else {
-        perfilLocal = {
-          id: authData.user.id,
-          email: emailAUsar,
-          usuario: userClean,
-          dni: userClean,
-          rol: roleSelectVal
-        };
+      if (!perfilLocal) {
+        alert('Error: No se encontró el perfil de usuario asociado en la base de datos.');
+        return;
       }
+
+      // 3. ROL REAL DE LA BASE DE DATOS (Sin sobreescribir con el selector del login)
+      const rolReal = String(perfilLocal.rol || 'estudiante').toLowerCase().trim();
+      perfilLocal.rol = rolReal;
 
       this.usuarioActual = perfilLocal;
       window.usuarioActual = perfilLocal;
 
-      // 4. Asignar atributo data-rol al body para control estricto de visibilidad por CSS
-      const rolNorm = String(perfilLocal.rol || roleSelectVal).toLowerCase().trim();
-      document.body.setAttribute('data-rol', rolNorm);
+      // Asignar el atributo de rol en la etiqueta <body> para bloqueo CSS estricto
+      document.body.setAttribute('data-rol', rolReal);
 
       if (typeof notify === 'function') {
         notify('success', `¡Bienvenido/a ${perfilLocal.nombre || perfilLocal.usuario}!`);
@@ -149,6 +140,7 @@ const Auth = {
         loginScreenEl.style.setProperty('display', 'none', 'important');
       }
 
+      // Renderizar la interfaz según el rol auténtico de BD
       if (typeof UI !== 'undefined' && typeof UI.mostrarDashboard === 'function') {
         UI.mostrarDashboard(perfilLocal);
       }
@@ -162,7 +154,6 @@ const Auth = {
       alert('Error de conexión o credenciales inválidas.');
     }
   }
-};
 
 window.Auth = Auth;
 window.AuthModulo = Auth;
