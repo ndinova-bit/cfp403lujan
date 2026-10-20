@@ -24,7 +24,6 @@ var ImportadorModulo = {
       return;
     }
 
-    // Modal emergente de espera bloqueante
     if (typeof Swal !== 'undefined') {
       Swal.fire({
         title: '⏳ Carga Masiva en Proceso',
@@ -41,7 +40,6 @@ var ImportadorModulo = {
       });
     }
 
-    // Activar protección contra recarga de pestaña accidental (F5 / Salir)
     const prevenirSalida = (e) => { e.preventDefault(); e.returnValue = ''; };
     window.addEventListener('beforeunload', prevenirSalida);
 
@@ -113,15 +111,15 @@ var ImportadorModulo = {
         for (const est of estudiantesProcesar) {
           procesados++;
           
-          // Actualizar contador en la pantalla de espera
           const txtContador = document.getElementById('contador-importacion');
           if (txtContador) {
             txtContador.innerText = `Registrando estudiante ${procesados} de ${total}...`;
           }
 
-// 1. Inserción/Sincronización en Usuarios
+          // 1. Inserción/Sincronización en Usuarios (Sin campo pass expuesto)
           await supabase.from('usuarios').upsert({
             usuario: est.dni,
+            dni: est.dni,
             nombre: est.nombre,
             apellido: est.apellido,
             email: est.email,
@@ -145,7 +143,6 @@ var ImportadorModulo = {
           }
         }
 
-        // Liberar protección de navegación al finalizar
         window.removeEventListener('beforeunload', prevenirSalida);
 
         if (typeof Swal !== 'undefined') {
@@ -157,7 +154,6 @@ var ImportadorModulo = {
           });
         }
 
-        // Refrescar vistas en pantalla
         if (window.ClasesModulo && typeof window.ClasesModulo.cargarSabanaEstudiantes === 'function') {
           await window.ClasesModulo.cargarSabanaEstudiantes();
         }
