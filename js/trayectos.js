@@ -68,7 +68,7 @@ const Trayectos = {
     return null;
   },
 
-  async cargarTrayectos() {
+ async cargarTrayectos() {
     try {
       const perfil = await this.obtenerPerfilActual();
       const rolNorm = String(perfil?.rol || '').toLowerCase().trim();
@@ -100,26 +100,38 @@ const Trayectos = {
         if (error) throw error;
         trayectosData = data || [];
       } 
-      // 3. Estudiante: Consulta sus inscripciones por DNI, usuario o Email
+      // 3. Estudiante: Consulta sus inscripciones
       else {
         const dniRaw = String(perfil.dni || perfil.usuario || '').trim();
         const emailRaw = String(perfil.email || '').trim().toLowerCase();
+        const userId = perfil.id;
 
+        // Construimos la consulta buscando por las diferentes columnas posibles
         let queryOr = [];
-        if (dniRaw) queryOr.push(`estudiante_user.eq.${dniRaw}`);
-        if (emailRaw) queryOr.push(`estudiante_user.eq.${emailRaw}`);
+        if (userId) queryOr.push(`usuario_id.eq.${userId}`);
+        if (dniRaw) {
+          queryOr.push(`dni.eq.${dniRaw}`);
+          queryOr.push(`estudiante_user.eq.${dniRaw}`);
+        }
+        if (emailRaw) {
+          queryOr.push(`email.ilike.${emailRaw}`);
+          queryOr.push(`estudiante_user.eq.${emailRaw}`);
+        }
 
         let inscripciones = [];
         if (queryOr.length > 0) {
-          const { data: resInsc } = await supabase
+          const { data: resInsc, error: errInsc } = await supabase
             .from('inscripciones')
             .select('trayecto_id')
             .or(queryOr.join(','));
-          inscripciones = resInsc || [];
+          
+          if (!errInsc && resInsc) {
+            inscripciones = resInsc;
+          }
         }
 
         if (inscripciones.length > 0) {
-          const idsTrayectos = inscripciones.map(i => i.trayecto_id);
+          const idsTrayectos = [...new Set(inscripciones.map(i => i.trayecto_id))];
 
           const { data: trayectos, error: errTray } = await supabase
             .from('trayectos')
@@ -128,6 +140,13 @@ const Trayectos = {
 
           if (errTray) throw errTray;
           trayectosData = trayectos || [];
+        } else {
+          // Si el estudiante no tiene inscripciones en la tabla, cargamos los trayectos activos del año actual para que vea la oferta disponible
+          const { data: trayectosOferta } = await supabase
+            .from('trayectos')
+            .select('*')
+            .eq('ciclo_lectivo', anioVigente);
+          trayectosData = trayectosOferta || [];
         }
       }
 
