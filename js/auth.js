@@ -12,7 +12,11 @@ const Auth = {
   },
 
   async obtenerPerfilSesion() {
-    if (this.usuarioActual) return this.usuarioActual;
+    if (this.usuarioActual) {
+      const rolNorm = String(this.usuarioActual.rol || '').toLowerCase().trim();
+      document.body.setAttribute('data-rol', rolNorm);
+      return this.usuarioActual;
+    }
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -29,6 +33,10 @@ const Auth = {
       if (dbUser) {
         this.usuarioActual = dbUser;
         window.usuarioActual = dbUser;
+        
+        const rolNorm = String(dbUser.rol || '').toLowerCase().trim();
+        document.body.setAttribute('data-rol', rolNorm);
+
         return dbUser;
       }
     } catch (err) {
@@ -40,6 +48,7 @@ const Auth = {
   async cerrarSesion() {
     this.usuarioActual = null;
     window.usuarioActual = null;
+    document.body.removeAttribute('data-rol');
 
     try {
       await supabase.auth.signOut();
@@ -127,6 +136,10 @@ const Auth = {
 
       this.usuarioActual = perfilLocal;
       window.usuarioActual = perfilLocal;
+
+      // 4. Asignar atributo data-rol al body para control estricto de visibilidad por CSS
+      const rolNorm = String(perfilLocal.rol || roleSelectVal).toLowerCase().trim();
+      document.body.setAttribute('data-rol', rolNorm);
 
       if (typeof notify === 'function') {
         notify('success', `¡Bienvenido/a ${perfilLocal.nombre || perfilLocal.usuario}!`);
