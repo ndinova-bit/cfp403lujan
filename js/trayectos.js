@@ -68,7 +68,7 @@ const Trayectos = {
     return null;
   },
 
- async cargarTrayectos() {
+async cargarTrayectos() {
     try {
       const perfil = await this.obtenerPerfilActual();
       const rolNorm = String(perfil?.rol || '').toLowerCase().trim();
@@ -91,8 +91,8 @@ const Trayectos = {
         if (error) throw error;
         trayectosData = data || [];
       } 
-      // 2. Docente / Sin perfil
-      else if (!perfil || esDocente) {
+      // 2. Docente
+      else if (esDocente) {
         const { data, error } = await supabase
           .from('trayectos')
           .select('*')
@@ -100,32 +100,23 @@ const Trayectos = {
         if (error) throw error;
         trayectosData = data || [];
       } 
-      // 3. Estudiante: Carga sus trayectos inscriptos sin errores de sintaxis URL
+      // 3. Estudiante: Consulta en 'inscripciones' por 'estudiante_user' (DNI/usuario)
       else {
-        const dniRaw = String(perfil.dni || perfil.usuario || '').trim();
-        const emailRaw = String(perfil.email || '').trim().toLowerCase();
+        const userKey = String(perfil?.dni || perfil?.usuario || '').trim();
 
         let idsTrayectos = [];
 
-        // Consulta limpia por DNI
-        if (dniRaw) {
-          const { data: resDni } = await supabase
+        if (userKey) {
+          const { data: resInsc, error: errInsc } = await supabase
             .from('inscripciones')
             .select('trayecto_id')
-            .eq('dni', dniRaw);
-          if (resDni) idsTrayectos.push(...resDni.map(i => i.trayecto_id));
+            .eq('estudiante_user', userKey);
+
+          if (!errInsc && resInsc) {
+            idsTrayectos = resInsc.map(i => i.trayecto_id);
+          }
         }
 
-        // Consulta limpia por Email
-        if (emailRaw) {
-          const { data: resEmail } = await supabase
-            .from('inscripciones')
-            .select('trayecto_id')
-            .eq('email', emailRaw);
-          if (resEmail) idsTrayectos.push(...resEmail.map(i => i.trayecto_id));
-        }
-
-        // Eliminar duplicados de IDs
         idsTrayectos = [...new Set(idsTrayectos)].filter(Boolean);
 
         if (idsTrayectos.length > 0) {
@@ -134,10 +125,9 @@ const Trayectos = {
             .select('*')
             .in('id', idsTrayectos);
 
-          if (errTray) throw errTray;
-          trayectosData = trayectos || [];
+          if (!errTray) trayectosData = trayectos || [];
         } else {
-          // Si no está inscripto individualmente a nada, se le muestran los trayectos activos del ciclo
+          // Si aún no está inscripto a ninguno en BD, muestra la oferta pública activa
           const { data: oferta } = await supabase
             .from('trayectos')
             .select('*')
@@ -153,6 +143,7 @@ const Trayectos = {
       console.error('Error al cargar trayectos:', err);
     }
   },
+   
   async renderizarTrayectos() {
     const contenedores = [
       document.getElementById('lista-trayectos-cards'),
