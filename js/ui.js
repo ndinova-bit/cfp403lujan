@@ -113,7 +113,7 @@ const UI = {
     }
   },
 
-  // Cambia entre secciones dentro del Panel validando permisos reales
+// Cambia entre secciones dentro del Panel validando permisos reales en 'usuarios'
   async showTab(tabId) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -121,14 +121,21 @@ const UI = {
       return;
     }
 
-    // Consultar rol verificado en el servidor
-    const { data: perfil } = await supabase
-      .from('profiles')
-      .select('rol')
-      .eq('id', session.user.id)
-      .single();
+    // Consultar rol verificado en la tabla auténtica 'usuarios'
+    let isAdmin = false;
+    try {
+      const emailNorm = session.user.email ? session.user.email.toLowerCase() : '';
+      const { data: perfil } = await supabase
+        .from('usuarios')
+        .select('rol')
+        .or(`email.ilike.${emailNorm},usuario.ilike.${emailNorm.split('@')[0]}`)
+        .maybeSingle();
 
-    const isAdmin = (perfil?.rol || '').toLowerCase().trim() === 'admin';
+      const rolNorm = String(perfil?.rol || '').toLowerCase().trim();
+      isAdmin = (rolNorm === 'admin' || rolNorm === 'administrador');
+    } catch (e) {
+      console.warn('Error al verificar permisos:', e);
+    }
 
     if (!isAdmin && (tabId === 'dashboard' || tabId === 'nuevo-trayecto' || tabId === 'certificados' || tabId === 'usuarios' || tabId === 'actas')) {
       tabId = 'trayectos';
@@ -243,27 +250,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // 2. Traer perfil REAL validado desde la base de datos (tabla 'profiles')
-  const { data: perfilValido, errorPerfil } = await supabase
-    .from('profiles')
+  // 2. Traer perfil REAL validado desde la base de datos (tabla 'usuarios')
+  const emailNorm = session.user.email ? session.user.email.toLowerCase() : '';
+  const { data: perfilValido } = await supabase
+    .from('usuarios')
     .select('*')
-    .eq('id', session.user.id)
-    .single();
+    .or(`email.ilike.${emailNorm},usuario.ilike.${emailNorm.split('@')[0]}`)
+    .maybeSingle();
 
-  if (errorPerfil || !perfilValido) {
+  if (!perfilValido) {
     await supabase.auth.signOut();
     localStorage.removeItem('usuario_actual');
     UI.showLanding();
     return;
   }
 
-  // 3. Renderizar plataforma con el perfil validado por el servidor
+  const rolNorm = String(perfilValido.rol || 'estudiante').toLowerCase().trim();
+  perfilValido.rol = rolNorm;
+
+  // 3. Renderizar plataforma con el perfil validado por la base de datos
   if (window.AuthModulo) {
     window.AuthModulo.usuarioActual = perfilValido;
   }
   
+  document.body.setAttribute('data-rol', rolNorm);
   UI.mostrarDashboard(perfilValido);
-  setTimeout(() => DashboardAdmin.cargarEstadisticas(), 500);
+
+  if (rolNorm === 'admin' || rolNorm === 'administrador') {
+    setTimeout(() => DashboardAdmin.cargarEstadisticas(), 500);
+  }
 });
 
 /* ==========================================================================
