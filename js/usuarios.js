@@ -5,8 +5,8 @@
 
 const UsuariosAdmin = {
   estaProcesando: false,
-  listaUsuarios: [],       // Cache local de usuarios
-  filtroRolActual: 'todos', // Estado del filtro: 'todos', 'personal', 'estudiante'
+  listaUsuarios: [],
+  filtroRolActual: 'todos',
 
   abrirModal() {
     const modal = document.getElementById('modal-alta-usuario');
@@ -29,7 +29,6 @@ const UsuariosAdmin = {
     this.estaProcesando = false;
   },
 
-  // Oculta/Muestra el recuadro de trayectos según el rol elegido
   escucharCambioRol() {
     const selectRol = document.getElementById('usr-alta-rol');
     const contenedor = document.getElementById('usr-alta-trayectos');
@@ -53,9 +52,6 @@ const UsuariosAdmin = {
     this.renderizarTabla();
   },
 
-  /**
-   * Carga la lista de usuarios consultando la tabla 'usuarios'
-   */
   async cargarUsuarios() {
     const tbody = document.getElementById('tabla-usuarios');
     if (!tbody) return;
@@ -248,7 +244,6 @@ const UsuariosAdmin = {
 
       const userId = authRes.user?.id;
 
-      // Actualizar tabla usuarios
       const { error: profileError } = await supabase
         .from('usuarios')
         .upsert({
