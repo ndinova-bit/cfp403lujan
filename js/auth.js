@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MÓDULO DE AUTENTICACIÓN OFICIAL (SIN PERSISTENCIA INSEGURA EN LOCALSTORAGE)
+   MÓDULO DE AUTENTICACIÓN OFICIAL (PERSISTENCIA SEGURA VÍA SUPABASE AUTH)
    Archivo: js/auth.js
    ========================================================================== */
 
@@ -9,6 +9,31 @@ const Auth = {
   limpiarIdentificador(val) {
     if (!val) return '';
     return String(val).trim();
+  },
+
+  async obtenerPerfilSesion() {
+    if (this.usuarioActual) return this.usuarioActual;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || !session.user) return null;
+
+      const emailNorm = session.user.email ? session.user.email.toLowerCase() : '';
+      const { data: dbUser } = await supabase
+        .from('usuarios')
+        .select('*')
+        .or(`email.ilike.${emailNorm},id.eq.${session.user.id}`)
+        .maybeSingle();
+
+      if (dbUser) {
+        this.usuarioActual = dbUser;
+        window.usuarioActual = dbUser;
+        return dbUser;
+      }
+    } catch (err) {
+      console.warn('Error obteniendo sesión de usuario:', err);
+    }
+    return null;
   },
 
   async cerrarSesion() {
@@ -43,7 +68,6 @@ const Auth = {
     const userClean = userValRaw.toLowerCase();
 
     try {
-      // 1. Buscar en la tabla usuarios para obtener el mail exacto y el DNI real
       let emailAUsar = userClean;
       let perfilLocal = null;
 
@@ -62,7 +86,6 @@ const Auth = {
         }
       }
 
-      // 2. Autenticar directo en Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: emailAUsar,
         password: passVal
@@ -73,7 +96,6 @@ const Auth = {
         return;
       }
 
-      // 3. Obtener el perfil definitivo desde la tabla usuarios
       if (!perfilLocal) {
         const { data: uRes } = await supabase
           .from('usuarios')
@@ -93,7 +115,6 @@ const Auth = {
         };
       }
 
-      // Guardar en memoria activa de la app (Sin localStorage)
       this.usuarioActual = perfilLocal;
       window.usuarioActual = perfilLocal;
 
@@ -109,7 +130,6 @@ const Auth = {
         UI.mostrarDashboard(perfilLocal);
       }
 
-      // Refrescar trayectos según el rol autenticado
       if (typeof Trayectos !== 'undefined' && typeof Trayectos.cargarTrayectos === 'function') {
         await Trayectos.cargarTrayectos();
       }
