@@ -119,15 +119,14 @@ var ImportadorModulo = {
             txtContador.innerText = `Registrando estudiante ${procesados} de ${total}...`;
           }
 
-          // 1. Inserción/Sincronización en Usuarios
+// 1. Inserción/Sincronización en Usuarios
           await supabase.from('usuarios').upsert({
             usuario: est.dni,
             nombre: est.nombre,
             apellido: est.apellido,
             email: est.email,
             rol: 'estudiante',
-            estado: 'ACTIVO',
-            pass: est.dni
+            estado: 'ACTIVO'
           }, { onConflict: 'usuario' });
 
           // 2. Inscripción al Trayecto
