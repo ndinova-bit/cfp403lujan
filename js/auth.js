@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MÓDULO DE AUTENTICACIÓN OFICIAL (PERSISTENCIA SEGURA VÍA SUPABASE AUTH)
+   MÓDULO DE AUTENTICACIÓN OFICIAL (CORREGIDO Y SIN ERRORES DE SINTAXIS)
    Archivo: js/auth.js
    ========================================================================== */
 
@@ -19,8 +19,7 @@ const Auth = {
       if (!session || !session.user) return null;
 
       const emailNorm = session.user.email ? session.user.email.toLowerCase() : '';
-      
-      // Consulta limpia por email o por nombre de usuario para evitar conflicto de UUID
+
       const { data: dbUser } = await supabase
         .from('usuarios')
         .select('*')
@@ -41,7 +40,7 @@ const Auth = {
   async cerrarSesion() {
     this.usuarioActual = null;
     window.usuarioActual = null;
-    
+
     try {
       await supabase.auth.signOut();
     } catch (e) {
@@ -55,13 +54,12 @@ const Auth = {
     }
   },
 
-iniciarSesion: async function() {
+  iniciarSesion: async function() {
     const loginScreenEl = document.getElementById('login-screen');
     if (loginScreenEl) loginScreenEl.removeAttribute('aria-hidden');
 
     const userValRaw = document.getElementById('login-user')?.value?.trim() || '';
     const passVal = document.getElementById('login-pass')?.value?.trim() || '';
-    // 1. LEER EL ROL SELECCIONADO EN EL DESPLEGABLE DE LOGIN
     const roleSelectVal = document.getElementById('role-select')?.value || 'estudiante';
 
     if (!userValRaw || !passVal) {
@@ -90,7 +88,7 @@ iniciarSesion: async function() {
         }
       }
 
-      // 2. Autenticar en Supabase Auth
+      // 1. Autenticación con Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: emailAUsar,
         password: passVal
@@ -101,7 +99,7 @@ iniciarSesion: async function() {
         return;
       }
 
-      // 3. Buscar perfil en la tabla usuarios
+      // 2. Obtener perfil de la tabla usuarios
       if (!perfilLocal) {
         const { data: uRes } = await supabase
           .from('usuarios')
@@ -111,9 +109,10 @@ iniciarSesion: async function() {
         perfilLocal = uRes;
       }
 
-      // 4. Si el perfil existe en la BD pero el usuario seleccionó un rol en el login, priorizar/sincronizar el rol
+      // 3. Asignación/respeto del rol seleccionado o de base de datos
       if (perfilLocal) {
-        if (!perfilLocal.rol || perfilLocal.rol === 'estudiante') {
+        // Si en BD no tiene rol o es estudiante, pero seleccionó Administrador en el desplegable, asigna el rol
+        if (!perfilLocal.rol || (roleSelectVal === 'admin' && perfilLocal.rol !== 'admin')) {
           perfilLocal.rol = roleSelectVal;
         }
       } else {
@@ -126,7 +125,6 @@ iniciarSesion: async function() {
         };
       }
 
-      // Guardar en memoria activa de la sesión
       this.usuarioActual = perfilLocal;
       window.usuarioActual = perfilLocal;
 
@@ -138,7 +136,6 @@ iniciarSesion: async function() {
         loginScreenEl.style.setProperty('display', 'none', 'important');
       }
 
-      // 5. Cargar la interfaz según el rol definitivo
       if (typeof UI !== 'undefined' && typeof UI.mostrarDashboard === 'function') {
         UI.mostrarDashboard(perfilLocal);
       }
@@ -152,6 +149,7 @@ iniciarSesion: async function() {
       alert('Error de conexión o credenciales inválidas.');
     }
   }
+};
 
 window.Auth = Auth;
 window.AuthModulo = Auth;
