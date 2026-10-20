@@ -13,8 +13,7 @@ const Auth = {
 
   async cerrarSesion() {
     this.usuarioActual = null;
-    localStorage.removeItem('usuario_actual');
-    
+        
     try {
       await supabase.auth.signOut();
     } catch (e) {
@@ -94,7 +93,6 @@ const Auth = {
       }
 
       this.usuarioActual = perfilLocal;
-      localStorage.setItem('usuario_actual', JSON.stringify(perfilLocal));
 
       if (typeof notify === 'function') {
         notify('success', `¡Bienvenido/a ${perfilLocal.nombre || perfilLocal.usuario}!`);
