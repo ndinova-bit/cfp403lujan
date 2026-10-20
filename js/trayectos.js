@@ -91,7 +91,7 @@ const Trayectos = {
         if (error) throw error;
         trayectosData = data || [];
       } 
-      // 2. Docente / Vista pública
+      // 2. Docente / Sin perfil
       else if (!perfil || esDocente) {
         const { data, error } = await supabase
           .from('trayectos')
@@ -100,39 +100,35 @@ const Trayectos = {
         if (error) throw error;
         trayectosData = data || [];
       } 
-      // 3. Estudiante: Consulta sus inscripciones
+      // 3. Estudiante: Carga sus trayectos inscriptos sin errores de sintaxis URL
       else {
         const dniRaw = String(perfil.dni || perfil.usuario || '').trim();
         const emailRaw = String(perfil.email || '').trim().toLowerCase();
-        const userId = perfil.id;
 
-        // Construimos la consulta buscando por las diferentes columnas posibles
-        let queryOr = [];
-        if (userId) queryOr.push(`usuario_id.eq.${userId}`);
+        let idsTrayectos = [];
+
+        // Consulta limpia por DNI
         if (dniRaw) {
-          queryOr.push(`dni.eq.${dniRaw}`);
-          queryOr.push(`estudiante_user.eq.${dniRaw}`);
-        }
-        if (emailRaw) {
-          queryOr.push(`email.ilike.${emailRaw}`);
-          queryOr.push(`estudiante_user.eq.${emailRaw}`);
-        }
-
-        let inscripciones = [];
-        if (queryOr.length > 0) {
-          const { data: resInsc, error: errInsc } = await supabase
+          const { data: resDni } = await supabase
             .from('inscripciones')
             .select('trayecto_id')
-            .or(queryOr.join(','));
-          
-          if (!errInsc && resInsc) {
-            inscripciones = resInsc;
-          }
+            .eq('dni', dniRaw);
+          if (resDni) idsTrayectos.push(...resDni.map(i => i.trayecto_id));
         }
 
-        if (inscripciones.length > 0) {
-          const idsTrayectos = [...new Set(inscripciones.map(i => i.trayecto_id))];
+        // Consulta limpia por Email
+        if (emailRaw) {
+          const { data: resEmail } = await supabase
+            .from('inscripciones')
+            .select('trayecto_id')
+            .eq('email', emailRaw);
+          if (resEmail) idsTrayectos.push(...resEmail.map(i => i.trayecto_id));
+        }
 
+        // Eliminar duplicados de IDs
+        idsTrayectos = [...new Set(idsTrayectos)].filter(Boolean);
+
+        if (idsTrayectos.length > 0) {
           const { data: trayectos, error: errTray } = await supabase
             .from('trayectos')
             .select('*')
@@ -141,12 +137,12 @@ const Trayectos = {
           if (errTray) throw errTray;
           trayectosData = trayectos || [];
         } else {
-          // Si el estudiante no tiene inscripciones en la tabla, cargamos los trayectos activos del año actual para que vea la oferta disponible
-          const { data: trayectosOferta } = await supabase
+          // Si no está inscripto individualmente a nada, se le muestran los trayectos activos del ciclo
+          const { data: oferta } = await supabase
             .from('trayectos')
             .select('*')
             .eq('ciclo_lectivo', anioVigente);
-          trayectosData = trayectosOferta || [];
+          trayectosData = oferta || [];
         }
       }
 
@@ -157,7 +153,6 @@ const Trayectos = {
       console.error('Error al cargar trayectos:', err);
     }
   },
-
   async renderizarTrayectos() {
     const contenedores = [
       document.getElementById('lista-trayectos-cards'),
