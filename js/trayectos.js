@@ -54,32 +54,40 @@ const Trayectos = {
     }
   },
 
-  obtenerPerfilActual() {
+  async obtenerPerfilActual() {
     if (typeof Auth !== 'undefined' && Auth.usuarioActual) {
       return Auth.usuarioActual;
     }
-    const perfilRaw = localStorage.getItem('usuario_actual') || 
-                      localStorage.getItem('usuario_logueado') || 
-                      sessionStorage.getItem('usuario_logueado');
-    return perfilRaw ? JSON.parse(perfilRaw) : {};
-  },
-   
-async cargarTrayectos() {
+    if (window.usuarioActual) {
+      return window.usuarioActual;
+    }
+
     try {
-      // 1. Obtener la sesión activa directamente desde Supabase Auth (sin usar localStorage)
       const { data: { session } } = await supabase.auth.getSession();
-      
-      let perfil = null;
       if (session && session.user) {
-        const userEmail = session.user.email ? session.user.email.toLowerCase() : '';
+        const emailNorm = session.user.email ? session.user.email.toLowerCase() : '';
         const { data: uRes } = await supabase
           .from('usuarios')
           .select('*')
-          .or(`email.ilike.${userEmail},usuario.eq.${session.user.user_metadata?.dni || ''}`)
+          .or(`email.ilike.${emailNorm},id.eq.${session.user.id}`)
           .maybeSingle();
-        perfil = uRes || { email: userEmail, rol: 'estudiante' };
+        
+        if (uRes) {
+          if (typeof Auth !== 'undefined') Auth.usuarioActual = uRes;
+          window.usuarioActual = uRes;
+          return uRes;
+        }
       }
+    } catch (e) {
+      console.warn('Error al obtener perfil desde la sesión de Supabase Auth:', e);
+    }
 
+    return {};
+  },
+
+  async cargarTrayectos() {
+    try {
+      const perfil = await this.obtenerPerfilActual();
       const rolNorm = String(perfil?.rol || '').toLowerCase().trim();
       const isAdmin = rolNorm === 'admin' || rolNorm === 'administrador';
       const esDocente = rolNorm === 'docente';
@@ -87,14 +95,14 @@ async cargarTrayectos() {
       const anioVigente = new Date().getFullYear();
       let trayectosData = [];
 
-      // 2. Administrador: ve todos los trayectos
+      // 1. Administrador: ve todos los trayectos
       if (isAdmin) {
         const { data, error } = await supabase.from('trayectos').select('*');
         if (error) throw error;
         trayectosData = data || [];
       } 
-      // 3. Visitante sin sesión o Docente: ve cursos del ciclo lectivo activo
-      else if (!perfil || esDocente) {
+      // 2. Vista pública inicial / Docente: muestra los cursos del ciclo lectivo vigente
+      else if (!perfil || !perfil.rol || esDocente) {
         const { data, error } = await supabase
           .from('trayectos')
           .select('*')
@@ -102,7 +110,7 @@ async cargarTrayectos() {
         if (error) throw error;
         trayectosData = data || [];
       } 
-      // 4. Estudiante: consulta sus inscripciones por DNI, usuario o Email
+      // 3. Estudiante: consulta sus inscripciones por DNI, usuario o email
       else {
         const dniRaw = String(perfil.dni || perfil.usuario || '').trim();
         const emailRaw = String(perfil.email || '').trim().toLowerCase();
@@ -141,7 +149,7 @@ async cargarTrayectos() {
     }
   },
 
-  renderizarTrayectos() {
+  async renderizarTrayectos() {
     const contenedores = [
       document.getElementById('lista-trayectos-cards'),
       document.getElementById('lista-trayectos-admin'),
@@ -151,7 +159,7 @@ async cargarTrayectos() {
 
     if (contenedores.length === 0) return;
 
-    const perfil = this.obtenerPerfilActual();
+    const perfil = await this.obtenerPerfilActual();
     const rolNorm = String(perfil.rol || '').toLowerCase().trim();
     const isAdmin = rolNorm === 'admin' || rolNorm === 'administrador';
     const esDocente = rolNorm === 'docente';
