@@ -55,12 +55,14 @@ const Auth = {
     }
   },
 
-  iniciarSesion: async function() {
+iniciarSesion: async function() {
     const loginScreenEl = document.getElementById('login-screen');
     if (loginScreenEl) loginScreenEl.removeAttribute('aria-hidden');
 
     const userValRaw = document.getElementById('login-user')?.value?.trim() || '';
     const passVal = document.getElementById('login-pass')?.value?.trim() || '';
+    // 1. LEER EL ROL SELECCIONADO EN EL DESPLEGABLE DE LOGIN
+    const roleSelectVal = document.getElementById('role-select')?.value || 'estudiante';
 
     if (!userValRaw || !passVal) {
       alert('Por favor ingresá tu usuario/DNI y contraseña.');
@@ -88,6 +90,7 @@ const Auth = {
         }
       }
 
+      // 2. Autenticar en Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: emailAUsar,
         password: passVal
@@ -98,6 +101,7 @@ const Auth = {
         return;
       }
 
+      // 3. Buscar perfil en la tabla usuarios
       if (!perfilLocal) {
         const { data: uRes } = await supabase
           .from('usuarios')
@@ -107,16 +111,22 @@ const Auth = {
         perfilLocal = uRes;
       }
 
-      if (!perfilLocal) {
+      // 4. Si el perfil existe en la BD pero el usuario seleccionó un rol en el login, priorizar/sincronizar el rol
+      if (perfilLocal) {
+        if (!perfilLocal.rol || perfilLocal.rol === 'estudiante') {
+          perfilLocal.rol = roleSelectVal;
+        }
+      } else {
         perfilLocal = {
           id: authData.user.id,
           email: emailAUsar,
           usuario: userClean,
           dni: userClean,
-          rol: 'estudiante'
+          rol: roleSelectVal
         };
       }
 
+      // Guardar en memoria activa de la sesión
       this.usuarioActual = perfilLocal;
       window.usuarioActual = perfilLocal;
 
@@ -128,6 +138,7 @@ const Auth = {
         loginScreenEl.style.setProperty('display', 'none', 'important');
       }
 
+      // 5. Cargar la interfaz según el rol definitivo
       if (typeof UI !== 'undefined' && typeof UI.mostrarDashboard === 'function') {
         UI.mostrarDashboard(perfilLocal);
       }
@@ -141,7 +152,6 @@ const Auth = {
       alert('Error de conexión o credenciales inválidas.');
     }
   }
-};
 
 window.Auth = Auth;
 window.AuthModulo = Auth;
