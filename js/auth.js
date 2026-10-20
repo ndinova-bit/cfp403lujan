@@ -19,10 +19,12 @@ const Auth = {
       if (!session || !session.user) return null;
 
       const emailNorm = session.user.email ? session.user.email.toLowerCase() : '';
+      
+      // Consulta limpia por email o por nombre de usuario para evitar conflicto de UUID
       const { data: dbUser } = await supabase
         .from('usuarios')
         .select('*')
-        .or(`email.ilike.${emailNorm},id.eq.${session.user.id}`)
+        .or(`email.ilike.${emailNorm},usuario.ilike.${emailNorm.split('@')[0]}`)
         .maybeSingle();
 
       if (dbUser) {
@@ -100,7 +102,7 @@ const Auth = {
         const { data: uRes } = await supabase
           .from('usuarios')
           .select('*')
-          .or(`email.eq.${emailAUsar},usuario.eq.${userClean}`)
+          .or(`email.ilike.${emailAUsar},usuario.eq.${userClean}`)
           .maybeSingle();
         perfilLocal = uRes;
       }
