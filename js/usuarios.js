@@ -1,5 +1,5 @@
 /* ==========================================================================
-   GESTIÓN DE USUARIOS Y ROLES (ADMINISTRACIÓN SEGURA CON SUPABASE AUTH Y RLS)
+   GESTIÓN DE USUARIOS Y ROLES (ADMINISTRACIÓN SEGURA CON SUPABASE AUTH)
    Archivo: js/usuarios.js
    ========================================================================== */
 
@@ -48,16 +48,13 @@ const UsuariosAdmin = {
     actualizarVista();
   },
 
-  /**
-   * Cambia el filtro actual de pestañas y renderiza la tabla sin recargar la BD
-   */
   setFiltro(nuevoFiltro) {
     this.filtroRolActual = nuevoFiltro;
     this.renderizarTabla();
   },
 
   /**
-   * Carga la lista de usuarios consultando la tabla segura 'profiles'
+   * Carga la lista de usuarios consultando la tabla 'usuarios'
    */
   async cargarUsuarios() {
     const tbody = document.getElementById('tabla-usuarios');
@@ -72,10 +69,9 @@ const UsuariosAdmin = {
     `;
 
     try {
-      // Consulta a la tabla 'profiles' (protegida por RLS)
-     const { data: usuarios, error } = await supabase
-  .from('usuarios')
-  .select('*');
+      const { data: usuarios, error } = await supabase
+        .from('usuarios')
+        .select('*');
 
       if (error) throw error;
 
@@ -87,14 +83,10 @@ const UsuariosAdmin = {
     }
   },
 
-  /**
-   * Dibuja la barra de pestañas y filtra los usuarios cargados en memoria
-   */
   renderizarTabla() {
     const tbody = document.getElementById('tabla-usuarios');
     if (!tbody) return;
 
-    // Inyectar o actualizar la barra de pestañas sobre la tabla
     let contenedorFiltros = document.getElementById('usr-pestañas-filtros');
     if (!contenedorFiltros) {
       const tarjetaContenedora = tbody.closest('.card') || tbody.closest('div') || tbody.parentElement;
@@ -127,11 +119,10 @@ const UsuariosAdmin = {
       `;
     }
 
-    // Filtrar lista según pestaña seleccionada
     const usuariosFiltrados = this.listaUsuarios.filter(u => {
       if (this.filtroRolActual === 'personal') return u.rol !== 'estudiante';
       if (this.filtroRolActual === 'estudiante') return u.rol === 'estudiante';
-      return true; // 'todos'
+      return true;
     });
 
     if (usuariosFiltrados.length === 0) {
@@ -149,7 +140,7 @@ const UsuariosAdmin = {
       const estadoRaw = String(u.estado || 'ACTIVO').toUpperCase();
       const esActivo = estadoRaw === 'ACTIVO' || estadoRaw === 'HABILITADO' || estadoRaw === 'APROBADO';
       const nombreCompleto = u.apellido ? `${u.apellido}, ${u.nombre}` : (u.nombre || 'Sin Nombre');
-      const idPrimario = u.id;
+      const idPrimario = u.id || u.usuario;
       const dniMostrar = u.dni || u.usuario || 'Sin DNI';
 
       return `
@@ -222,9 +213,6 @@ const UsuariosAdmin = {
     }
   },
 
-  /**
-   * Crea un usuario mediante Supabase Auth de forma segura
-   */
   async crearUsuarioManual(e) {
     if (e && typeof e.preventDefault === 'function') e.preventDefault();
 
@@ -243,12 +231,10 @@ const UsuariosAdmin = {
       return;
     }
 
-    // Normalizar email a minúsculas estrictas para Supabase Auth
     const emailSintetico = emailRaw ? emailRaw.toLowerCase() : `${dniVal.toLowerCase()}@cfp403.ar`;
-    const passwordTemp = `CFP403_${dniVal}`; // Clave temporal predeterminada
+    const passwordTemp = `CFP403_${dniVal}`;
 
     try {
-      // 1. Alta en el motor de autenticación de Supabase Auth
       const { data: authRes, error: authError } = await supabase.auth.signUp({
         email: emailSintetico,
         password: passwordTemp
@@ -262,26 +248,24 @@ const UsuariosAdmin = {
 
       const userId = authRes.user?.id;
 
-      if (userId) {
-        // 2. Actualizar/Insertar perfil en la tabla 'profiles'
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            id: userId,
-            dni: dniVal,
-            nombre: nombre,
-            apellido: apellido,
-            email: emailSintetico,
-            rol: rol,
-            estado: 'ACTIVO'
-          });
+      // Actualizar tabla usuarios
+      const { error: profileError } = await supabase
+        .from('usuarios')
+        .upsert({
+          id: userId,
+          usuario: dniVal,
+          dni: dniVal,
+          nombre: nombre,
+          apellido: apellido,
+          email: emailSintetico,
+          rol: rol,
+          estado: 'ACTIVO'
+        }, { onConflict: 'usuario' });
 
-        if (profileError) {
-          console.warn('Advertencia actualizando perfil:', profileError.message);
-        }
+      if (profileError) {
+        console.warn('Advertencia actualizando usuario:', profileError.message);
       }
 
-      // 3. Si es Estudiante se procesan las inscripciones
       if (rol === 'estudiante') {
         const checkboxes = document.querySelectorAll('input[name="trayectos_seleccionados"]:checked');
         const trayectoIds = Array.from(checkboxes).map(cb => cb.value);
@@ -319,9 +303,9 @@ const UsuariosAdmin = {
   async cambiarEstado(userId, nuevoEstado) {
     try {
       const { error } = await supabase
-        .from('profiles')
+        .from('usuarios')
         .update({ estado: nuevoEstado })
-        .eq('id', userId);
+        .or(`id.eq.${userId},usuario.eq.${userId}`);
 
       if (error) throw error;
       this.cargarUsuarios();
@@ -333,14 +317,13 @@ const UsuariosAdmin = {
   async cambiarRol(userId, nuevoRol) {
     try {
       const { error } = await supabase
-        .from('profiles')
+        .from('usuarios')
         .update({ rol: nuevoRol })
-        .eq('id', userId);
+        .or(`id.eq.${userId},usuario.eq.${userId}`);
 
       if (error) throw error;
       
-      // Actualizar en el arreglo local
-      const idx = this.listaUsuarios.findIndex(u => u.id === userId);
+      const idx = this.listaUsuarios.findIndex(u => u.id === userId || u.usuario === userId);
       if (idx !== -1) this.listaUsuarios[idx].rol = nuevoRol;
       this.renderizarTabla();
     } catch (err) {
@@ -356,9 +339,9 @@ const UsuariosAdmin = {
 
     try {
       const { error } = await supabase
-        .from('profiles')
+        .from('usuarios')
         .delete()
-        .eq('id', userId);
+        .or(`id.eq.${userId},usuario.eq.${userId}`);
 
       if (error) throw error;
 
