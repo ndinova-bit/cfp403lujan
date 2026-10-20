@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MÓDULO DE AUTENTICACIÓN OFICIAL (DIRECTO Y RÁPIDO)
+   MÓDULO DE AUTENTICACIÓN OFICIAL (SIN PERSISTENCIA INSEGURA EN LOCALSTORAGE)
    Archivo: js/auth.js
    ========================================================================== */
 
@@ -13,7 +13,8 @@ const Auth = {
 
   async cerrarSesion() {
     this.usuarioActual = null;
-        
+    window.usuarioActual = null;
+    
     try {
       await supabase.auth.signOut();
     } catch (e) {
@@ -61,7 +62,7 @@ const Auth = {
         }
       }
 
-      // 2. Autenticar directo en Supabase Auth (sin reintentos lentos)
+      // 2. Autenticar directo en Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: emailAUsar,
         password: passVal
@@ -92,7 +93,9 @@ const Auth = {
         };
       }
 
+      // Guardar en memoria activa de la app (Sin localStorage)
       this.usuarioActual = perfilLocal;
+      window.usuarioActual = perfilLocal;
 
       if (typeof notify === 'function') {
         notify('success', `¡Bienvenido/a ${perfilLocal.nombre || perfilLocal.usuario}!`);
@@ -104,6 +107,11 @@ const Auth = {
 
       if (typeof UI !== 'undefined' && typeof UI.mostrarDashboard === 'function') {
         UI.mostrarDashboard(perfilLocal);
+      }
+
+      // Refrescar trayectos según el rol autenticado
+      if (typeof Trayectos !== 'undefined' && typeof Trayectos.cargarTrayectos === 'function') {
+        await Trayectos.cargarTrayectos();
       }
 
     } catch (err) {
