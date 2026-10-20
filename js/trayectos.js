@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MÓDULO DE TRAYECTOS FORMATIVOS POR CICLO LECTIVO (OFICIAL Y DIRECTO)
+   MÓDULO DE TRAYECTOS FORMATIVOS POR CICLO LECTIVO
    Archivo: js/trayectos.js
    ========================================================================== */
 
@@ -61,28 +61,11 @@ const Trayectos = {
     if (window.usuarioActual) {
       return window.usuarioActual;
     }
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session && session.user) {
-        const emailNorm = session.user.email ? session.user.email.toLowerCase() : '';
-        const { data: uRes } = await supabase
-          .from('usuarios')
-          .select('*')
-          .or(`email.ilike.${emailNorm},id.eq.${session.user.id}`)
-          .maybeSingle();
-        
-        if (uRes) {
-          if (typeof Auth !== 'undefined') Auth.usuarioActual = uRes;
-          window.usuarioActual = uRes;
-          return uRes;
-        }
-      }
-    } catch (e) {
-      console.warn('Error al obtener perfil desde la sesión de Supabase Auth:', e);
+    if (typeof Auth !== 'undefined' && typeof Auth.obtenerPerfilSesion === 'function') {
+      const p = await Auth.obtenerPerfilSesion();
+      if (p) return p;
     }
-
-    return {};
+    return null;
   },
 
   async cargarTrayectos() {
@@ -92,17 +75,24 @@ const Trayectos = {
       const isAdmin = rolNorm === 'admin' || rolNorm === 'administrador';
       const esDocente = rolNorm === 'docente';
 
+      const selectFiltro = document.getElementById('filtro-ciclo-lectivo');
+      const cicloSeleccionado = selectFiltro ? selectFiltro.value : 'TODOS';
       const anioVigente = new Date().getFullYear();
+
       let trayectosData = [];
 
-      // 1. Administrador: ve todos los trayectos
+      // 1. Administrador: Ve todos los trayectos
       if (isAdmin) {
-        const { data, error } = await supabase.from('trayectos').select('*');
+        let query = supabase.from('trayectos').select('*');
+        if (cicloSeleccionado && cicloSeleccionado !== 'TODOS') {
+          query = query.eq('ciclo_lectivo', Number(cicloSeleccionado));
+        }
+        const { data, error } = await query;
         if (error) throw error;
         trayectosData = data || [];
       } 
-      // 2. Vista pública inicial / Docente: muestra los cursos del ciclo lectivo vigente
-      else if (!perfil || !perfil.rol || esDocente) {
+      // 2. Docente / Vista pública
+      else if (!perfil || esDocente) {
         const { data, error } = await supabase
           .from('trayectos')
           .select('*')
@@ -110,7 +100,7 @@ const Trayectos = {
         if (error) throw error;
         trayectosData = data || [];
       } 
-      // 3. Estudiante: consulta sus inscripciones por DNI, usuario o email
+      // 3. Estudiante: Consulta sus inscripciones por DNI, usuario o Email
       else {
         const dniRaw = String(perfil.dni || perfil.usuario || '').trim();
         const emailRaw = String(perfil.email || '').trim().toLowerCase();
@@ -160,7 +150,7 @@ const Trayectos = {
     if (contenedores.length === 0) return;
 
     const perfil = await this.obtenerPerfilActual();
-    const rolNorm = String(perfil.rol || '').toLowerCase().trim();
+    const rolNorm = String(perfil?.rol || '').toLowerCase().trim();
     const isAdmin = rolNorm === 'admin' || rolNorm === 'administrador';
     const esDocente = rolNorm === 'docente';
     const esEstudiante = rolNorm === 'estudiante';
