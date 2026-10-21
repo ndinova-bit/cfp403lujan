@@ -171,6 +171,9 @@ const UsuariosAdmin = {
                 🔒 Inhabilitar
               </button>
             `}
+            <button title="Restablecer contraseña" style="padding: 0.35rem 0.6rem; font-size: 0.8rem; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; border-radius: 6px; cursor: pointer;" onclick="UsuariosAdmin.restablecerClave('${idPrimario}')">
+              🔑
+            </button>
             <button title="Eliminar definitivamente" style="padding: 0.35rem 0.6rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; border-radius: 6px; cursor: pointer;" onclick="UsuariosAdmin.eliminarUsuario('${idPrimario}')">
               🗑️
             </button>
@@ -299,6 +302,41 @@ const UsuariosAdmin = {
     } finally {
       this.estaProcesando = false;
     }
+  },
+
+  // El administrador define una contraseña nueva para otra persona
+  async restablecerClave(userId) {
+    const u = this.listaUsuarios.find(x => String(x.id) === String(userId));
+    if (!u) return;
+
+    const nombre = u.apellido ? `${u.apellido}, ${u.nombre}` : (u.nombre || u.dni);
+    const { value: nueva } = await Swal.fire({
+      title: 'Restablecer contraseña',
+      html: `Contraseña nueva para <b>${Trayectos.esc(nombre)}</b><br><small>DNI ${Trayectos.esc(u.dni)}</small>`,
+      input: 'text',
+      inputPlaceholder: 'Mínimo 8 caracteres',
+      showCancelButton: true,
+      confirmButtonText: 'Guardar',
+      cancelButtonText: 'Cancelar',
+      inputValidator: (v) => (!v || v.trim().length < 8) ? 'Escribí al menos 8 caracteres.' : null
+    });
+    if (!nueva) return;
+
+    const { error } = await supabase.rpc('admin_restablecer_clave', {
+      p_user_id: userId,
+      p_nueva: nueva.trim()
+    });
+
+    if (error) {
+      alert('No se pudo restablecer la contraseña: ' + error.message);
+      return;
+    }
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Contraseña actualizada',
+      text: 'Pasásela a la persona. Después puede cambiarla desde "Cambiar mi contraseña".'
+    });
   },
 
   esMiUsuario(userId) {
