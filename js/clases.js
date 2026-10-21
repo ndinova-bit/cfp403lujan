@@ -70,8 +70,8 @@ const ClasesModulo = {
     this.trayectoActualId = trayectoId;
     this.claseEditandoId = null;
 
-    const perfil = (typeof Trayectos !== 'undefined' && Trayectos.obtenerPerfilActual)
-      ? Trayectos.obtenerPerfilActual()
+    const perfil = (window.Auth && Auth.usuarioActual)
+      ? Auth.usuarioActual
       : (() => {
           const sesionRaw = localStorage.getItem('usuario_actual') || localStorage.getItem('usuario_logueado') || sessionStorage.getItem('usuario_logueado');
           return sesionRaw ? JSON.parse(sesionRaw) : {};
@@ -339,9 +339,9 @@ const ClasesModulo = {
     if (!contenedor) return;
 
     try {
-      const perfil = (typeof Trayectos !== 'undefined' && Trayectos.obtenerPerfilActual)
-        ? Trayectos.obtenerPerfilActual()
-        : (() => {
+      const perfil = (window.Auth && Auth.usuarioActual)
+      ? Auth.usuarioActual
+      : (() => {
             const sesionRaw = localStorage.getItem('usuario_actual') || localStorage.getItem('usuario_logueado') || sessionStorage.getItem('usuario_logueado');
             return sesionRaw ? JSON.parse(sesionRaw) : {};
           })();
@@ -587,8 +587,8 @@ const ClasesModulo = {
       return;
     }
 
-    const perfil = (typeof Trayectos !== 'undefined' && Trayectos.obtenerPerfilActual)
-      ? Trayectos.obtenerPerfilActual()
+    const perfil = (window.Auth && Auth.usuarioActual)
+      ? Auth.usuarioActual
       : (() => {
           const sesionRaw = localStorage.getItem('usuario_actual') || localStorage.getItem('usuario_logueado') || sessionStorage.getItem('usuario_logueado');
           return sesionRaw ? JSON.parse(sesionRaw) : {};
