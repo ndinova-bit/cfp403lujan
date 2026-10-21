@@ -6,6 +6,18 @@
 const Trayectos = {
   listaTrayectos: [],
 
+  // Evita que texto cargado en la base se interprete como HTML
+  esc(v) {
+    return String(v ?? '').replace(/[&<>"']/g, c => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    ));
+  },
+
+  // Ciclo lectivo vigente = año calendario actual
+  cicloVigente() {
+    return new Date().getFullYear();
+  },
+
   poblarDesplegableCiclos() {
     const selectFiltro = document.getElementById('filtro-ciclo-lectivo');
     if (!selectFiltro) return;
@@ -32,15 +44,16 @@ const Trayectos = {
 
     try {
       const { data: docentes, error } = await supabase
-        .from('usuarios')
-        .select('usuario, nombre, apellido')
-        .eq('rol', 'docente');
+        .from('profiles')
+        .select('dni, nombre, apellido')
+        .eq('rol', 'docente')
+        .order('apellido', { ascending: true });
 
       if (error) throw error;
 
       selectDocente.innerHTML = '<option value="">Sin docente asignado</option>';
       (docentes || []).forEach(doc => {
-        const idDocente = String(doc.usuario || '').trim();
+        const idDocente = String(doc.dni || '').trim();
         if (!idDocente) return;
 
         const nombreCompleto = `${doc.apellido || ''} ${doc.nombre || ''}`.trim() || idDocente;
@@ -68,82 +81,73 @@ const Trayectos = {
     return null;
   },
 
-async cargarTrayectos() {
+  // Quién ve qué (además, la base de datos lo hace cumplir con RLS):
+  //  - Sin sesión:   solo los trayectos del ciclo lectivo vigente (web pública)
+  //  - Estudiante:   solo los trayectos en los que está inscripto
+  //  - Docente:      solo los trayectos que tiene asignados
+  //  - Administrador: todos (con filtro opcional por ciclo)
+  async cargarTrayectos() {
     try {
       const perfil = await this.obtenerPerfilActual();
       const rolNorm = String(perfil?.rol || '').toLowerCase().trim();
       const isAdmin = rolNorm === 'admin' || rolNorm === 'administrador';
       const esDocente = rolNorm === 'docente';
+      const esEstudiante = rolNorm === 'estudiante';
 
       const selectFiltro = document.getElementById('filtro-ciclo-lectivo');
       const cicloSeleccionado = selectFiltro ? selectFiltro.value : 'TODOS';
-      const anioVigente = new Date().getFullYear();
+      const hayFiltroCiclo = cicloSeleccionado && cicloSeleccionado !== 'TODOS';
 
-      let trayectosData = [];
+      let query = supabase.from('trayectos').select('*').order('nombre', { ascending: true });
 
-      // 1. Administrador: Ve todos los trayectos
       if (isAdmin) {
-        let query = supabase.from('trayectos').select('*');
-        if (cicloSeleccionado && cicloSeleccionado !== 'TODOS') {
-          query = query.eq('ciclo_lectivo', Number(cicloSeleccionado));
+        if (hayFiltroCiclo) query = query.eq('ciclo_lectivo', Number(cicloSeleccionado));
+      } else if (esDocente) {
+        query = query.eq('docente_user', String(perfil.dni || ''));
+        if (hayFiltroCiclo) query = query.eq('ciclo_lectivo', Number(cicloSeleccionado));
+      } else if (esEstudiante) {
+        const { data: insc, error: errInsc } = await supabase
+          .from('inscripciones')
+          .select('trayecto_id')
+          .eq('estudiante_user', String(perfil.dni || ''));
+        if (errInsc) throw errInsc;
+
+        const ids = [...new Set((insc || []).map(i => i.trayecto_id))].filter(Boolean);
+        if (ids.length === 0) {
+          this.listaTrayectos = [];
+          this.renderizarTrayectos();
+          return;
         }
-        const { data, error } = await query;
-        if (error) throw error;
-        trayectosData = data || [];
-      } 
-      // 2. Docente
-      else if (esDocente) {
-        const { data, error } = await supabase
-          .from('trayectos')
-          .select('*')
-          .eq('ciclo_lectivo', anioVigente);
-        if (error) throw error;
-        trayectosData = data || [];
-      } 
-      // 3. Estudiante: Consulta en 'inscripciones' por 'estudiante_user' (DNI/usuario)
-      else {
-        const userKey = String(perfil?.dni || perfil?.usuario || '').trim();
-
-        let idsTrayectos = [];
-
-        if (userKey) {
-          const { data: resInsc, error: errInsc } = await supabase
-            .from('inscripciones')
-            .select('trayecto_id')
-            .eq('estudiante_user', userKey);
-
-          if (!errInsc && resInsc) {
-            idsTrayectos = resInsc.map(i => i.trayecto_id);
-          }
-        }
-
-        idsTrayectos = [...new Set(idsTrayectos)].filter(Boolean);
-
-        if (idsTrayectos.length > 0) {
-          const { data: trayectos, error: errTray } = await supabase
-            .from('trayectos')
-            .select('*')
-            .in('id', idsTrayectos);
-
-          if (!errTray) trayectosData = trayectos || [];
-        } else {
-          // Si aún no está inscripto a ninguno en BD, muestra la oferta pública activa
-          const { data: oferta } = await supabase
-            .from('trayectos')
-            .select('*')
-            .eq('ciclo_lectivo', anioVigente);
-          trayectosData = oferta || [];
-        }
+        query = query.in('id', ids);
+      } else {
+        // Web pública: solo el ciclo vigente
+        query = query.eq('ciclo_lectivo', this.cicloVigente());
       }
 
-      this.listaTrayectos = trayectosData;
+      const { data, error } = await query;
+      if (error) throw error;
+      const trayectos = data || [];
+
+      // Módulos de cada trayecto
+      if (trayectos.length > 0) {
+        const { data: mods } = await supabase
+          .from('modulos')
+          .select('*')
+          .in('trayecto_id', trayectos.map(t => t.id))
+          .order('fecha_inicio', { ascending: true });
+        trayectos.forEach(t => {
+          t.modulos = (mods || []).filter(m => String(m.trayecto_id) === String(t.id));
+        });
+      }
+
+      this.listaTrayectos = trayectos;
       this.renderizarTrayectos();
 
     } catch (err) {
       console.error('Error al cargar trayectos:', err);
     }
   },
-   
+
   async renderizarTrayectos() {
     const contenedores = [
       document.getElementById('lista-trayectos-cards'),
@@ -169,7 +173,7 @@ async cargarTrayectos() {
         contenedor.innerHTML = `
           <div class="empty-state-card fade-in" style="text-align: center; padding: 3rem; background: rgba(30,41,59,0.5); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); grid-column: 1 / -1;">
             <div class="empty-state-icon" style="font-size: 2rem; margin-bottom: 0.5rem;">📚</div>
-            <h3 class="empty-state-title" style="color: #f8fafc; margin-bottom: 0.5rem;">No hay trayectos disponibles para este ciclo lectivo</h3>
+            <h3 class="empty-state-title" style="color: #f8fafc; margin-bottom: 0.5rem;">${(esEstudiante && !esVistaPublica) ? 'Todavía no estás inscripto/a en ningún trayecto' : 'No hay trayectos disponibles para este ciclo lectivo'}</h3>
             <p class="empty-state-text" style="color: #94a3b8;">Ponate en contacto con la administración del CFP para más información.</p>
           </div>
         `;
@@ -244,11 +248,11 @@ async cargarTrayectos() {
           card.innerHTML = `
             <div>
               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
-                <h3 style="color: #f8fafc; margin: 0; font-size: 1.2rem; font-weight: 600;">${trayecto.nombre}</h3>
+                <h3 style="color: #f8fafc; margin: 0; font-size: 1.2rem; font-weight: 600;">${Trayectos.esc(trayecto.nombre)}</h3>
                 ${cicloBadge}
               </div>
               <p style="color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.75rem; line-height: 1.4;">
-                ${trayecto.descripcion || 'Sin descripción disponible.'}
+                ${Trayectos.esc(trayecto.descripcion || 'Sin descripción disponible.')}
               </p>
             </div>
             ${accionesAdmin}
@@ -258,8 +262,8 @@ async cargarTrayectos() {
           if (trayecto.modulos && trayecto.modulos.length > 0) {
             modulosHTML = trayecto.modulos.map(m => `
               <div class="modulo-card" style="margin-top: 0.5rem; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 0.6rem 0.8rem;">
-                <strong style="color: #f8fafc; font-size: 0.85rem;">${m.nombre}</strong> 
-                <span style="color: #fbbf24; font-size: 0.75rem;">(${m.codigo || 'S/C'})</span>
+                <strong style="color: #f8fafc; font-size: 0.85rem;">${Trayectos.esc(m.nombre)}</strong> 
+                <span style="color: #fbbf24; font-size: 0.75rem;">(${Trayectos.esc(m.codigo || 'S/C')})</span>
               </div>
             `).join('');
           } else {
@@ -272,18 +276,18 @@ async cargarTrayectos() {
             <div>
               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
                 <div>
-                  <h3 style="color: #f8fafc; margin: 0; font-size: 1.2rem; font-weight: 600;">${trayecto.nombre}</h3>
+                  <h3 style="color: #f8fafc; margin: 0; font-size: 1.2rem; font-weight: 600;">${Trayectos.esc(trayecto.nombre)}</h3>
                 </div>
                 ${cicloBadge}
               </div>
 
               <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.75rem; background: rgba(0,0,0,0.2); padding: 0.5rem; border-radius: 6px;">
-                📜 <strong>N° de Curso:</strong> ${numCursoMostrado}<br>
-                📑 <strong>Resolución:</strong> ${trayecto.resolucion || 'S/D'}
+                📜 <strong>N° de Curso:</strong> ${Trayectos.esc(numCursoMostrado)}<br>
+                📑 <strong>Resolución:</strong> ${Trayectos.esc(trayecto.resolucion || 'S/D')}
               </div>
 
               <p style="color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.75rem; line-height: 1.4;">
-                ${trayecto.descripcion || 'Sin descripción disponible.'}
+                ${Trayectos.esc(trayecto.descripcion || 'Sin descripción disponible.')}
               </p>
 
               <div style="margin-top: 0.5rem;">${modulosHTML}</div>
@@ -365,7 +369,6 @@ async cargarTrayectos() {
         nombre: nombre,
         ciclo_lectivo: Number(cicloVal) || new Date().getFullYear(),
         sector: sector || null,
-        certificacion_oficial: certificacionVal || null,
         certificacion: certificacionVal || null,
         resolucion: resolucion || null,
         descripcion: descripcion || null,

@@ -13,6 +13,11 @@ const UI = {
     if (landing) landing.style.setProperty('display', 'block', 'important');
     if (login) login.style.setProperty('display', 'none', 'important');
     if (app) app.style.setProperty('display', 'none', 'important');
+
+    // Sin sesión activa, la web pública recarga solo la oferta del ciclo vigente
+    if (window.Trayectos && !(window.Auth && Auth.usuarioActual)) {
+      Trayectos.cargarTrayectos();
+    }
   },
 
   // Muestra la pantalla o modal de Login centrado
@@ -115,27 +120,13 @@ const UI = {
 
 // Cambia entre secciones dentro del Panel validando permisos reales en 'usuarios'
   async showTab(tabId) {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
+    // El rol sale del perfil de la sesión (tabla `profiles`)
+    const perfil = await Auth.obtenerPerfilSesion();
+    if (!perfil) {
       this.showLoginScreen();
       return;
     }
-
-    // Consultar rol verificado en la tabla auténtica 'usuarios'
-    let isAdmin = false;
-    try {
-      const emailNorm = session.user.email ? session.user.email.toLowerCase() : '';
-      const { data: perfil } = await supabase
-        .from('usuarios')
-        .select('rol')
-        .or(`email.ilike.${emailNorm},usuario.ilike.${emailNorm.split('@')[0]}`)
-        .maybeSingle();
-
-      const rolNorm = String(perfil?.rol || '').toLowerCase().trim();
-      isAdmin = (rolNorm === 'admin' || rolNorm === 'administrador');
-    } catch (e) {
-      console.warn('Error al verificar permisos:', e);
-    }
+    const isAdmin = Auth.esAdmin(perfil.rol);
 
     if (!isAdmin && (tabId === 'dashboard' || tabId === 'nuevo-trayecto' || tabId === 'certificados' || tabId === 'usuarios' || tabId === 'actas')) {
       tabId = 'trayectos';
@@ -241,39 +232,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnDashboard.addEventListener('click', () => DashboardAdmin.cargarEstadisticas());
   }
 
-  // 1. Validar sesión activa en Supabase Auth
-  const { data: { session }, error } = await supabase.auth.getSession();
+  // 1. Perfil de la sesión activa (null si no hay sesión o si venció)
+  let perfilValido = null;
+  try {
+    perfilValido = await Auth.obtenerPerfilSesion();
+  } catch (e) {
+    console.warn('Sesión no válida:', e);
+  }
 
-  if (!session || error) {
-    localStorage.removeItem('usuario_actual');
+  // 2. Sin sesión, sin perfil o cuenta no aprobada: se muestra la web pública
+  if (!perfilValido || perfilValido.estado !== 'ACTIVO') {
+    // Limpia sesiones viejas que ya no se pueden renovar (evita el error 400 de refresh_token)
+    try { await supabase.auth.signOut({ scope: 'local' }); } catch (e) { /* nada */ }
+    Auth.limpiarPerfil();
     UI.showLanding();
     return;
   }
-
-  // 2. Traer perfil REAL validado desde la base de datos (tabla 'usuarios')
-  const emailNorm = session.user.email ? session.user.email.toLowerCase() : '';
-  const { data: perfilValido } = await supabase
-    .from('usuarios')
-    .select('*')
-    .or(`email.ilike.${emailNorm},usuario.ilike.${emailNorm.split('@')[0]}`)
-    .maybeSingle();
-
-  if (!perfilValido) {
-    await supabase.auth.signOut();
-    localStorage.removeItem('usuario_actual');
-    UI.showLanding();
-    return;
-  }
-
-  const rolNorm = String(perfilValido.rol || 'estudiante').toLowerCase().trim();
-  perfilValido.rol = rolNorm;
 
   // 3. Renderizar plataforma con el perfil validado por la base de datos
-  if (window.AuthModulo) {
-    window.AuthModulo.usuarioActual = perfilValido;
-  }
-  
-  document.body.setAttribute('data-rol', rolNorm);
+  const rolNorm = perfilValido.rol;
   UI.mostrarDashboard(perfilValido);
 
   if (rolNorm === 'admin' || rolNorm === 'administrador') {

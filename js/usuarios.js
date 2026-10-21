@@ -66,8 +66,9 @@ const UsuariosAdmin = {
 
     try {
       const { data: usuarios, error } = await supabase
-        .from('usuarios')
-        .select('*');
+        .from('profiles')
+        .select('*')
+        .order('apellido', { ascending: true });
 
       if (error) throw error;
 
@@ -135,9 +136,9 @@ const UsuariosAdmin = {
     tbody.innerHTML = usuariosFiltrados.map(u => {
       const estadoRaw = String(u.estado || 'ACTIVO').toUpperCase();
       const esActivo = estadoRaw === 'ACTIVO' || estadoRaw === 'HABILITADO' || estadoRaw === 'APROBADO';
-      const nombreCompleto = u.apellido ? `${u.apellido}, ${u.nombre}` : (u.nombre || 'Sin Nombre');
+      const nombreCompleto = Trayectos.esc(u.apellido ? `${u.apellido}, ${u.nombre}` : (u.nombre || 'Sin Nombre'));
       const idPrimario = u.id || u.usuario;
-      const dniMostrar = u.dni || u.usuario || 'Sin DNI';
+      const dniMostrar = Trayectos.esc(u.dni || u.usuario || 'Sin DNI');
 
       return `
         <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
@@ -146,7 +147,7 @@ const UsuariosAdmin = {
             <span style="font-size: 0.8rem; color: #94a3b8;">DNI: ${dniMostrar}</span>
           </td>
           <td style="padding: 0.85rem 0.75rem; font-size: 0.85rem; color: #cbd5e1;">
-            ${u.email || `${dniMostrar}@cfp403.ar`}
+            ${Trayectos.esc(u.email) || `${dniMostrar}@cfp403.ar`}
           </td>
           <td style="padding: 0.85rem 0.75rem;">
             <select class="form-control" style="padding: 0.3rem 0.5rem; font-size: 0.85rem; width: auto;" onchange="UsuariosAdmin.cambiarRol('${idPrimario}', this.value)">
@@ -170,7 +171,7 @@ const UsuariosAdmin = {
                 🔒 Inhabilitar
               </button>
             `}
-            <button title="Eliminar definitivamente" style="padding: 0.35rem 0.6rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; border-radius: 6px; cursor: pointer;" onclick="UsuariosAdmin.eliminarUsuario('${idPrimario}', '${nombreCompleto.replace(/'/g, "\\'")}')">
+            <button title="Eliminar definitivamente" style="padding: 0.35rem 0.6rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; border-radius: 6px; cursor: pointer;" onclick="UsuariosAdmin.eliminarUsuario('${idPrimario}')">
               🗑️
             </button>
           </td>
@@ -231,9 +232,12 @@ const UsuariosAdmin = {
     const passwordTemp = `CFP403_${dniVal}`;
 
     try {
-      const { data: authRes, error: authError } = await supabase.auth.signUp({
+      // Cliente temporal: así la sesión del administrador no se cierra al crear la cuenta
+      const clienteAlta = window.crearClienteTemporal();
+      const { data: authRes, error: authError } = await clienteAlta.auth.signUp({
         email: emailSintetico,
-        password: passwordTemp
+        password: passwordTemp,
+        options: { data: { dni: dniVal, nombre: nombre, apellido: apellido } }
       });
 
       if (authError) {
@@ -243,22 +247,24 @@ const UsuariosAdmin = {
       }
 
       const userId = authRes.user?.id;
+      // Supabase devuelve un usuario sin identidades cuando el email ya estaba registrado
+      if (!userId || (authRes.user.identities && authRes.user.identities.length === 0)) {
+        alert('Ya existe una cuenta con ese email o DNI.');
+        this.estaProcesando = false;
+        return;
+      }
 
-      const { error: profileError } = await supabase
-        .from('usuarios')
-        .upsert({
-          id: userId,
-          usuario: dniVal,
-          dni: dniVal,
-          nombre: nombre,
-          apellido: apellido,
-          email: emailSintetico,
-          rol: rol,
-          estado: 'ACTIVO'
-        }, { onConflict: 'usuario' });
+      // El trigger de la base ya creó el perfil (estudiante / PENDIENTE): lo completa el administrador
+      const { data: filasPerfil, error: profileError } = await supabase
+        .from('profiles')
+        .update({ dni: dniVal, nombre: nombre, apellido: apellido, email: emailSintetico, rol: rol, estado: 'ACTIVO' })
+        .eq('id', userId)
+        .select('id');
 
-      if (profileError) {
-        console.warn('Advertencia actualizando usuario:', profileError.message);
+      if (profileError || !filasPerfil || filasPerfil.length === 0) {
+        alert('⚠️ La cuenta se creó pero no se pudo asignar el rol: ' + (profileError ? profileError.message : 'el perfil no existe todavía (¿ejecutaste el paso 1 de SQL?)'));
+        this.estaProcesando = false;
+        return;
       }
 
       if (rol === 'estudiante') {
@@ -295,12 +301,20 @@ const UsuariosAdmin = {
     }
   },
 
+  esMiUsuario(userId) {
+    return !!(window.Auth && Auth.usuarioActual && String(Auth.usuarioActual.id) === String(userId));
+  },
+
   async cambiarEstado(userId, nuevoEstado) {
+    if (this.esMiUsuario(userId) && nuevoEstado !== 'ACTIVO') {
+      alert('No podés inhabilitar tu propia cuenta.');
+      return;
+    }
     try {
       const { error } = await supabase
-        .from('usuarios')
+        .from('profiles')
         .update({ estado: nuevoEstado })
-        .or(`id.eq.${userId},usuario.eq.${userId}`);
+        .eq('id', userId);
 
       if (error) throw error;
       this.cargarUsuarios();
@@ -310,11 +324,16 @@ const UsuariosAdmin = {
   },
 
   async cambiarRol(userId, nuevoRol) {
+    if (this.esMiUsuario(userId) && !Auth.esAdmin(nuevoRol)) {
+      alert('No podés quitarte a vos mismo el rol de administrador.');
+      this.renderizarTabla();
+      return;
+    }
     try {
       const { error } = await supabase
-        .from('usuarios')
+        .from('profiles')
         .update({ rol: nuevoRol })
-        .or(`id.eq.${userId},usuario.eq.${userId}`);
+        .eq('id', userId);
 
       if (error) throw error;
       
@@ -327,16 +346,21 @@ const UsuariosAdmin = {
   },
 
   async eliminarUsuario(userId, nombreMostrar) {
-    const usuarioABorrar = nombreMostrar || userId;
+    if (this.esMiUsuario(userId)) {
+      alert('No podés eliminar tu propia cuenta.');
+      return;
+    }
+    const u = this.listaUsuarios.find(x => String(x.id) === String(userId));
+    const usuarioABorrar = nombreMostrar || (u ? (u.apellido ? `${u.apellido}, ${u.nombre}` : u.nombre) : userId);
 
-    const confirmar = confirm(`⚠️ ¿Estás seguro de que querés eliminar definitivamente a "${usuarioABorrar}"?\nEsta acción no se puede deshacer.`);
+    const confirmar = confirm(`⚠️ ¿Estás seguro de que querés eliminar el perfil de "${usuarioABorrar}"?\nLa persona ya no va a poder usar la plataforma. Esta acción no se puede deshacer.`);
     if (!confirmar) return;
 
     try {
       const { error } = await supabase
-        .from('usuarios')
+        .from('profiles')
         .delete()
-        .or(`id.eq.${userId},usuario.eq.${userId}`);
+        .eq('id', userId);
 
       if (error) throw error;
 

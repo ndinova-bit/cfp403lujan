@@ -5,12 +5,28 @@ if (typeof SUPABASE_URL === 'undefined') {
 }
 
 // Inicializar el cliente Supabase de forma segura
+// Guardamos la librería antes de que `window.supabase` pase a ser el cliente
+if (!window.supabaseLib) window.supabaseLib = window.supabase;
+
 if (typeof window.supabaseClient === 'undefined') {
-  window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  window.supabaseClient = window.supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
 
 // Aseguramos que la instancia global tenga la referencia correcta
 window.supabase = window.supabaseClient;
+
+// Cliente secundario que NO toca la sesión del administrador
+// (se usa para dar de alta usuarios sin que el admin quede deslogueado)
+window.crearClienteTemporal = function () {
+  return window.supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      storageKey: 'cfp403-alta-temporal'
+    }
+  });
+};
 
 // Funciones globales de alertas
 function alertError(titulo, mensaje) {
