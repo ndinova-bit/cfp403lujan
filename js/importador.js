@@ -2,15 +2,16 @@
    CARGA MASIVA DE ESTUDIANTES (CSV) A UN TRAYECTO
    Archivo: js/importador.js
 
-   Qué hace el importador:
-   1. Guarda a cada persona en el PADRÓN (tabla padron_estudiantes): DNI, nombre,
-      apellido y email si lo trae. El padrón NO es una cuenta.
-   2. Inscribe a cada DNI en el trayecto elegido (tabla inscripciones).
+   Qué hace el importador con cada fila del CSV, usando la función segura
+   "importar-estudiantes" que corre dentro de Supabase:
+   1. Guarda a la persona en el padrón (DNI, nombre, apellido).
+   2. Le crea la cuenta si no tiene (usuario: su DNI; contraseña inicial:
+      CFP403_ + DNI) y la deja aprobada.
+   3. La inscribe en el trayecto.
 
-   Qué NO hace (a propósito): crear cuentas de acceso. Cada estudiante se
-   registra solo desde "Solicitar Cuenta" con su DNI y su propia contraseña, y
-   la administración aprueba la cuenta. Al registrarse, la base completa su
-   nombre y apellido desde el padrón y ya lo encuentra inscripto.
+   Si la función todavía no está instalada en Supabase, el importador usa el
+   modo de respaldo: carga solo el padrón y las inscripciones, sin crear
+   cuentas (cada estudiante debe registrarse en "Solicitar Cuenta").
    ========================================================================== */
 
 var ImportadorModulo = {
@@ -149,59 +150,110 @@ var ImportadorModulo = {
 
         const trayectoId = Number(this.trayectoIdActual);
         const contador = () => document.getElementById('contador-importacion');
-        const TAM_LOTE = 200;
-        let errores = [];
+        const errores = [];
 
-        // ---- 2. Padrón (se pisan nombre/apellido si el DNI ya estaba) ----
-        for (let i = 0; i < estudiantes.length; i += TAM_LOTE) {
-          const lote = estudiantes.slice(i, i + TAM_LOTE);
-          if (contador()) contador().innerText = `Guardando padrón ${Math.min(i + TAM_LOTE, estudiantes.length)} de ${estudiantes.length}...`;
+        // ---- 2. Función del servidor: cuentas + padrón + inscripción ----
+        const srv = { creados: 0, ya_tenian_cuenta: 0, aprobados: 0, inscriptos_nuevos: 0, ya_inscriptos: 0 };
+        let usoServidor = true;
+        let motivoFallback = '';
+        const TAM_SRV = 25;
 
-          const { error } = await supabase
-            .from('padron_estudiantes')
-            .upsert(lote, { onConflict: 'dni' });
+        for (let i = 0; i < estudiantes.length; i += TAM_SRV) {
+          const lote = estudiantes.slice(i, i + TAM_SRV);
+          if (contador()) contador().innerText = `Creando cuentas e inscribiendo ${Math.min(i + TAM_SRV, estudiantes.length)} de ${estudiantes.length}...`;
 
-          if (error) errores.push('Padrón: ' + error.message);
+          let data = null;
+          let error = null;
+          try {
+            const r = await supabase.functions.invoke('importar-estudiantes', {
+              body: { trayecto_id: trayectoId, estudiantes: lote }
+            });
+            data = r.data;
+            error = r.error;
+          } catch (ex) {
+            error = ex;
+          }
+
+          if (error || !data || data.error) {
+            if (i === 0) {
+              // La función no está instalada o no respondió: se usa el modo de respaldo
+              usoServidor = false;
+              motivoFallback = (data && data.error) || (error && error.message) || 'sin respuesta';
+              break;
+            }
+            errores.push('Servidor: ' + ((data && data.error) || (error && error.message) || 'error desconocido'));
+            continue;
+          }
+
+          Object.keys(srv).forEach(k => { srv[k] += data[k] || 0; });
+          (data.errores || []).forEach(x => errores.push(x));
         }
 
-        // ---- 3. Inscripciones (solo las que faltan) ----
-        const { data: yaInscriptos, error: errLectura } = await supabase
-          .from('inscripciones')
-          .select('estudiante_user')
-          .eq('trayecto_id', trayectoId);
+        // ---- 3. Modo de respaldo: solo padrón e inscripción (sin crear cuentas) ----
+        let nuevos = [];
+        if (!usoServidor) {
+          const TAM_LOTE = 200;
 
-        if (errLectura) errores.push('Lectura de inscripciones: ' + errLectura.message);
+          for (let i = 0; i < estudiantes.length; i += TAM_LOTE) {
+            const lote = estudiantes.slice(i, i + TAM_LOTE);
+            if (contador()) contador().innerText = `Guardando padrón ${Math.min(i + TAM_LOTE, estudiantes.length)} de ${estudiantes.length}...`;
 
-        const setYa = new Set((yaInscriptos || []).map(i => String(i.estudiante_user)));
-        const nuevos = estudiantes.filter(e => !setYa.has(e.dni));
+            const { error } = await supabase
+              .from('padron_estudiantes')
+              .upsert(lote, { onConflict: 'dni' });
+            if (error) errores.push('Padrón: ' + error.message);
+          }
 
-        for (let i = 0; i < nuevos.length; i += TAM_LOTE) {
-          const lote = nuevos.slice(i, i + TAM_LOTE).map(e => ({
-            trayecto_id: trayectoId,
-            estudiante_user: e.dni
-          }));
-          if (contador()) contador().innerText = `Inscribiendo ${Math.min(i + TAM_LOTE, nuevos.length)} de ${nuevos.length}...`;
+          const { data: yaInscriptos, error: errLectura } = await supabase
+            .from('inscripciones')
+            .select('estudiante_user')
+            .eq('trayecto_id', trayectoId);
+          if (errLectura) errores.push('Lectura de inscripciones: ' + errLectura.message);
 
-          const { error } = await supabase.from('inscripciones').insert(lote);
-          if (error) errores.push('Inscripción: ' + error.message);
+          const setYa = new Set((yaInscriptos || []).map(i => String(i.estudiante_user)));
+          nuevos = estudiantes.filter(x => !setYa.has(x.dni));
+
+          for (let i = 0; i < nuevos.length; i += TAM_LOTE) {
+            const lote = nuevos.slice(i, i + TAM_LOTE).map(x => ({ trayecto_id: trayectoId, estudiante_user: x.dni }));
+            if (contador()) contador().innerText = `Inscribiendo ${Math.min(i + TAM_LOTE, nuevos.length)} de ${nuevos.length}...`;
+
+            const { error } = await supabase.from('inscripciones').insert(lote);
+            if (error) errores.push('Inscripción: ' + error.message);
+          }
         }
 
         this.cerrarEspera(prevenirSalida);
 
         // ---- 4. Resumen ----
-        const resumen = `
-          <div style="text-align:left; font-size: 14px; line-height: 1.6;">
+        const esc = (t) => (window.Trayectos ? Trayectos.esc(t) : String(t));
+
+        const detalle = usoServidor ? `
+            ✅ <b>${estudiantes.length}</b> estudiantes leídos del archivo<br>
+            🔑 <b>${srv.creados}</b> cuentas creadas: ya pueden ingresar con su DNI<br>
+            👤 <b>${srv.ya_tenian_cuenta}</b> ya tenían cuenta${srv.aprobados ? ` (<b>${srv.aprobados}</b> estaban pendientes y quedaron aprobadas)` : ''}<br>
+            🆕 <b>${srv.inscriptos_nuevos}</b> inscriptos nuevos en este trayecto<br>
+            ↩️ <b>${srv.ya_inscriptos}</b> ya estaban inscriptos<br>`
+        : `
+            ⚠️ <b>No se crearon cuentas</b>: la función del servidor no respondió (${esc(motivoFallback)}). Se cargó solo el padrón y la inscripción.<br>
             ✅ <b>${estudiantes.length}</b> estudiantes leídos del archivo<br>
             🆕 <b>${nuevos.length}</b> inscriptos nuevos en este trayecto<br>
-            ↩️ <b>${estudiantes.length - nuevos.length}</b> ya estaban inscriptos<br>
+            ↩️ <b>${estudiantes.length - nuevos.length}</b> ya estaban inscriptos<br>`;
+
+        const pie = usoServidor
+          ? 'Usuario: el DNI. Contraseña inicial: CFP403_ seguido del DNI. Cada persona puede cambiarla desde "Cambiar mi contraseña".'
+          : 'Cada estudiante debe registrarse en "Solicitar Cuenta" con su DNI y vos aprobás su cuenta en Usuarios y Roles.';
+
+        const resumen = `
+          <div style="text-align:left; font-size: 14px; line-height: 1.6;">
+            ${detalle}
             ${filasInvalidas ? `⚠️ <b>${filasInvalidas}</b> filas ignoradas por DNI inválido<br>` : ''}
-            ${errores.length ? `<br><span style="color:#f87171">❌ Hubo errores:<br>${errores.map(x => Trayectos.esc(x)).join('<br>')}</span>` : ''}
-            <br><small style="color:#94a3b8">Cada estudiante debe registrarse en "Solicitar Cuenta" con su DNI y vos aprobás su cuenta en Usuarios y Roles.</small>
+            ${errores.length ? `<br><span style="color:#f87171">❌ Hubo errores:<br>${errores.map(x => esc(x)).join('<br>')}</span><br>` : ''}
+            <br><small style="color:#94a3b8">${pie}</small>
           </div>`;
 
         if (typeof Swal !== 'undefined') {
           Swal.fire({
-            icon: errores.length ? 'warning' : 'success',
+            icon: (errores.length || !usoServidor) ? 'warning' : 'success',
             title: errores.length ? 'Importación con errores' : '¡Importación finalizada!',
             html: resumen,
             confirmButtonText: 'Entendido'
