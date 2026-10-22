@@ -190,6 +190,68 @@ const Auth = {
     }
   },
 
+  /* ---------- cambio de contraseña (cualquier usuario con sesión) ---------- */
+
+  async cambiarMiClave() {
+    if (typeof Swal === 'undefined') {
+      this.avisar('No se pudo abrir el formulario. Recargá la página e intentá de nuevo.');
+      return;
+    }
+
+    const { value: datos } = await Swal.fire({
+      title: 'Cambiar mi contraseña',
+      html: `
+        <input id="clave-actual" type="password" class="swal2-input" placeholder="Contraseña actual" autocomplete="current-password">
+        <input id="clave-nueva" type="password" class="swal2-input" placeholder="Contraseña nueva (mínimo 8 caracteres)" autocomplete="new-password">
+        <input id="clave-repetir" type="password" class="swal2-input" placeholder="Repetir la contraseña nueva" autocomplete="new-password">
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'Guardar',
+      cancelButtonText: 'Cancelar',
+      preConfirm: () => {
+        const actual = document.getElementById('clave-actual').value;
+        const nueva = document.getElementById('clave-nueva').value;
+        const repetir = document.getElementById('clave-repetir').value;
+        if (!actual || !nueva || !repetir) { Swal.showValidationMessage('Completá los tres campos.'); return false; }
+        if (nueva.length < 8) { Swal.showValidationMessage('La contraseña nueva debe tener al menos 8 caracteres.'); return false; }
+        if (nueva !== repetir) { Swal.showValidationMessage('Las contraseñas nuevas no coinciden.'); return false; }
+        if (nueva === actual) { Swal.showValidationMessage('La contraseña nueva debe ser distinta de la actual.'); return false; }
+        return { actual, nueva };
+      }
+    });
+
+    if (!datos) return;
+
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      const email = u?.user?.email;
+      if (!email) {
+        this.avisar('Tu sesión venció. Volvé a ingresar.');
+        return;
+      }
+
+      // Se verifica la contraseña actual antes de cambiarla
+      const { error: errActual } = await supabase.auth.signInWithPassword({ email, password: datos.actual });
+      if (errActual) {
+        this.avisar('La contraseña actual no es correcta.');
+        return;
+      }
+
+      const { error } = await supabase.auth.updateUser({ password: datos.nueva });
+      if (error) {
+        this.avisar('No se pudo cambiar la contraseña: ' + error.message);
+        return;
+      }
+
+      if (typeof alertSuccess === 'function') alertSuccess('Contraseña actualizada', 'La próxima vez que ingreses usá tu contraseña nueva.');
+      else alert('Contraseña actualizada.');
+    } catch (err) {
+      console.error('Error al cambiar la contraseña:', err);
+      this.avisar('No se pudo conectar. Intentá de nuevo en unos minutos.');
+    }
+  },
+
   /* ---------- solicitud de cuenta ---------- */
 
   // Formulario "Solicitar Cuenta". Crea el usuario en Auth; un trigger de la

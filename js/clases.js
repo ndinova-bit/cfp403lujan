@@ -7,21 +7,42 @@ const ClasesModulo = {
   trayectoActualId: null,
   claseEditandoId: null,
 
+  // Escapa texto para insertarlo de forma segura en HTML (evita que un título o comentario ejecute código)
+  esc(t) {
+    return String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  },
+
+  // Devuelve el enlace normalizado solo si empieza con http:// o https://; si no, devuelve ''
+  urlSegura(u) {
+    try {
+      const x = new URL(String(u || '').trim());
+      return (x.protocol === 'http:' || x.protocol === 'https:') ? x.href : '';
+    } catch (e) {
+      return '';
+    }
+  },
+
   convertirLinks(texto) {
     if (!texto) return '';
     const urlRegex = /(https?:\/\/[^\s]+)/g;
-    return texto.replace(urlRegex, (url) => {
-      const urlEscapada = url.replace(/'/g, "\\'");
+    // Primero se escapa todo el texto; recién después se convierten los enlaces en botones
+    return this.esc(texto).replace(urlRegex, (url) => {
       return `
         <div style="margin-top:0.4rem; display:flex; gap:0.4rem; flex-wrap:wrap; align-items:center;">
-          <a href="${url}" target="_blank" rel="noopener" style="display:inline-block; padding:0.35rem 0.75rem; background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.3); color:#facc15; border-radius:6px; font-size:0.82rem; text-decoration:none; font-weight:600;">📝 Abrir Enlace de Actividad / TP</a>
-          <button type="button" onclick="ClasesModulo.verEnPantalla('${urlEscapada}', 'Actividad / TP')" style="padding:0.35rem 0.75rem; background:rgba(234,179,8,0.25); border:1px solid rgba(234,179,8,0.5); color:#fef08a; border-radius:6px; font-size:0.82rem; cursor:pointer; font-weight:600;">👁️ Visualizar en Pantalla</button>
+          <a href="${url}" target="_blank" rel="noopener noreferrer" style="display:inline-block; padding:0.35rem 0.75rem; background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.3); color:#facc15; border-radius:6px; font-size:0.82rem; text-decoration:none; font-weight:600;">📝 Abrir Enlace de Actividad / TP</a>
+          <button type="button" data-url="${url}" onclick="ClasesModulo.verEnPantalla(this.dataset.url, 'Actividad / TP')" style="padding:0.35rem 0.75rem; background:rgba(234,179,8,0.25); border:1px solid rgba(234,179,8,0.5); color:#fef08a; border-radius:6px; font-size:0.82rem; cursor:pointer; font-weight:600;">👁️ Visualizar en Pantalla</button>
         </div>
       `;
     });
   },
 
   verEnPantalla(url, titulo) {
+    url = this.urlSegura(url);
+    if (!url) {
+      alert('El enlace no es válido: tiene que empezar con http:// o https://');
+      return;
+    }
+    titulo = this.esc(titulo);
     if (url.includes('drive.google.com/drive/folders') || url.includes('drive.google.com/folderview')) {
       alert('📁 Las carpetas de Google Drive no se pueden previsualizar en pantalla por restricciones de seguridad. Se abrirá en una pestaña nueva.');
       window.open(url, '_blank');
@@ -53,12 +74,12 @@ const ClasesModulo = {
         <div style="padding:0.8rem 1.2rem; background:#1e293b; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
           <strong style="color:#38bdf8; font-size:0.95rem;">📄 Vista Previa: ${titulo}</strong>
           <div style="display:flex; gap:0.5rem; align-items:center;">
-            <a href="${url}" target="_blank" rel="noopener" style="padding:0.25rem 0.6rem; background:#0284c7; color:#fff; border-radius:4px; font-size:0.8rem; text-decoration:none; font-weight:600;">🔗 Abrir pestaña aparte</a>
+            <a href="${this.esc(url)}" target="_blank" rel="noopener noreferrer" style="padding:0.25rem 0.6rem; background:#0284c7; color:#fff; border-radius:4px; font-size:0.8rem; text-decoration:none; font-weight:600;">🔗 Abrir pestaña aparte</a>
             <button type="button" onclick="document.getElementById('modal-visor-recurso').style.display='none'" style="background:none; border:none; color:#f87171; font-size:1.4rem; cursor:pointer; font-weight:bold; margin-left:0.5rem;">✕</button>
           </div>
         </div>
         <div style="flex:1; background:#000; position:relative;">
-          <iframe src="${embedUrl}" style="width:100%; height:100%; border:none;" allow="autoplay"></iframe>
+          <iframe src="${this.esc(embedUrl)}" style="width:100%; height:100%; border:none;" allow="autoplay"></iframe>
         </div>
       </div>
     `;
@@ -92,7 +113,7 @@ const ClasesModulo = {
     let htmlModal = `
       <div style="background:#1e293b; border:1px solid rgba(255,255,255,0.1); border-radius:12px; width:100%; max-width:980px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; color:#f8fafc;">
         <div style="padding:1.2rem 1.5rem; background:#0f172a; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
-          <h3 style="margin:0; font-size:1.15rem;">📚 Trayecto: <span style="color:#38bdf8;">${nombreTrayecto}</span></h3>
+          <h3 style="margin:0; font-size:1.15rem;">📚 Trayecto: <span style="color:#38bdf8;">${this.esc(nombreTrayecto)}</span></h3>
           <div style="display:flex; gap:0.5rem; align-items:center;">
             ${!esEstudiante ? `
               <button type="button" onclick="ReportesModulo.descargarBackupCompletoJSON()" style="padding:0.35rem 0.7rem; background:rgba(34,197,94,0.2); border:1px solid rgba(34,197,94,0.4); color:#4ade80; border-radius:6px; font-size:0.78rem; font-weight:600; cursor:pointer;">
@@ -256,7 +277,7 @@ const ClasesModulo = {
       }
 
       select.innerHTML = '<option value="">-- Seleccionar Módulo (Opcional) --</option>' + 
-        modulos.map(m => `<option value="${m.id}">${m.nombre} (${m.codigo || 'S/C'})</option>`).join('');
+        modulos.map(m => `<option value="${Number(m.id)}">${this.esc(m.nombre)} (${this.esc(m.codigo || 'S/C')})</option>`).join('');
 
     } catch (err) {
       console.error('Error al poblar combo de módulos:', err);
@@ -288,7 +309,7 @@ const ClasesModulo = {
           const apStr = (u.apellido || '').toUpperCase().trim();
           const nomStr = u.nombre ? (u.nombre.charAt(0).toUpperCase() + u.nombre.slice(1).toLowerCase()) : '';
           const nombreCompleto = apStr && nomStr ? `${apStr}, ${nomStr}` : (apStr || nomStr || userKey);
-          return `<option value="${userKey}">👤 ${nombreCompleto} (DNI: ${userKey})</option>`;
+          return `<option value="${this.esc(userKey)}">👤 ${this.esc(nombreCompleto)} (DNI: ${this.esc(userKey)})</option>`;
         }).join('');
 
     } catch (err) {
@@ -416,7 +437,7 @@ const ClasesModulo = {
 
       contenedor.innerHTML = publicacionesMostrar.map((c) => {
         const descHTML = this.convertirLinks(c.descripcion || 'Sin descripción');
-        const urlTeoriaEscapada = (c.url_recurso || '').replace(/'/g, "\\'");
+        const urlTeoria = this.urlSegura(c.url_recurso);
         const tieneActividad = (c.descripcion || '').includes('📝 Enlace a Actividad / TP:');
 
         let badgeExclusivo = '';
@@ -492,18 +513,18 @@ const ClasesModulo = {
                       </div>
                     </div>
                     <div style="border-top:1px solid rgba(255,255,255,0.08); padding-top:0.4rem; margin-top:0.4rem;">
-                      <a href="${miEntrega.url_entrega}" target="_blank" style="color:#38bdf8; text-decoration:underline; font-weight:600;">🔗 Ver Trabajo Enviado</a>
-                      ${miEntrega.comentario_docente ? `<br><span style="color:#cbd5e1; display:inline-block; margin-top:0.3rem;">💬 <strong>Devolución Docente:</strong> <em>"${miEntrega.comentario_docente}"</em></span>` : ''}
+                      <a href="${this.esc(this.urlSegura(miEntrega.url_entrega))}" target="_blank" rel="noopener noreferrer" style="color:#38bdf8; text-decoration:underline; font-weight:600;">🔗 Ver Trabajo Enviado</a>
+                      ${miEntrega.comentario_docente ? `<br><span style="color:#cbd5e1; display:inline-block; margin-top:0.3rem;">💬 <strong>Devolución Docente:</strong> <em>"${this.esc(miEntrega.comentario_docente)}"</em></span>` : ''}
                     </div>
                   </div>
                 `;
               } else {
                 estadoEntregaHTML = `
                   <div style="font-size:0.82rem; color:#f87171; margin-bottom:0.4rem; background:rgba(239,68,68,0.15); padding:0.6rem; border-radius:6px; border:1px solid rgba(239,68,68,0.4);">
-                    ⚠️ <strong>Calificación:</strong> ${miEntrega.nota}% — <strong style="color:#f87171;">MÓDULO NO ACREDITADO (&lt;70%)</strong>
+                    ⚠️ <strong>Calificación:</strong> ${this.esc(miEntrega.nota)}% — <strong style="color:#f87171;">MÓDULO NO ACREDITADO (&lt;70%)</strong>
                     <br><em>Esta entrega ha sido evaluada y cerrada. Si el docente asigna un trabajo recuperatorio, te aparecerá como una tarea nueva.</em>
-                    <br><a href="${miEntrega.url_entrega}" target="_blank" style="color:#38bdf8; text-decoration:underline; display:inline-block; margin-top:0.2rem;">Ver Entrega Evaluada</a>
-                    ${miEntrega.comentario_docente ? `<br>💬 <strong>Devolución Docente:</strong> ${miEntrega.comentario_docente}` : ''}
+                    <br><a href="${this.esc(this.urlSegura(miEntrega.url_entrega))}" target="_blank" rel="noopener noreferrer" style="color:#38bdf8; text-decoration:underline; display:inline-block; margin-top:0.2rem;">Ver Entrega Evaluada</a>
+                    ${miEntrega.comentario_docente ? `<br>💬 <strong>Devolución Docente:</strong> ${this.esc(miEntrega.comentario_docente)}` : ''}
                   </div>
                 `;
               }
@@ -511,7 +532,7 @@ const ClasesModulo = {
               estadoEntregaHTML = `
                 <div style="font-size:0.82rem; color:#facc15; margin-bottom:0.4rem; background:rgba(250,204,21,0.1); padding:0.5rem; border-radius:6px; border:1px solid rgba(250,204,21,0.3);">
                   ⏳ <strong>Trabajo Enviado:</strong> Pendiente de corrección por el docente. <em>(Podés corregir o reemplazar tu enlace antes de que sea calificado).</em>
-                  <br><a href="${miEntrega.url_entrega}" target="_blank" style="color:#38bdf8; text-decoration:underline; display:inline-block; margin-top:0.2rem;">Ver Archivo Enviado</a>
+                  <br><a href="${this.esc(this.urlSegura(miEntrega.url_entrega))}" target="_blank" rel="noopener noreferrer" style="color:#38bdf8; text-decoration:underline; display:inline-block; margin-top:0.2rem;">Ver Archivo Enviado</a>
                 </div>
               `;
             }
@@ -530,7 +551,7 @@ const ClasesModulo = {
                 ${estadoEntregaHTML}
                 ${!bloqueadoPorNota ? `
                   <div style="display:flex; gap:0.5rem; margin-top:0.3rem;">
-                    <input type="url" id="input-entrega-${c.id}" placeholder="Pegá el link a tu trabajo (Google Drive, PDF)" value="${miEntrega ? miEntrega.url_entrega : ''}" style="flex:1; padding:0.4rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px; font-size:0.82rem;">
+                    <input type="url" id="input-entrega-${c.id}" placeholder="Pegá el link a tu trabajo (Google Drive, PDF)" value="${miEntrega ? this.esc(miEntrega.url_entrega) : ''}" style="flex:1; padding:0.4rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px; font-size:0.82rem;">
                     <button type="button" onclick="ClasesModulo.enviarEntregaEstudiante(${c.id})" style="padding:0.4rem 0.8rem; background:#0284c7; color:#fff; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:0.8rem;">
                       ${miEntrega ? 'Actualizar Enlace' : 'Enviar Entrega'}
                     </button>
@@ -548,12 +569,12 @@ const ClasesModulo = {
         return `
           <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:0.8rem; display:flex; justify-content:space-between; align-items:flex-start;">
             <div style="flex:1; padding-right:1rem;">
-              <h4 style="margin:0 0 0.4rem 0; color:#f8fafc; font-size:0.95rem;">📌 ${c.titulo} ${badgeExclusivo}</h4>
+              <h4 style="margin:0 0 0.4rem 0; color:#f8fafc; font-size:0.95rem;">📌 ${this.esc(c.titulo)} ${badgeExclusivo}</h4>
               
-              ${c.url_recurso ? `
+              ${urlTeoria ? `
                 <div style="margin-bottom:0.5rem; display:flex; gap:0.4rem; flex-wrap:wrap; align-items:center;">
-                  <a href="${c.url_recurso}" target="_blank" rel="noopener" style="display:inline-block; padding:0.35rem 0.75rem; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; border-radius:6px; font-size:0.82rem; text-decoration:none; font-weight:600;">📚 Abrir Material Teórico de Clase</a>
-                  <button type="button" onclick="ClasesModulo.verEnPantalla('${urlTeoriaEscapada}', '${c.titulo.replace(/'/g, "\\'")}')" style="padding:0.35rem 0.75rem; background:rgba(56,189,248,0.25); border:1px solid rgba(56,189,248,0.5); color:#7dd3fc; border-radius:6px; font-size:0.82rem; cursor:pointer; font-weight:600;">👁️ Visualizar en Pantalla</button>
+                  <a href="${this.esc(urlTeoria)}" target="_blank" rel="noopener noreferrer" style="display:inline-block; padding:0.35rem 0.75rem; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; border-radius:6px; font-size:0.82rem; text-decoration:none; font-weight:600;">📚 Abrir Material Teórico de Clase</a>
+                  <button type="button" data-url="${this.esc(urlTeoria)}" data-titulo="${this.esc(c.titulo)}" onclick="ClasesModulo.verEnPantalla(this.dataset.url, this.dataset.titulo)" style="padding:0.35rem 0.75rem; background:rgba(56,189,248,0.25); border:1px solid rgba(56,189,248,0.5); color:#7dd3fc; border-radius:6px; font-size:0.82rem; cursor:pointer; font-weight:600;">👁️ Visualizar en Pantalla</button>
                 </div>
               ` : ''}
 
@@ -584,6 +605,11 @@ const ClasesModulo = {
 
     if (!url) {
       alert('Por favor pegá el enlace a tu trabajo práctico resuelto.');
+      return;
+    }
+    const urlValida = this.urlSegura(url);
+    if (!urlValida) {
+      alert('El enlace no es válido. Tiene que empezar con http:// o https:// (por ejemplo, un link de Google Drive).');
       return;
     }
 
@@ -617,7 +643,7 @@ const ClasesModulo = {
 
         const { error } = await supabase
           .from('entregas_actividades')
-          .update({ url_entrega: url, created_at: new Date() })
+          .update({ url_entrega: urlValida, created_at: new Date() })
           .eq('id', existe.id);
         if (error) throw error;
         alert('✅ Enlace actualizado correctamente.');
@@ -627,7 +653,7 @@ const ClasesModulo = {
           .insert([{
             clase_id: claseId,
             estudiante_user: String(idEstudiante),
-            url_entrega: url
+            url_entrega: urlValida
           }]);
         if (error) throw error;
         alert('✅ Trabajo Práctico entregado con éxito.');
@@ -726,6 +752,14 @@ const ClasesModulo = {
 
     if (!titulo) {
       alert('Por favor ingresá un título.');
+      return;
+    }
+    if (urlTeoria && !this.urlSegura(urlTeoria)) {
+      alert('El enlace del material teórico no es válido. Tiene que empezar con http:// o https://');
+      return;
+    }
+    if (urlActividad && !this.urlSegura(urlActividad)) {
+      alert('El enlace de la actividad no es válido. Tiene que empezar con http:// o https://');
       return;
     }
 
@@ -864,7 +898,7 @@ const ClasesModulo = {
 
       let thModulosHTML = '';
       if (tieneModulos) {
-        thModulosHTML = modulos.map(m => `<th style="padding:0.75rem; text-align:center;">${m.nombre}</th>`).join('');
+        thModulosHTML = modulos.map(m => `<th style="padding:0.75rem; text-align:center;">${this.esc(m.nombre)}</th>`).join('');
       } else {
         thModulosHTML = `<th style="padding:0.75rem; text-align:center;">Promedio General</th>`;
       }
@@ -971,12 +1005,12 @@ const ClasesModulo = {
           <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
             <td style="padding:0.75rem 1rem; color:#94a3b8;">${i + 1}</td>
             <td style="padding:0.75rem 1rem; font-weight:600; color:#f8fafc;">
-              ${nombreCompleto}
-              <span style="display:block; font-size:0.75rem; color:#94a3b8;">DNI: ${userKey}</span>
+              ${this.esc(nombreCompleto)}
+              <span style="display:block; font-size:0.75rem; color:#94a3b8;">DNI: ${this.esc(userKey)}</span>
             </td>
             ${celdasNotasHTML}
             <td style="padding:0.75rem 1rem; text-align:center;">
-              <button type="button" onclick="ClasesModulo.toggleExcepcionEstudiante('${userKey}', ${exEspecial ? 'false' : 'true'})" style="padding:0.3rem 0.6rem; border-radius:6px; border:none; font-size:0.75rem; font-weight:600; cursor:pointer; ${exEspecial ? 'background:#eab308; color:#000;' : 'background:rgba(255,255,255,0.08); color:#cbd5e1;'}">
+              <button type="button" onclick="ClasesModulo.toggleExcepcionEstudiante('${String(userKey).replace(/[^0-9A-Za-z_-]/g, '')}', ${exEspecial ? 'false' : 'true'})" style="padding:0.3rem 0.6rem; border-radius:6px; border:none; font-size:0.75rem; font-weight:600; cursor:pointer; ${exEspecial ? 'background:#eab308; color:#000;' : 'background:rgba(255,255,255,0.08); color:#cbd5e1;'}">
                 ${exEspecial ? '🔓 Excepción Activa' : '🔒 Excepción Inactiva'}
               </button>
             </td>
@@ -1087,7 +1121,7 @@ const ClasesModulo = {
         if (claseObj && claseObj.modulo_id) {
           const modObj = (modulos || []).find(m => Number(m.id) === Number(claseObj.modulo_id));
           if (modObj) {
-            moduloBadge = `<span style="font-size:0.75rem; background:rgba(250,204,21,0.15); color:#facc15; border:1px solid rgba(250,204,21,0.3); padding:0.15rem 0.4rem; border-radius:4px; margin-left:0.4rem;">📘 Módulo: ${modObj.nombre}</span>`;
+            moduloBadge = `<span style="font-size:0.75rem; background:rgba(250,204,21,0.15); color:#facc15; border:1px solid rgba(250,204,21,0.3); padding:0.15rem 0.4rem; border-radius:4px; margin-left:0.4rem;">📘 Módulo: ${this.esc(modObj.nombre)}</span>`;
           }
         }
 
@@ -1110,21 +1144,21 @@ const ClasesModulo = {
           <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:0.8rem;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:0.5rem;">
               <div>
-                <strong style="color:#38bdf8; font-size:0.9rem; display:inline-block;">📌 ${tituloClase}</strong> ${moduloBadge}
-                <div style="color:#f8fafc; font-size:0.85rem; font-weight:600; margin-top:0.2rem;">👤 Estudiante: ${nombreAlumno} ${estadoAcreditacionHTML}</div>
+                <strong style="color:#38bdf8; font-size:0.9rem; display:inline-block;">📌 ${this.esc(tituloClase)}</strong> ${moduloBadge}
+                <div style="color:#f8fafc; font-size:0.85rem; font-weight:600; margin-top:0.2rem;">👤 Estudiante: ${this.esc(nombreAlumno)} ${estadoAcreditacionHTML}</div>
               </div>
-              <a href="${ent.url_entrega}" target="_blank" rel="noopener" style="padding:0.3rem 0.6rem; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; border-radius:6px; font-size:0.8rem; text-decoration:none; font-weight:600;">🔗 Ver Trabajo Entregado</a>
+              <a href="${this.esc(this.urlSegura(ent.url_entrega))}" target="_blank" rel="noopener noreferrer" style="padding:0.3rem 0.6rem; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.3); color:#38bdf8; border-radius:6px; font-size:0.8rem; text-decoration:none; font-weight:600;">🔗 Ver Trabajo Entregado</a>
             </div>
 
             <div style="display:grid; grid-template-columns: 160px 1fr 100px; gap:0.6rem; margin-top:0.8rem; align-items:center;">
               <div>
                 <label style="display:block; font-size:0.75rem; color:#facc15; font-weight:600; margin-bottom:0.2rem;">Nota (0-100):</label>
-                <input type="text" id="nota-panel-${ent.id}" placeholder="Ej: 85" value="${ent.nota || ''}" style="width:100%; padding:0.4rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px; font-size:0.82rem;">
+                <input type="text" id="nota-panel-${ent.id}" placeholder="Ej: 85" value="${this.esc(ent.nota || '')}" style="width:100%; padding:0.4rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px; font-size:0.82rem;">
               </div>
 
               <div>
                 <label style="display:block; font-size:0.75rem; color:#cbd5e1; font-weight:600; margin-bottom:0.2rem;">Comentario / Devolución:</label>
-                <input type="text" id="coment-panel-${ent.id}" placeholder="Observaciones pedagógicas..." value="${ent.comentario_docente || ''}" style="width:100%; padding:0.4rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px; font-size:0.82rem;">
+                <input type="text" id="coment-panel-${ent.id}" placeholder="Observaciones pedagógicas..." value="${this.esc(ent.comentario_docente || '')}" style="width:100%; padding:0.4rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px; font-size:0.82rem;">
               </div>
 
               <button type="button" onclick="ClasesModulo.guardarCalificacionDesdePanel(${ent.id})" style="padding:0.45rem 0.6rem; background:#22c55e; color:#fff; border:none; border-radius:6px; font-weight:600; cursor:pointer; font-size:0.8rem; margin-top:1rem;">
