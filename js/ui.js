@@ -111,6 +111,9 @@ const UI = {
       el.style.setProperty('display', isAdmin ? (el.tagName === 'BUTTON' ? 'inline-flex' : 'block') : 'none', 'important');
     });
 
+    const btnProg = document.getElementById('btn-progreso');
+    if (btnProg) btnProg.style.setProperty('display', rolNorm === 'estudiante' ? 'flex' : 'none', 'important');
+
     if (!isAdmin) {
       this.showTab('trayectos');
     } else {
@@ -154,6 +157,7 @@ const UI = {
     if (titleEl) {
       const titles = {
         'dashboard': 'Dashboard',
+        'progreso': 'Mi progreso',
         'trayectos': isAdmin ? 'Trayectos Formativos' : 'Mis Trayectos Formativos',
         'actas': 'Fichas de Curso / Actas de Examen',
         'nuevo-trayecto': 'Cargar Trayecto',
@@ -167,6 +171,10 @@ const UI = {
 
     if (tabId === 'usuarios' && window.UsuariosAdmin) {
       window.UsuariosAdmin.cargarUsuarios();
+    }
+
+    if (tabId === 'progreso' && window.ProgresoModulo) {
+      window.ProgresoModulo.cargar();
     }
 
     if (tabId === 'auditoria' && window.AuditoriaModulo) {
@@ -304,7 +312,7 @@ const DashboardAdmin = {
       const cantInscriptos = inscripciones.length;
       const cantAprobados = inscripciones.filter(esAprobado).length;
       const cantCertificados = cantAprobados;
-      const cantDesaprobados = '—'; // pendiente: definir de dónde sale este dato
+      const cantDesaprobados = Math.max(0, cantInscriptos - cantAprobados);
 
       // 4. Inyectar números en las tarjetas KPI
       if (elTrayectos) elTrayectos.textContent = cantTrayectos;
@@ -320,36 +328,18 @@ const DashboardAdmin = {
           return;
         }
 
-        let htmlTabla = `
-          <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem; text-align: left;">
-            <thead>
-              <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); color: #94a3b8;">
-                <th style="padding: 0.5rem;">Trayecto</th>
-                <th style="padding: 0.5rem; text-align: center;">Inscriptos</th>
-                <th style="padding: 0.5rem; text-align: center;">Aprobados</th>
-                <th style="padding: 0.5rem; text-align: right;">Rendimiento</th>
-              </tr>
-            </thead>
-            <tbody>
-        `;
-
+        let htmlTabla = '<div class="dash-leyenda"><span><i style="background:#3FA7E0"></i>Inscriptos</span><span><i style="background:#F6B81A"></i>Aprobados</span></div><div class="dash-rows">';
+        const maxIns = Math.max(1, ...trayectos.map(t => inscripciones.filter(i => String(i.trayecto_id) === String(t.id)).length));
         trayectos.forEach(t => {
           const insT = inscripciones.filter(i => String(i.trayecto_id) === String(t.id));
           const inscrip = insT.length;
           const aprob = insT.filter(esAprobado).length;
           const pct = inscrip > 0 ? Math.round((aprob / inscrip) * 100) : 0;
-
-          htmlTabla += `
-            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-              <td style="padding: 0.6rem 0.5rem; font-weight: 600; color: #f8fafc;">${(t.nombre || 'Sin Nombre').toUpperCase()}</td>
-              <td style="padding: 0.6rem 0.5rem; text-align: center;">${inscrip}</td>
-              <td style="padding: 0.6rem 0.5rem; text-align: center; color: #4ade80;">${aprob}</td>
-              <td style="padding: 0.6rem 0.5rem; text-align: right; color: #fde047; font-weight: 700;">${pct}%</td>
-            </tr>
-          `;
+          const w = Math.round(inscrip / maxIns * 100);
+          const wa = inscrip > 0 ? Math.round(aprob / maxIns * 100) : 0;
+          htmlTabla += `<div><div class="dash-row-head"><span>${escHtml(t.nombre || 'Sin nombre')}</span><span>${aprob} de ${inscrip} · ${pct}%</span></div><div class="dash-bar"><div class="dash-bar-insc" style="width:${w}%"></div><div class="dash-bar-aprob" style="width:${wa}%"></div></div></div>`;
         });
-
-        htmlTabla += '</tbody></table>';
+        htmlTabla += '</div>';
         elDesglose.innerHTML = htmlTabla;
       }
 
