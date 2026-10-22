@@ -454,3 +454,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   .sidebar-nav .nav-item-btn { width: auto !important; }
   .main-wrapper { margin-left: 0 !important; }
 }
+
+/* La campana de notificaciones es fija: se le deja lugar para que no tape el nombre */
+.admin-header { padding-right: 110px !important; }
+#btn-notificaciones-campana { top: 10px !important; right: 16px !important; }
