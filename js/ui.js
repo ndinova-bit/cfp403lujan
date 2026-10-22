@@ -113,6 +113,10 @@ const UI = {
 
     const btnProg = document.getElementById('btn-progreso');
     if (btnProg) btnProg.style.setProperty('display', rolNorm === 'estudiante' ? 'flex' : 'none', 'important');
+    const btnSeg = document.getElementById('btn-seguimiento');
+    const puedeSeguir = isAdmin || rolNorm === 'docente';
+    if (btnSeg) btnSeg.style.setProperty('display', puedeSeguir ? 'flex' : 'none', 'important');
+    if (puedeSeguir && window.SeguimientoModulo) setTimeout(() => SeguimientoModulo.contarPendientes(), 800);
 
     if (!isAdmin) {
       this.showTab('trayectos');
@@ -134,6 +138,9 @@ const UI = {
     if (!isAdmin && (tabId === 'dashboard' || tabId === 'nuevo-trayecto' || tabId === 'certificados' || tabId === 'usuarios' || tabId === 'actas' || tabId === 'backups' || tabId === 'auditoria')) {
       tabId = 'trayectos';
     }
+
+    const rolActual = String(perfil.rol || '').toLowerCase().trim();
+    if (tabId === 'seguimiento' && !isAdmin && rolActual !== 'docente') tabId = 'trayectos';
 
     document.querySelectorAll('.section-tab').forEach(sec => {
       sec.style.setProperty('display', 'none', 'important');
@@ -158,6 +165,7 @@ const UI = {
       const titles = {
         'dashboard': 'Dashboard',
         'progreso': 'Mi progreso',
+        'seguimiento': 'Seguimiento',
         'trayectos': isAdmin ? 'Trayectos Formativos' : 'Mis Trayectos Formativos',
         'actas': 'Fichas de Curso / Actas de Examen',
         'nuevo-trayecto': 'Cargar Trayecto',
@@ -171,6 +179,10 @@ const UI = {
 
     if (tabId === 'usuarios' && window.UsuariosAdmin) {
       window.UsuariosAdmin.cargarUsuarios();
+    }
+
+    if (tabId === 'seguimiento' && window.SeguimientoModulo) {
+      window.SeguimientoModulo.cargar();
     }
 
     if (tabId === 'progreso' && window.ProgresoModulo) {
