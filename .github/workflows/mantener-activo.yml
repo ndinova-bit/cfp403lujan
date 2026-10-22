@@ -1,0 +1,20 @@
+# Evita que Supabase (plan gratuito) pause el proyecto por inactividad:
+# hace una consulta mínima cada 3 días. Es el mismo pedido público que hace el sitio.
+name: Mantener activo Supabase
+
+on:
+  schedule:
+    - cron: '0 12 */3 * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Consulta mínima a la base
+        run: |
+          CODIGO=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://dxgqtdaexlegsaohdywx.supabase.co/rest/v1/trayectos?select=id&limit=1" \
+            -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR4Z3F0ZGFleGxlZ3Nhb2hkeXd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0MDk3MTMsImV4cCI6MjEwNTk4NTcxM30.XFH0vQYm68RQcY8fQNbCx_5kt6Iclb-QeJWGBuyNQow")
+          echo "Respuesta: $CODIGO"
+          test "$CODIGO" = "200"
