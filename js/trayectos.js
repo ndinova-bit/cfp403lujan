@@ -281,9 +281,9 @@ const Trayectos = {
                 ${cicloBadge}
               </div>
 
-              <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.75rem; background: rgba(0,0,0,0.2); padding: 0.5rem; border-radius: 6px;">
-                📜 <strong>N° de Curso:</strong> ${Trayectos.esc(numCursoMostrado)}<br>
-                📑 <strong>Resolución:</strong> ${Trayectos.esc(trayecto.resolucion || 'S/D')}
+              <div class="trayecto-ficha">
+                <span><strong>N° de curso:</strong> ${Trayectos.esc(numCursoMostrado)}</span>
+                <span><strong>Resolución:</strong> ${Trayectos.esc(trayecto.resolucion || 'S/D')}</span>
               </div>
 
               <p style="color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.75rem; line-height: 1.4;">
