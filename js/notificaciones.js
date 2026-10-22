@@ -59,10 +59,10 @@ const NotificacionesModulo = {
       : notifs.map(n => `
         <div style="background:${n.leido ? 'rgba(255,255,255,0.02)' : 'rgba(56,189,248,0.1)'}; border:1px solid ${n.leido ? 'rgba(255,255,255,0.05)' : 'rgba(56,189,248,0.3)'}; border-radius:8px; padding:0.8rem; margin-bottom:0.6rem;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3rem;">
-            <strong style="color:#38bdf8; font-size:0.88rem;">${n.titulo}</strong>
+            <strong style="color:#38bdf8; font-size:0.88rem;">${escHtml(n.titulo)}</strong>
             <span style="font-size:0.72rem; color:#94a3b8;">${new Date(n.created_at).toLocaleDateString()}</span>
           </div>
-          <p style="margin:0; font-size:0.82rem; color:#cbd5e1;">${n.mensaje}</p>
+          <p style="margin:0; font-size:0.82rem; color:#cbd5e1;">${escHtml(n.mensaje)}</p>
         </div>
       `).join('');
 

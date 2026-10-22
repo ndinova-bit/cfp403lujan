@@ -164,10 +164,10 @@ const UsuariosAdmin = {
           <td style="padding: 0.85rem 0.75rem; text-align: right; display: flex; gap: 0.4rem; justify-content: flex-end; align-items: center;">
             ${!esActivo ? `
               <button class="btn btn-gold" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="UsuariosAdmin.cambiarEstado('${idPrimario}', 'ACTIVO')">
-                ✓ Aprobar
+                ${estadoRaw === 'INHABILITADO' ? '↩ Reactivar' : '✓ Aprobar'}
               </button>
             ` : `
-              <button class="btn btn-danger" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171;" onclick="UsuariosAdmin.cambiarEstado('${idPrimario}', 'PENDIENTE')">
+              <button class="btn btn-danger" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171;" onclick="UsuariosAdmin.cambiarEstado('${idPrimario}', 'INHABILITADO')">
                 🔒 Inhabilitar
               </button>
             `}
@@ -232,7 +232,7 @@ const UsuariosAdmin = {
     }
 
     const emailSintetico = emailRaw ? emailRaw.toLowerCase() : `${dniVal.toLowerCase()}@cfp403.ar`;
-    const passwordTemp = `CFP403_${dniVal}`;
+    const passwordTemp = window.generarClaveInicial();
 
     try {
       // Cliente temporal: así la sesión del administrador no se cierra al crear la cuenta
@@ -292,9 +292,16 @@ const UsuariosAdmin = {
         }
       }
 
-      alert(`✅ Usuario ${nombre} ${apellido} (${rol.toUpperCase()}) guardado correctamente en Supabase Auth.`);
       this.cerrarModal();
       this.cargarUsuarios();
+      await Swal.fire({
+        icon: 'success',
+        title: 'Usuario creado',
+        html: `<b>${Trayectos.esc(nombre)} ${Trayectos.esc(apellido)}</b> (${Trayectos.esc(rol)})<br><br>
+               Usuario: <b>${Trayectos.esc(dniVal)}</b><br>
+               Contraseña inicial: <code style="font-size:1.1rem; user-select:all;">${Trayectos.esc(passwordTemp)}</code><br><br>
+               <small>Anotala y pasásela a la persona: no se vuelve a mostrar. Después puede cambiarla desde "Cambiar mi contraseña".</small>`
+      });
 
     } catch (err) {
       console.error('Error general:', err);
@@ -383,31 +390,72 @@ const UsuariosAdmin = {
     }
   },
 
-  async eliminarUsuario(userId, nombreMostrar) {
+  // Baja de una persona. Lo recomendable es INHABILITAR (conserva el historial);
+  // eliminar borra también su cuenta de acceso.
+  async eliminarUsuario(userId) {
     if (this.esMiUsuario(userId)) {
-      alert('No podés eliminar tu propia cuenta.');
+      Swal.fire({ icon: 'info', title: 'No es posible', text: 'No podés eliminar ni inhabilitar tu propia cuenta.' });
       return;
     }
     const u = this.listaUsuarios.find(x => String(x.id) === String(userId));
-    const usuarioABorrar = nombreMostrar || (u ? (u.apellido ? `${u.apellido}, ${u.nombre}` : u.nombre) : userId);
+    const nombre = u ? (u.apellido ? `${u.apellido}, ${u.nombre}` : (u.nombre || u.dni)) : String(userId);
 
-    const confirmar = confirm(`⚠️ ¿Estás seguro de que querés eliminar el perfil de "${usuarioABorrar}"?\nLa persona ya no va a poder usar la plataforma. Esta acción no se puede deshacer.`);
-    if (!confirmar) return;
+    const r = await Swal.fire({
+      icon: 'warning',
+      title: 'Dar de baja',
+      html: `<b>${Trayectos.esc(nombre)}</b><br><br>
+        <b>Inhabilitar</b> (recomendado): no puede ingresar, pero se conserva su historial y se puede reactivar.<br><br>
+        <b>Eliminar definitivamente</b>: borra su cuenta de acceso. No se puede deshacer.`,
+      showDenyButton: true,
+      showCancelButton: true,
+      confirmButtonText: 'Inhabilitar',
+      denyButtonText: 'Eliminar definitivamente',
+      cancelButtonText: 'Cancelar'
+    });
 
+    if (r.isConfirmed) {
+      await this.cambiarEstado(userId, 'INHABILITADO');
+      return;
+    }
+    if (!r.isDenied) return;
+
+    await this._eliminarDefinitivo(userId, nombre, false);
+  },
+
+  async _eliminarDefinitivo(userId, nombre, forzar) {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', userId);
-
+      const { data, error } = await supabase.functions.invoke('eliminar-usuario', {
+        body: { user_id: userId, forzar }
+      });
       if (error) throw error;
+      if (data && data.error) throw new Error(data.error);
 
-      alert(`🗑️ Usuario "${usuarioABorrar}" eliminado correctamente.`);
+      if (data && data.requiere_confirmacion) {
+        const h = data.historial || {};
+        const c = await Swal.fire({
+          icon: 'warning',
+          title: 'Esta persona tiene historial',
+          html: `${h.inscripciones || 0} inscripciones, ${h.entregas || 0} entregas/notas y ${h.asistencias || 0} asistencias.<br><br>
+                 Si la eliminás, <b>se borra también ese historial</b> (queda una copia en Auditoría).<br>
+                 Para conservarlo, mejor <b>inhabilitala</b>.`,
+          showCancelButton: true,
+          confirmButtonText: 'Eliminar todo igual',
+          confirmButtonColor: '#dc2626',
+          cancelButtonText: 'Cancelar'
+        });
+        if (c.isConfirmed) await this._eliminarDefinitivo(userId, nombre, true);
+        return;
+      }
+
+      Swal.fire({ icon: 'success', title: 'Usuario eliminado', text: nombre });
       await this.cargarUsuarios();
-
     } catch (err) {
       console.error('Error al eliminar usuario:', err);
-      alert('Error al eliminar usuario: ' + (err.message || 'Ocurrió un problema durante la baja.'));
+      Swal.fire({
+        icon: 'error',
+        title: 'No se pudo eliminar',
+        text: (err.message || 'Error desconocido') + ' — Si la función "eliminar-usuario" todavía no está instalada en Supabase, usá Inhabilitar.'
+      });
     }
   }
 };

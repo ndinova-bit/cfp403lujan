@@ -55,8 +55,8 @@ const ActasModulo = {
         html += `
           <button type="button" class="btn btn-tab-trayecto ${esActivo ? 'btn-gold' : 'btn-outline'}" 
                   style="white-space: nowrap; font-size: 0.85rem; padding: 0.5rem 1rem;" 
-                  onclick="ActasModulo.seleccionarTrayecto('${t.id}', this)">
-            ${t.nombre}
+                  onclick="ActasModulo.seleccionarTrayecto('${Number(t.id)}', this)">
+            ${escHtml(t.nombre)}
           </button>
         `;
       });
@@ -108,7 +108,7 @@ const ActasModulo = {
 
     vista.innerHTML = `
       <div style="background: rgba(15,23,42,0.6); padding: 1.5rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 1.5rem;">
-        <h3 style="margin: 0 0 0.5rem 0; color: #38bdf8;">${trayecto.nombre}</h3>
+        <h3 style="margin: 0 0 0.5rem 0; color: #38bdf8;">${escHtml(trayecto.nombre)}</h3>
         <p style="margin: 0; color: #cbd5e1; font-size: 0.9rem;">Total de estudiantes inscriptos: <strong>${alumnos.length}</strong></p>
         
         <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">

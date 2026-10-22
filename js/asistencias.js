@@ -56,7 +56,7 @@ const AsistenciasModulo = {
       const filasHistorialHTML = Object.values(fechasMap).map(f => `
         <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
           <td style="padding:0.5rem 0.8rem; color:#cbd5e1;">${f.fecha.split('-').reverse().join('/')}</td>
-          <td style="padding:0.5rem 0.8rem; color:#facc15;">${f.modulo}</td>
+          <td style="padding:0.5rem 0.8rem; color:#facc15;">${escHtml(f.modulo)}</td>
           <td style="padding:0.5rem 0.8rem; text-align:center; color:#4ade80; font-weight:600;">${f.presentes} / ${f.total} Presentes</td>
         </tr>
       `).join('');
@@ -73,7 +73,7 @@ const AsistenciasModulo = {
               <label style="display:block; font-size:0.8rem; color:#cbd5e1; margin-bottom:0.2rem;">Módulo Afectado</label>
               <select id="asistencia-modulo-id" style="width:100%; padding:0.5rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px; font-size:0.85rem;">
                 <option value="">Aplica a Todos los Módulos (General)</option>
-                ${(modulos || []).map(m => `<option value="${m.id}">${m.nombre}</option>`).join('')}
+                ${(modulos || []).map(m => `<option value="${Number(m.id)}">${escHtml(m.nombre)}</option>`).join('')}
               </select>
             </div>
           </div>
@@ -113,11 +113,11 @@ const AsistenciasModulo = {
                   <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
                     <td style="padding:0.75rem 1rem; color:#94a3b8;">${i + 1}</td>
                     <td style="padding:0.75rem 1rem; color:#f8fafc; font-weight:600;">
-                      ${nombreCompleto} 
-                      <span style="font-size:0.75rem; color:#94a3b8; display:block;">DNI: ${userKey}</span>
+                      ${escHtml(nombreCompleto)} 
+                      <span style="font-size:0.75rem; color:#94a3b8; display:block;">DNI: ${escHtml(userKey)}</span>
                     </td>
                     <td style="padding:0.75rem 1rem; text-align:center;">
-                      <select class="select-asistencia-item" data-user="${userKey}" style="padding:0.4rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px; font-size:0.82rem;">
+                      <select class="select-asistencia-item" data-user="${escHtml(userKey)}" style="padding:0.4rem; background:#0f172a; border:1px solid #334155; color:#fff; border-radius:6px; font-size:0.82rem;">
                         <option value="presente">✅ Presente</option>
                         <option value="ausente">❌ Ausente</option>
                         <option value="justificado">⏳ Ausente Justificado</option>

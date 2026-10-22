@@ -128,7 +128,7 @@ const UI = {
     }
     const isAdmin = Auth.esAdmin(perfil.rol);
 
-    if (!isAdmin && (tabId === 'dashboard' || tabId === 'nuevo-trayecto' || tabId === 'certificados' || tabId === 'usuarios' || tabId === 'actas')) {
+    if (!isAdmin && (tabId === 'dashboard' || tabId === 'nuevo-trayecto' || tabId === 'certificados' || tabId === 'usuarios' || tabId === 'actas' || tabId === 'backups' || tabId === 'auditoria')) {
       tabId = 'trayectos';
     }
 
@@ -158,13 +158,19 @@ const UI = {
         'actas': 'Fichas de Curso / Actas de Examen',
         'nuevo-trayecto': 'Cargar Trayecto',
         'certificados': 'Emitir Certificados',
-        'usuarios': 'Usuarios y Roles'
+        'usuarios': 'Usuarios y Roles',
+        'backups': 'Base de Datos',
+        'auditoria': 'Auditoría de cambios'
       };
       titleEl.innerText = titles[tabId] || 'Panel de Control';
     }
 
     if (tabId === 'usuarios' && window.UsuariosAdmin) {
       window.UsuariosAdmin.cargarUsuarios();
+    }
+
+    if (tabId === 'auditoria' && window.AuditoriaModulo) {
+      window.AuditoriaModulo.cargar();
     }
 
     if (tabId === 'actas' && window.ActasModulo) {
@@ -291,30 +297,14 @@ const DashboardAdmin = {
         inscripciones = inscripciones.filter(i => idsTrayectosCiclo.includes(String(i.trayecto_id)));
       }
 
-      // 3. Criterio de Aprobado / Apto
-      const esAprobado = (i) => {
-        const est = String(i.estado || '').toUpperCase();
-        if (est === 'DESAPROBADO' || est === 'AUSENTE') return false;
-
-        const tieneNumEgresado = i.num_egresado && String(i.num_egresado).trim() !== '';
-        const notaNum = parseFloat(String(i.nota || i.porcentaje || '0').replace('%', ''));
-        const notaAprobada = !isNaN(notaNum) && notaNum >= 70;
-
-        return tieneNumEgresado || est === 'APROBADO' || est === 'ACREDITADO' || i.acreditado === true || notaAprobada;
-      };
+      // 3. Criterio: aprobado = tiene número de egresado cargado (certificación oficial)
+      const esAprobado = (i) => !!(i.num_egresado && String(i.num_egresado).trim() !== '');
 
       const cantTrayectos = trayectos.length;
       const cantInscriptos = inscripciones.length;
       const cantAprobados = inscripciones.filter(esAprobado).length;
-      
-      const cantCertificados = inscripciones.filter(i => 
-        i.num_egresado && String(i.num_egresado).trim() !== ''
-      ).length;
-
-      const cantDesaprobados = inscripciones.filter(i => {
-        const est = String(i.estado || '').toUpperCase();
-        return est === 'DESAPROBADO' || est === 'AUSENTE';
-      }).length;
+      const cantCertificados = cantAprobados;
+      const cantDesaprobados = '—'; // pendiente: definir de dónde sale este dato
 
       // 4. Inyectar números en las tarjetas KPI
       if (elTrayectos) elTrayectos.textContent = cantTrayectos;
