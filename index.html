@@ -34,7 +34,7 @@
   <!-- 4. CSS Panel de Administración -->
   <link rel="stylesheet" href="css/admin-dashboard.css?v=60005">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/tema-cfp.css?v=70008">
+  <link rel="stylesheet" href="css/tema-cfp.css?v=70009">
   <style>
     /* Los avisos de SweetAlert (progreso, resúmenes, errores) tienen que verse por encima de los paneles de la plataforma */
     .swal2-container { z-index: 20000 !important; }
@@ -316,6 +316,9 @@
   <button id="btn-progreso" class="nav-item-btn" style="display:none" onclick="UI.showTab('progreso')">
     <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg></span> Mi progreso
   </button>
+  <button id="btn-seguimiento" class="nav-item-btn" style="display:none" onclick="UI.showTab('seguimiento')">
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg></span> Seguimiento
+  </button>
   <button id="btn-trayectos" class="nav-item-btn" onclick="UI.showTab('trayectos')">
     <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2z"/><path d="M8 7h6"/></svg></span> Trayectos Formativos
   </button>
@@ -463,6 +466,8 @@
         </section>
 
         <!-- VISTA 2: LISTA DE TRAYECTOS DENTRO DEL DASHBOARD -->
+        <section id="seguimiento" class="section-tab" style="display: none;"><div id="seguimiento-contenido"></div></section>
+
         <section id="progreso" class="section-tab" style="display: none;"><div id="progreso-contenido"></div></section>
 
         <section id="trayectos" class="section-tab" style="display: none;">
@@ -819,12 +824,13 @@
   <script src="js/supabase-config.js?v=70007" defer></script>
   <script src="js/avisos.js?v=70008" defer></script>
   <script src="js/pdf-lab.js?v=70007" defer></script>
-  <script src="js/ui.js?v=70007" defer></script>
+  <script src="js/ui.js?v=70009" defer></script>
   <script src="js/auth.js?v=70007" defer></script>
   <script src="js/trayectos.js?v=70008" defer></script>
   <script src="js/usuarios.js?v=70007" defer></script>
   <script src="js/auditoria.js?v=70007" defer></script>
   <script src="js/progreso.js?v=70007" defer></script>
+  <script src="js/seguimiento.js?v=70009" defer></script>
   <script src="js/importador.js?v=70007" defer></script>
   <script src="js/clases.js?v=70007" defer></script>
   <script src="js/asistencias.js?v=70007" defer></script>
