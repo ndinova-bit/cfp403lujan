@@ -7,7 +7,7 @@
 
   <!-- Soporte App Móvil PWA -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0b111e">
+  <meta name="theme-color" content="#071B38">
 
   <!-- Fuente Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -32,6 +32,8 @@
 
   <!-- 4. CSS Panel de Administración -->
   <link rel="stylesheet" href="css/admin-dashboard.css?v=60005">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/tema-cfp.css?v=70007">
   <style>
     /* Los avisos de SweetAlert (progreso, resúmenes, errores) tienen que verse por encima de los paneles de la plataforma */
     .swal2-container { z-index: 20000 !important; }
@@ -308,39 +310,42 @@
 <!-- index.html (Navegación Sidebar) -->
 <nav class="sidebar-nav">
   <button id="btn-dashboard" class="nav-item-btn active" onclick="UI.showTab('dashboard')">
-    <span class="icon">📊</span> Dashboard
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></span> Dashboard
+  </button>
+  <button id="btn-progreso" class="nav-item-btn" style="display:none" onclick="UI.showTab('progreso')">
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg></span> Mi progreso
   </button>
   <button id="btn-trayectos" class="nav-item-btn" onclick="UI.showTab('trayectos')">
-    <span class="icon">📚</span> Trayectos Formativos
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2z"/><path d="M8 7h6"/></svg></span> Trayectos Formativos
   </button>
 
   <!-- NUEVO BOTÓN: FICHAS DE CURSO / ACTAS DE EXAMEN -->
   <button id="btn-actas" class="nav-item-btn admin-only" onclick="UI.showTab('actas')">
-    <span class="icon">📋</span> Fichas / Actas de Examen
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 11h6M9 15h6"/></svg></span> Fichas / Actas de Examen
   </button>
 
   <button id="btn-nuevo-trayecto" class="nav-item-btn admin-only" onclick="UI.showTab('nuevo-trayecto')">
-    <span class="icon">➕</span> Cargar Trayecto
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg></span> Cargar Trayecto
   </button>
   <button id="btn-certificados" class="nav-item-btn admin-only" onclick="UI.showTab('certificados')">
-    <span class="icon">📜</span> Emitir Certificados
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h9a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8z"/><path d="M8 3v5H5M9 13h6M9 17h4"/></svg></span> Emitir Certificados
   </button>
   <button id="btn-usuarios" class="nav-item-btn admin-only" onclick="UI.showTab('usuarios')">
-    <span class="icon">👥</span> Usuarios y Roles
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 3-6 6.5-6s6.500 2.400 6.500 6"/><path d="M16 4.500a3.500 3.500 0 0 1 0 7M18 14c2.200.800 3.500 2.700 3.500 6"/></svg></span> Usuarios y Roles
   </button>
   <button id="btn-backups" class="nav-item-btn admin-only" onclick="UI.showTab('backups')">
-    <span class="icon">💾</span> Base de Datos
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.700 3.600 3 8 3s8-1.300 8-3V6M4 12v6c0 1.700 3.600 3 8 3s8-1.300 8-3v-6"/></svg></span> Base de Datos
   </button>
   <button id="btn-auditoria" class="nav-item-btn admin-only" onclick="UI.showTab('auditoria')">
-    <span class="icon">🕵️</span> Auditoría
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 3.400 8.200 8 9 4.600-.800 8-4 8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></span> Auditoría
   </button>
 </nav>
 
       <button class="btn btn-outline" style="margin-top: auto; width: 100%; margin-bottom: 0.5rem;" onclick="Auth.cambiarMiClave()">
-        🔑 Cambiar mi contraseña
+        Cambiar mi contraseña
       </button>
       <button class="btn btn-danger" style="width: 100%;" onclick="Auth.cerrarSesion()">
-        🚪 Cerrar Sesión
+        Cerrar sesión
       </button>
     </aside>
 
@@ -384,7 +389,7 @@
           <!-- Grilla de Tarjetas KPI -->
           <div class="stats-grid">
             <div class="stat-card">
-              <div class="stat-icon" style="background: rgba(37, 99, 235, 0.15); color: #38bdf8;">🎓</div>
+              <div class="stat-icon" style="background:#E6F3FC;color:#1D5FA8;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c0 1.500 2.700 3 6 3s6-1.500 6-3v-5"/></svg></div>
               <div class="stat-info">
                 <h4>Trayectos Activos</h4>
                 <p class="stat-value" id="stat-count-trayectos">--</p>
@@ -392,7 +397,7 @@
             </div>
 
             <div class="stat-card">
-              <div class="stat-icon" style="background: rgba(168, 85, 247, 0.15); color: #c084fc;">👥</div>
+              <div class="stat-icon" style="background:#EAE8FB;color:#5B4BC4;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 3-6 6.5-6s6.500 2.400 6.500 6"/><path d="M16 4.500a3.500 3.500 0 0 1 0 7M18 14c2.200.800 3.500 2.700 3.500 6"/></svg></div>
               <div class="stat-info">
                 <h4>Matrícula / Inscriptos</h4>
                 <p class="stat-value" id="stat-count-inscriptos">--</p>
@@ -400,7 +405,7 @@
             </div>
 
             <div class="stat-card">
-              <div class="stat-icon" style="background: rgba(34, 197, 94, 0.15); color: #4ade80;">✅</div>
+              <div class="stat-icon" style="background:#DDF5EA;color:#146B47;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg></div>
               <div class="stat-info">
                 <h4>Aprobados / Aptos</h4>
                 <p class="stat-value" id="stat-count-aprobados">--</p>
@@ -408,7 +413,7 @@
             </div>
 
             <div class="stat-card">
-              <div class="stat-icon" style="background: rgba(234, 179, 8, 0.15); color: #fde047;">📜</div>
+              <div class="stat-icon" style="background:#FFF4D1;color:#7A5600;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h9a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8z"/><path d="M8 3v5H5M9 13h6M9 17h4"/></svg></div>
               <div class="stat-info">
                 <h4>Certificados Emitidos</h4>
                 <p class="stat-value" id="stat-count-certificados">--</p>
@@ -416,9 +421,9 @@
             </div>
 
             <div class="stat-card">
-              <div class="stat-icon" style="background: rgba(239, 68, 68, 0.15); color: #f87171;">⚠️</div>
+              <div class="stat-icon" style="background:#FDE7E5;color:#B42318;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20z"/><path d="M12 10v5M12 18h.01"/></svg></div>
               <div class="stat-info">
-                <h4>Desaprobados / Ausentes</h4>
+                <h4>Sin certificar</h4>
                 <p class="stat-value" id="stat-count-desaprobados">--</p>
               </div>
             </div>
@@ -429,7 +434,7 @@
             <!-- Tabla de Rendimiento por Trayecto -->
             <div class="card-panel" style="margin: 0;">
               <div class="card-panel-header">
-                <h4 style="margin: 0; color: #f8fafc;">📈 Rendimiento por Trayecto</h4>
+                <h4 style="margin: 0; color: #f8fafc;">Rendimiento por trayecto</h4>
               </div>
               <div id="desglose-trayectos-dashboard" style="overflow-x: auto;">
                 <p style="color: #94a3b8; font-size: 0.85rem;">Cargando resumen de trayectos...</p>
@@ -439,7 +444,7 @@
             <!-- Acciones Rápidas -->
             <div class="card-panel" style="margin: 0;">
               <div class="card-panel-header">
-                <h4 style="margin: 0; color: #f8fafc;">⚡ Acciones Rápidas</h4>
+                <h4 style="margin: 0; color: #f8fafc;">Acciones rápidas</h4>
               </div>
               <div style="display: flex; flex-direction: column; gap: 0.75rem;">
                 <button type="button" class="btn btn-primary" style="text-align: left; justify-content: flex-start;" onclick="if(window.UsuariosAdmin && UsuariosAdmin.abrirModal) { UsuariosAdmin.abrirModal(); } else if(window.UI && UI.abrirModalNuevoUsuario) { UI.abrirModalNuevoUsuario(); }">
@@ -457,6 +462,8 @@
         </section>
 
         <!-- VISTA 2: LISTA DE TRAYECTOS DENTRO DEL DASHBOARD -->
+        <section id="progreso" class="section-tab" style="display: none;"><div id="progreso-contenido"></div></section>
+
         <section id="trayectos" class="section-tab" style="display: none;">
           <div class="card-panel-header">
             <div>
@@ -807,19 +814,20 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
   
   <!-- Lógica Interna (Sin caracteres sueltos y con versión actualizada) -->
-  <script src="js/entorno-prueba.js?v=70006" defer></script>
-  <script src="js/supabase-config.js?v=70006" defer></script>
-  <script src="js/pdf-lab.js?v=70006" defer></script>
-  <script src="js/ui.js?v=70006" defer></script>
-  <script src="js/auth.js?v=70006" defer></script>
-  <script src="js/trayectos.js?v=70006" defer></script>
-  <script src="js/usuarios.js?v=70006" defer></script>
-  <script src="js/auditoria.js?v=70006" defer></script>
-  <script src="js/importador.js?v=70006" defer></script>
-  <script src="js/clases.js?v=70006" defer></script>
-  <script src="js/asistencias.js?v=70006" defer></script>
-  <script src="js/reportes.js?v=70006" defer></script>
-  <script src="js/notificaciones.js?v=70006" defer></script>
-  <script src="js/actas.js?v=70006" defer></script>
+  <script src="js/entorno-prueba.js?v=70007" defer></script>
+  <script src="js/supabase-config.js?v=70007" defer></script>
+  <script src="js/pdf-lab.js?v=70007" defer></script>
+  <script src="js/ui.js?v=70007" defer></script>
+  <script src="js/auth.js?v=70007" defer></script>
+  <script src="js/trayectos.js?v=70007" defer></script>
+  <script src="js/usuarios.js?v=70007" defer></script>
+  <script src="js/auditoria.js?v=70007" defer></script>
+  <script src="js/progreso.js?v=70007" defer></script>
+  <script src="js/importador.js?v=70007" defer></script>
+  <script src="js/clases.js?v=70007" defer></script>
+  <script src="js/asistencias.js?v=70007" defer></script>
+  <script src="js/reportes.js?v=70007" defer></script>
+  <script src="js/notificaciones.js?v=70007" defer></script>
+  <script src="js/actas.js?v=70007" defer></script>
 </body>
 </html>
