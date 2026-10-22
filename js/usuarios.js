@@ -171,6 +171,7 @@ const UsuariosAdmin = {
                 🔒 Inhabilitar
               </button>
             `}
+            ${u.rol === 'estudiante' ? `<button title="Ver ficha de cursada" class="btn-ficha" onclick="FichaAlumno.abrir('${Trayectos.esc(String(u.dni || u.usuario || '').replace(/\D/g, ''))}')">Ficha</button>` : ''}
             <button title="Restablecer contraseña" style="padding: 0.35rem 0.6rem; font-size: 0.8rem; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; border-radius: 6px; cursor: pointer;" onclick="UsuariosAdmin.restablecerClave('${idPrimario}')">
               🔑
             </button>
@@ -232,7 +233,7 @@ const UsuariosAdmin = {
     }
 
     const emailSintetico = emailRaw ? emailRaw.toLowerCase() : `${dniVal.toLowerCase()}@cfp403.ar`;
-    const passwordTemp = window.generarClaveInicial();
+    const passwordTemp = `CFP403_${dniVal}`;
 
     try {
       // Cliente temporal: así la sesión del administrador no se cierra al crear la cuenta
@@ -300,7 +301,7 @@ const UsuariosAdmin = {
         html: `<b>${Trayectos.esc(nombre)} ${Trayectos.esc(apellido)}</b> (${Trayectos.esc(rol)})<br><br>
                Usuario: <b>${Trayectos.esc(dniVal)}</b><br>
                Contraseña inicial: <code style="font-size:1.1rem; user-select:all;">${Trayectos.esc(passwordTemp)}</code><br><br>
-               <small>Anotala y pasásela a la persona: no se vuelve a mostrar. Después puede cambiarla desde "Cambiar mi contraseña".</small>`
+               <small>La persona puede cambiarla desde "Cambiar mi contraseña".</small>`
       });
 
     } catch (err) {

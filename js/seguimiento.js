@@ -87,7 +87,7 @@ const SeguimientoModulo = {
         htmlPend += `
           <div class="seg-item" id="seg-ent-${Number(e.id)}">
             <div class="seg-item-info">
-              <strong>${this.esc(this.nombreDe(alumnos, e.estudiante_user))}</strong>
+              <strong><button type="button" class="seg-nombre" onclick="FichaAlumno.abrir('${this.esc(String(e.estudiante_user).replace(/\D/g, ''))}')">${this.esc(this.nombreDe(alumnos, e.estudiante_user))}</button></strong>
               <span>${this.esc(c ? c.titulo : 'Actividad')}</span>
             </div>
             ${url !== '#' ? `<a class="seg-ver" href="${this.esc(url)}" target="_blank" rel="noopener noreferrer">Ver trabajo</a>` : '<span class="seg-sinlink">Sin enlace</span>'}
@@ -127,6 +127,7 @@ const SeguimientoModulo = {
       filas.forEach(f => {
         htmlRiesgo += `<div class="seg-item riesgo">
             <div class="seg-item-info"><strong>${this.esc(f.nombre)}</strong><span>DNI ${this.esc(f.key)}</span></div>
+            <button type="button" class="seg-ver" onclick="FichaAlumno.abrir('${this.esc(String(f.key).replace(/\D/g, ''))}')">Ver ficha</button>
             <div class="seg-chips">${f.motivos.map(m => `<span class="seg-chip">${this.esc(m)}</span>`).join('')}</div>
           </div>`;
       });

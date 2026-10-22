@@ -135,7 +135,7 @@ const UI = {
     }
     const isAdmin = Auth.esAdmin(perfil.rol);
 
-    if (!isAdmin && (tabId === 'dashboard' || tabId === 'nuevo-trayecto' || tabId === 'certificados' || tabId === 'usuarios' || tabId === 'actas' || tabId === 'backups' || tabId === 'auditoria')) {
+    if (!isAdmin && (tabId === 'dashboard' || tabId === 'nuevo-trayecto' || tabId === 'certificados' || tabId === 'usuarios' || tabId === 'actas' || tabId === 'backups' || tabId === 'auditoria' || tabId === 'novedades')) {
       tabId = 'trayectos';
     }
 
@@ -166,6 +166,7 @@ const UI = {
         'dashboard': 'Dashboard',
         'progreso': 'Mi progreso',
         'seguimiento': 'Seguimiento',
+        'novedades': 'Novedades y calendario',
         'trayectos': isAdmin ? 'Trayectos Formativos' : 'Mis Trayectos Formativos',
         'actas': 'Fichas de Curso / Actas de Examen',
         'nuevo-trayecto': 'Cargar Trayecto',
@@ -179,6 +180,14 @@ const UI = {
 
     if (tabId === 'usuarios' && window.UsuariosAdmin) {
       window.UsuariosAdmin.cargarUsuarios();
+    }
+
+    if (tabId === 'novedades' && window.NovedadesModulo) {
+      window.NovedadesModulo.cargarAdmin();
+    }
+
+    if ((tabId === 'trayectos' || tabId === 'progreso') && window.NovedadesModulo) {
+      window.NovedadesModulo.mostrarEnPlataforma();
     }
 
     if (tabId === 'seguimiento' && window.SeguimientoModulo) {

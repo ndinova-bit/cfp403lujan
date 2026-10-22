@@ -28,21 +28,26 @@ const ProgresoModulo = {
   async cargar() {
     const cont = document.getElementById('progreso-contenido');
     if (!cont) return;
-    cont.innerHTML = '<p style="color:#5B6B82">Cargando tu progreso…</p>';
-    try {
-      const perfil = await Auth.obtenerPerfilSesion();
-      const key = String(perfil.usuario || perfil.dni || perfil.id);
+    const perfil = await Auth.obtenerPerfilSesion();
+    if (!perfil) return;
+    await this.cargarPara(String(perfil.usuario || perfil.dni || perfil.id), cont, { boton: true });
+  },
 
-      const { data: insc } = await supabase.from('inscripciones').select('trayecto_id').eq('estudiante_user', key);
+  // Dibuja el progreso de un estudiante (por DNI) dentro de un contenedor.
+  // Lo usan "Mi progreso" (el propio alumno) y la ficha del alumno (admin / docente).
+  async cargarPara(key, cont, opciones = {}) {
+    cont.innerHTML = '<p style="color:#5B6B82">Cargando progreso…</p>';
+    try {
+      const { data: insc } = await supabase.from('inscripciones').select('trayecto_id, num_egresado').eq('estudiante_user', key);
       const ids = (insc || []).map(i => Number(i.trayecto_id));
       if (!ids.length) {
-        cont.innerHTML = '<div class="prog-vacio">Todavía no estás inscripto/a en ningún trayecto.</div>';
-        return;
+        cont.innerHTML = `<div class="prog-vacio">${opciones.boton ? 'Todavía no estás inscripto/a en ningún trayecto.' : 'No tiene inscripciones en trayectos.'}</div>`;
+        return { entregas: [], clases: [] };
       }
       const [rT, rM, rC, rA, rX] = await Promise.all([
         supabase.from('trayectos').select('*').in('id', ids),
         supabase.from('modulos').select('*').in('trayecto_id', ids).order('id', { ascending: true }),
-        supabase.from('clases').select('id, modulo_id, trayecto_id').in('trayecto_id', ids),
+        supabase.from('clases').select('id, titulo, modulo_id, trayecto_id').in('trayecto_id', ids),
         supabase.from('asistencias').select('*').eq('estudiante_user', key),
         supabase.from('excepciones_estudiantes').select('*').eq('estudiante_user', key).eq('habilitado', true)
       ]);
@@ -56,16 +61,19 @@ const ProgresoModulo = {
       const asis = rA.data || [];
       const exc = rX.data || [];
 
-      cont.innerHTML = '<div class="prog-wrap">' + (rT.data || []).map(t =>
-        this.tarjeta(t, (rM.data || []).filter(m => Number(m.trayecto_id) === Number(t.id)), clases, entregas, asis, exc)
-      ).join('') + '</div>';
+      cont.innerHTML = '<div class="prog-wrap">' + (rT.data || []).map(t => {
+        const ins = (insc || []).find(i => Number(i.trayecto_id) === Number(t.id));
+        return this.tarjeta(t, (rM.data || []).filter(m => Number(m.trayecto_id) === Number(t.id)), clases, entregas, asis, exc, opciones, ins);
+      }).join('') + '</div>';
+      return { entregas, clases, trayectos: rT.data || [] };
     } catch (e) {
-      console.error('Mi progreso:', e);
-      cont.innerHTML = '<div class="prog-vacio">No se pudo cargar tu progreso. Probá recargar la página.</div>';
+      console.error('Progreso:', e);
+      cont.innerHTML = '<div class="prog-vacio">No se pudo cargar el progreso. Probá recargar la página.</div>';
+      return { entregas: [], clases: [] };
     }
   },
 
-  tarjeta(t, modulos, clases, entregas, asis, exc) {
+  tarjeta(t, modulos, clases, entregas, asis, exc, opciones = { boton: true }, ins = null) {
     const tid = Number(t.id);
     const asT = asis.filter(a => Number(a.trayecto_id) === tid);
     const habExc = exc.some(x => Number(x.trayecto_id) === tid);
@@ -93,7 +101,7 @@ const ProgresoModulo = {
       if (aprobado) estado = 'ok';
       else if (enCursoMarcado) estado = 'curso';
       if (!aprobado) enCursoMarcado = true;
-      const detalle = aprobado ? 'Aprobado' : (nota === null ? 'Sin calificaciones todavía' : `En curso · necesitás ${this.MINIMO} o más`);
+      const detalle = aprobado ? 'Aprobado' : (nota === null ? 'Sin calificaciones todavía' : `En curso · ${opciones.boton ? 'necesitás' : 'se necesita'} ${this.MINIMO} o más`);
       const clsNota = aprobado ? 'ok' : (nota !== null && nota < this.MINIMO ? 'bad' : 'curso');
       filas += `<div class="prog-mod ${estado === 'curso' ? 'curso' : ''}"><span class="prog-mod-ico ${estado}">${this.ICO[estado]}</span><div class="prog-mod-info"><strong>${titulo}</strong><span>${detalle} · ${ent.length} actividad(es) entregada(s)</span></div>${nota !== null ? `<span class="prog-mod-nota ${clsNota}">${nota}</span>` : ''}</div>`;
       aprobadoAnterior = aprobado;
@@ -104,8 +112,8 @@ const ProgresoModulo = {
     const grados = prom === null ? 0 : Math.min(100, prom);
     let chip = '<span class="prog-estado none">Sin datos aún</span>';
     if (prom !== null) chip = prom >= this.MINIMO
-      ? '<span class="prog-estado ok">Vas en camino</span>'
-      : (prom >= this.MINIMO - 10 ? '<span class="prog-estado mid">Casi llegás</span>' : '<span class="prog-estado bad">Necesitás recuperar</span>');
+      ? (opciones.boton ? '<span class="prog-estado ok">Vas en camino</span>' : '<span class="prog-estado ok">En condiciones</span>')
+      : (prom >= this.MINIMO - 10 ? (opciones.boton ? '<span class="prog-estado mid">Casi llegás</span>' : '<span class="prog-estado mid">Cerca del mínimo</span>') : (opciones.boton ? '<span class="prog-estado bad">Necesitás recuperar</span>' : '<span class="prog-estado bad">Debajo del mínimo</span>'));
     const color = prom === null ? '#E3EBF5' : (prom >= this.MINIMO ? '#1E9E6A' : (prom >= this.MINIMO - 10 ? '#F6B81A' : '#D64545'));
 
     return `
@@ -114,7 +122,7 @@ const ProgresoModulo = {
         <div class="prog-top-info">
           <span class="prog-chip">${this.esc(t.modalidad || 'Trayecto formativo')}</span>
           <h2 class="prog-title">${this.esc(t.nombre)}</h2>
-          <p class="prog-sub">Para certificar necesitás un promedio de <strong>${this.MINIMO} o más</strong>.</p>
+          <p class="prog-sub">Para certificar ${opciones.boton ? 'necesitás' : 'se necesita'} un promedio de <strong>${this.MINIMO} o más</strong>.</p>
           <div class="prog-bar"><div class="prog-bar-fill" style="width:${grados}%"></div><div class="prog-bar-mark"></div></div>
           <div class="prog-bar-legend"><span>0</span><span>Mínimo para certificar: ${this.MINIMO}</span><span>100</span></div>
         </div>
@@ -133,7 +141,8 @@ const ProgresoModulo = {
             <div class="prog-asis-num">${pctAs === null ? '–' : pctAs + '%'} <small>de las clases</small></div>
             <div class="prog-mini"><div style="width:${pctAs || 0}%"></div></div>
           </div>
-          <button class="prog-open" onclick="UI.showTab('trayectos')">Ir a mis clases y actividades</button>
+          ${ins && ins.num_egresado ? `<div class="prog-side-card prog-egresado"><h3>Egresado/a</h3><div>N° de egresado: <strong>${this.esc(ins.num_egresado)}</strong></div></div>` : ''}
+          ${opciones.boton ? `<button class="prog-open" onclick="UI.showTab('trayectos')">Ir a mis clases y actividades</button>` : ''}
         </div>
       </div>
     </section>`;
