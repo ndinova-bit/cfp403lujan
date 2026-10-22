@@ -458,3 +458,22 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 /* La campana de notificaciones es fija: se le deja lugar para que no tape el nombre */
 .admin-header { padding-right: 110px !important; }
 #btn-notificaciones-campana { top: 10px !important; right: 16px !important; }
+
+/* Ficha del trayecto (N° de curso / Resolución) en las tarjetas */
+.trayecto-ficha {
+  display: flex; flex-direction: column; gap: .25rem;
+  font-size: .8rem; line-height: 1.45; color: var(--cfp-ink-2);
+  background: var(--cfp-celeste-soft); border-left: 3px solid var(--cfp-celeste);
+  padding: .6rem .75rem; border-radius: 8px; margin-bottom: .75rem;
+  word-break: break-word;
+}
+.trayecto-ficha strong { color: var(--cfp-navy); }
+
+/* Módulos dentro de las tarjetas */
+.modulo-card strong { color: var(--cfp-ink) !important; }
+.modulo-card span { color: var(--cfp-blue) !important; font-weight: 600; }
+
+/* Etiqueta "Ciclo lectivo" de las tarjetas */
+[style*="background: rgba(56, 189, 248"], [style*="background:rgba(56,189,248"] {
+  background: var(--cfp-celeste-soft) !important; color: var(--cfp-blue) !important; border-color: #BFE0F5 !important;
+}
