@@ -507,3 +507,91 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .seg-chip { font-size: .75rem; font-weight: 700; padding: .25rem .6rem; border-radius: 999px; background: var(--cfp-bad-soft); color: var(--cfp-bad); }
 .seg-ok { padding: 1rem 1.25rem; border-radius: 12px; background: var(--cfp-ok-soft); color: var(--cfp-ok); font-weight: 700; font-size: .9rem; }
 .seg-badge { margin-left: auto; min-width: 22px; height: 20px; padding: 0 .4rem; border-radius: 999px; background: var(--cfp-yellow); color: var(--cfp-navy-deep); font-size: .72rem; font-weight: 800; align-items: center; justify-content: center; }
+
+/* ==========================================================================
+   9. NOVEDADES Y CALENDARIO
+   ========================================================================== */
+.nov-grid { display: grid !important; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+.nov-card { display: flex; gap: 1rem; align-items: flex-start; background: #fff; border: 1px solid var(--cfp-line); border-radius: 16px; padding: 1.1rem 1.2rem; box-shadow: var(--shadow-card); text-align: left; }
+.nov-card.compacta { padding: .85rem 1rem; box-shadow: none; }
+.nov-fecha { flex: none; width: 56px; height: 60px; border-radius: 12px; background: var(--cfp-navy); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+.nov-fecha strong { font-size: 1.35rem; font-weight: 800; }
+.nov-fecha span { font-size: .72rem; font-weight: 700; text-transform: uppercase; color: var(--cfp-yellow); margin-top: .2rem; }
+.nov-fecha.sin { background: var(--cfp-celeste-soft); font-size: 1.5rem; }
+.nov-card.compacta .nov-fecha { width: 48px; height: 52px; }
+.nov-info { min-width: 0; flex: 1; }
+.nov-info h3 { margin: .15rem 0 .25rem; font-size: 1rem; font-weight: 800; color: var(--cfp-ink); }
+.nov-info p { margin: 0; font-size: .86rem; line-height: 1.5; color: var(--cfp-ink-2); }
+.nov-tipo { font-size: .72rem; font-weight: 700; color: var(--cfp-blue); text-transform: uppercase; letter-spacing: .03em; }
+.tipo-feriado .nov-fecha:not(.sin) { background: var(--cfp-bad); }
+.tipo-feriado .nov-fecha span { color: #fff; }
+.tipo-examen .nov-fecha:not(.sin) { background: var(--cfp-blue); }
+.tipo-acto .nov-fecha:not(.sin) { background: var(--cfp-yellow); color: var(--cfp-navy-deep); }
+.tipo-acto .nov-fecha span { color: var(--cfp-navy-deep); }
+
+.nov-usuario { margin-bottom: 1.5rem; }
+.nov-usuario h3 { margin: 0 0 .6rem; font-size: 1rem; font-weight: 800; color: var(--cfp-ink); }
+.nov-usuario-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: .75rem; }
+
+.nov-form-panel { margin-bottom: 1.5rem; }
+#novedades-admin .card-panel { padding: 1.5rem !important; }
+#novedades-admin .card-panel-header { margin-bottom: 1rem; }
+.nov-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 1rem; }
+.nov-col-2 { grid-column: 1 / -1; }
+.nov-check { display: flex; align-items: center; gap: .5rem; font-size: .88rem; color: var(--cfp-ink-2); margin: .25rem 0 1rem; }
+.nov-botones { display: flex; gap: .75rem; flex-wrap: wrap; }
+.nov-admin-item { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; padding: .6rem 0; border-bottom: 1px solid var(--cfp-line); }
+.nov-admin-item:last-child { border-bottom: none; }
+.nov-admin-item .nov-card { flex: 1 1 340px; }
+.nov-admin-acciones { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.nov-admin-acciones .btn { padding: .4rem .75rem !important; font-size: .8rem !important; }
+.nov-estado { font-size: .72rem; font-weight: 800; padding: .25rem .6rem; border-radius: 999px; }
+.nov-estado.web { background: var(--cfp-ok-soft); color: var(--cfp-ok); }
+.nov-estado.interna { background: var(--cfp-celeste-soft); color: var(--cfp-blue); }
+.nov-estado.oculta { background: #EEF3F9; color: var(--cfp-muted); }
+@media (max-width: 640px) { .nov-form-grid { grid-template-columns: 1fr; } }
+
+/* ==========================================================================
+   10. FICHA DEL ALUMNO
+   ========================================================================== */
+.btn-ficha { padding: .35rem .65rem; font-size: .8rem; font-weight: 700; background: var(--cfp-celeste-soft); color: var(--cfp-blue); border: 1px solid #BFE0F5; border-radius: 6px; cursor: pointer; }
+.btn-ficha:hover { background: #D3EAFA; }
+.seg-nombre { background: none; border: none; padding: 0; font: inherit; font-weight: 700; color: var(--cfp-ink); cursor: pointer; text-align: left; text-decoration: underline; text-decoration-color: var(--cfp-line-2); text-underline-offset: 3px; }
+.seg-nombre:hover { color: var(--cfp-blue); }
+button.seg-ver { border: none; cursor: pointer; font-family: inherit; }
+
+.ficha-overlay { position: fixed; inset: 0; z-index: 100001; background: rgba(7, 27, 56, .6); display: none; align-items: flex-start; justify-content: center; padding: 2rem 1rem; overflow-y: auto; }
+.ficha-overlay.abierta { display: flex; }
+.ficha-caja { width: 100%; max-width: 1100px; background: #F5F8FC; border-radius: 20px; box-shadow: 0 30px 60px -20px rgba(0, 0, 0, .5); overflow: hidden; }
+.ficha-cabecera { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; padding: 1.5rem 1.75rem; background: var(--cfp-navy-deep); border-bottom: 3px solid var(--cfp-yellow); }
+.ficha-cabecera h2 { margin: .3rem 0 .2rem; color: #fff; font-size: 1.5rem; font-weight: 800; }
+.ficha-cabecera p { margin: 0; color: #CFE2F5; font-size: .88rem; }
+.ficha-etiqueta { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--cfp-yellow); }
+.ficha-acciones { display: flex; gap: .5rem; align-items: center; }
+.ficha-acciones .btn { padding: .45rem .9rem !important; font-size: .85rem !important; }
+.ficha-cerrar { width: 38px; height: 38px; border-radius: 10px; border: 1px solid #2B4A74; background: transparent; color: #fff; font-size: 1rem; cursor: pointer; }
+.ficha-cerrar:hover { background: rgba(255, 255, 255, .1); }
+.ficha-cuerpo { padding: 1.5rem 1.75rem 2rem; }
+.ficha-entregas { margin-top: 1.5rem; background: #fff; border: 1px solid var(--cfp-line); border-radius: 20px; padding: 1.5rem; }
+.ficha-entregas h3 { margin: 0 0 1rem; font-size: 1.05rem; font-weight: 800; color: var(--cfp-ink); }
+.ficha-tabla-wrap { overflow-x: auto; }
+.ficha-tabla { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.ficha-tabla th { text-align: left; font-size: .75rem; text-transform: uppercase; letter-spacing: .03em; color: var(--cfp-muted); padding: .5rem .6rem; border-bottom: 2px solid var(--cfp-line); }
+.ficha-tabla td { padding: .6rem; border-bottom: 1px solid var(--cfp-line); color: var(--cfp-ink-2); vertical-align: top; }
+.ficha-tabla a { color: var(--cfp-blue); font-weight: 700; }
+.ficha-ok { color: var(--cfp-ok); }
+.ficha-bad { color: var(--cfp-bad); }
+.ficha-pend { font-size: .75rem; font-weight: 700; padding: .2rem .5rem; border-radius: 999px; background: var(--cfp-yellow-soft); color: #7A5600; }
+.ficha-vacio { color: var(--cfp-muted); margin: 0; }
+.prog-egresado { background: var(--cfp-ok-soft); border-color: #BCE8D3 !important; color: var(--cfp-ok); }
+.prog-egresado h3 { color: var(--cfp-ok) !important; }
+
+/* Imprimir la ficha: solo se imprime la ficha */
+@media print {
+  body.ficha-imprimiendo > *:not(#modal-ficha-alumno) { display: none !important; }
+  body.ficha-imprimiendo #modal-ficha-alumno { position: static; background: #fff; padding: 0; display: block; overflow: visible; }
+  body.ficha-imprimiendo .ficha-caja { box-shadow: none; max-width: none; border-radius: 0; }
+  body.ficha-imprimiendo .ficha-acciones { display: none; }
+  body.ficha-imprimiendo .ficha-cabecera { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body.ficha-imprimiendo .prog-trayecto, body.ficha-imprimiendo .ficha-entregas { break-inside: avoid; box-shadow: none; }
+}
