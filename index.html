@@ -32,6 +32,10 @@
 
   <!-- 4. CSS Panel de Administración -->
   <link rel="stylesheet" href="css/admin-dashboard.css?v=60005">
+  <style>
+    /* Los avisos de SweetAlert (progreso, resúmenes, errores) tienen que verse por encima de los paneles de la plataforma */
+    .swal2-container { z-index: 20000 !important; }
+  </style>
 </head>
 <body>
 
@@ -326,6 +330,9 @@
   </button>
   <button id="btn-backups" class="nav-item-btn admin-only" onclick="UI.showTab('backups')">
     <span class="icon">💾</span> Base de Datos
+  </button>
+  <button id="btn-auditoria" class="nav-item-btn admin-only" onclick="UI.showTab('auditoria')">
+    <span class="icon">🕵️</span> Auditoría
   </button>
 </nav>
 
@@ -676,6 +683,35 @@
           </div>
         </section>
 
+        <!-- VISTA 7: AUDITORÍA DE CAMBIOS (EXCLUSIVO ADMIN) -->
+        <section id="auditoria" class="section-tab admin-only" style="display: none;">
+          <div class="card-panel" style="padding: 1.5rem;">
+            <div class="card-panel-header" style="margin-bottom: 1rem;">
+              <div>
+                <h2 style="color: #f8fafc; margin: 0;">🕵️ Auditoría de cambios</h2>
+                <p style="color: #94a3b8; font-size: 0.875rem; margin-top: 0.25rem;">
+                  Quién modificó notas, roles, inscripciones y otros datos, y cuándo. Los datos anteriores quedan guardados.
+                </p>
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem;">
+              <select id="auditoria-filtro-tabla" class="form-control" style="width: auto;" onchange="AuditoriaModulo.cargar()">
+                <option value="">Todo</option>
+                <option value="entregas_actividades">Entregas y notas</option>
+                <option value="profiles">Usuarios / roles</option>
+                <option value="inscripciones">Inscripciones</option>
+                <option value="asistencias">Asistencias</option>
+                <option value="clases">Clases</option>
+                <option value="trayectos">Trayectos</option>
+                <option value="modulos">Módulos</option>
+              </select>
+              <input id="auditoria-filtro-texto" class="form-control" style="width: 220px;" placeholder="DNI o N° de registro" onkeydown="if(event.key==='Enter') AuditoriaModulo.cargar()">
+              <button type="button" class="btn btn-outline" onclick="AuditoriaModulo.cargar()">🔍 Buscar</button>
+            </div>
+            <div id="auditoria-contenido"></div>
+          </div>
+        </section>
+
       </main>
     </div>
   </div>
@@ -771,17 +807,19 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
   
   <!-- Lógica Interna (Sin caracteres sueltos y con versión actualizada) -->
-  <script src="js/supabase-config.js?v=70004" defer></script>
-  <script src="js/pdf-lab.js?v=70004" defer></script>
-  <script src="js/ui.js?v=70004" defer></script>
-  <script src="js/auth.js?v=70004" defer></script>
-  <script src="js/trayectos.js?v=70004" defer></script>
-  <script src="js/usuarios.js?v=70004" defer></script>
-  <script src="js/importador.js?v=70004" defer></script>
-  <script src="js/clases.js?v=70004" defer></script>
-  <script src="js/asistencias.js?v=70004" defer></script>
-  <script src="js/reportes.js?v=70004" defer></script>
-  <script src="js/notificaciones.js?v=70004" defer></script>
-  <script src="js/actas.js?v=70004" defer></script>
+  <script src="js/entorno-prueba.js?v=70006" defer></script>
+  <script src="js/supabase-config.js?v=70006" defer></script>
+  <script src="js/pdf-lab.js?v=70006" defer></script>
+  <script src="js/ui.js?v=70006" defer></script>
+  <script src="js/auth.js?v=70006" defer></script>
+  <script src="js/trayectos.js?v=70006" defer></script>
+  <script src="js/usuarios.js?v=70006" defer></script>
+  <script src="js/auditoria.js?v=70006" defer></script>
+  <script src="js/importador.js?v=70006" defer></script>
+  <script src="js/clases.js?v=70006" defer></script>
+  <script src="js/asistencias.js?v=70006" defer></script>
+  <script src="js/reportes.js?v=70006" defer></script>
+  <script src="js/notificaciones.js?v=70006" defer></script>
+  <script src="js/actas.js?v=70006" defer></script>
 </body>
 </html>
