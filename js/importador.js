@@ -5,8 +5,8 @@
    Qué hace el importador con cada fila del CSV, usando la función segura
    "importar-estudiantes" que corre dentro de Supabase:
    1. Guarda a la persona en el padrón (DNI, nombre, apellido).
-   2. Le crea la cuenta si no tiene (usuario: su DNI; contraseña inicial
-      aleatoria, que se entrega en una planilla CSV) y la deja aprobada.
+   2. Le crea la cuenta si no tiene (usuario: su DNI; contraseña inicial:
+      CFP403_ + DNI) y la deja aprobada.
    3. La inscribe en el trayecto.
 
    Si la función todavía no está instalada en Supabase, el importador usa el
@@ -48,20 +48,6 @@ var ImportadorModulo = {
     }
     out.push(actual.trim());
     return out;
-  },
-
-  // Planilla con usuario y contraseña inicial de las cuentas recién creadas
-  descargarCredenciales(lista) {
-    const celda = (t) => `"${String(t ?? '').replace(/"/g, '""')}"`;
-    let csv = '\uFEFFdni;apellido;nombre;usuario;contrasena_inicial\r\n';
-    lista.forEach(c => {
-      csv += [c.dni, c.apellido, c.nombre, c.dni, c.clave].map(celda).join(';') + '\r\n';
-    });
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `credenciales_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
   },
 
   cerrarEspera(prevenirSalida) {
@@ -174,7 +160,6 @@ var ImportadorModulo = {
         const trayectoId = Number(this.trayectoIdActual);
         const contador = () => document.getElementById('contador-importacion');
         const errores = [];
-        const credenciales = [];
 
         // ---- 2. Función del servidor: cuentas + padrón + inscripción ----
         const srv = { creados: 0, ya_tenian_cuenta: 0, aprobados: 0, inscriptos_nuevos: 0, ya_inscriptos: 0 };
@@ -211,7 +196,6 @@ var ImportadorModulo = {
 
           Object.keys(srv).forEach(k => { srv[k] += data[k] || 0; });
           (data.errores || []).forEach(x => errores.push(x));
-          (data.credenciales || []).forEach(x => credenciales.push(x));
         }
 
         // ---- 3. Modo de respaldo: solo padrón e inscripción (sin crear cuentas) ----
@@ -265,9 +249,7 @@ var ImportadorModulo = {
             ↩️ <b>${estudiantes.length - nuevos.length}</b> ya estaban inscriptos<br>`;
 
         const pie = usoServidor
-          ? (credenciales.length
-              ? 'Usuario: el DNI. Cada cuenta nueva tiene una contraseña inicial propia: descargá la planilla ahora, no se vuelve a mostrar. Cada persona puede cambiarla desde "Cambiar mi contraseña".'
-              : 'Usuario: el DNI. Cada persona puede cambiar su contraseña desde "Cambiar mi contraseña".')
+          ? 'Usuario: el DNI. Contraseña inicial: CFP403_ seguido del DNI. Cada persona puede cambiarla desde "Cambiar mi contraseña".'
           : 'Cada estudiante debe registrarse en "Solicitar Cuenta" con su DNI y vos aprobás su cuenta en Usuarios y Roles.';
 
         const resumen = `
@@ -284,11 +266,6 @@ var ImportadorModulo = {
             title: errores.length ? 'Importación con errores' : '¡Importación finalizada!',
             html: resumen,
             confirmButtonText: 'Entendido',
-            showDenyButton: credenciales.length > 0,
-            denyButtonText: '⬇️ Descargar contraseñas (CSV)',
-            denyButtonColor: '#0284c7',
-            // Descarga la planilla y deja el cuadro abierto
-            preDeny: () => { this.descargarCredenciales(credenciales); return false; }
           });
         }
 
