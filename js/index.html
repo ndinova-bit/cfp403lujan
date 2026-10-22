@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CFP N° 403 - Plataforma</title>
+
+  <!-- Soporte App Móvil PWA -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="logo.png">
+  <meta name="theme-color" content="#071B38">
+
+  <!-- Fuente Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- 1. Variables globales -->
+  <link rel="stylesheet" href="css/variables.css">
+
+  <!-- 2. Hojas de estilo modulares -->
+  <link rel="stylesheet" href="css/header.css">
+  <link rel="stylesheet" href="css/hero.css">
+  <link rel="stylesheet" href="css/courses.css">
+  <link rel="stylesheet" href="css/footer.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/sections.css">
+  <link rel="stylesheet" href="css/pdf-lab.css">
+  <link rel="stylesheet" href="css/auth.css">
+  
+  <!-- 3. CSS principal base -->
+  <link rel="stylesheet" href="css/styles.css">
+
+  <!-- 4. CSS Panel de Administración -->
+  <link rel="stylesheet" href="css/admin-dashboard.css?v=60005">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/tema-cfp.css?v=70010">
+  <style>
+    /* Los avisos de SweetAlert (progreso, resúmenes, errores) tienen que verse por encima de los paneles de la plataforma */
+    .swal2-container { z-index: 20000 !important; }
+  </style>
+</head>
+<body>
+
+  <!-- 1. VISTA PÚBLICA / LANDING -->
+  <div id="landing-screen" class="public-landing fade-in">
+    
+    <header class="main-header">
+      <div class="header-brand-center">
+        <div class="header-top-brand">
+          <img src="logo.png" alt="CFP N° 403 Logo" class="header-logo-xl">
+          <div>
+            <h1 class="header-title-lg">CFP N° 403 "OSCAR SMITH"</h1>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">LUJÁN, BUENOS AIRES</span>
+          </div>
+        </div>
+        
+        <!-- Barra de Navegación -->
+        <nav class="main-nav">
+          <a href="#inicio" class="nav-link">Inicio</a>
+          <a href="#cursos" class="nav-link">Cursos</a>
+          <a href="#por-que" class="nav-link">¿Por qué el 403?</a>
+          <a href="#inscripcion" class="nav-link">¿Cómo inscribirse?</a>
+          <a href="#noticias" class="nav-link">Noticias</a>
+          <a href="#contacto" class="nav-link">Contacto</a>
+        </nav>
+      </div>
+
+      <div class="header-action-right">
+        <a href="#" onclick="UI.showLoginScreen(); return false;" class="btn-header-login">
+          🔓 Ingresar / Registrarse
+        </a>
+      </div>
+    </header>
+
+    <!-- CONTENIDO PRINCIPAL DE LA LANDING -->
+    <main class="public-container">
+
+      <!-- 1. HERO BANNER -->
+      <section id="inicio" class="hero-banner">
+        <span class="hero-badge">Formación Profesional Gratuita</span>
+        <h1 class="hero-title">Encontrá tu próxima formación profesional</h1>
+        <p class="hero-subtitle">
+          Capacitate con certificados oficiales avalados por la DGCyE de la Provincia de Buenos Aires.
+        </p>
+        <div style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+          <a href="#cursos" class="btn btn-gold">Ver Cursos</a>
+          <a href="#inscripcion" class="btn btn-outline">¿Cómo inscribirme?</a>
+        </div>
+      </section>
+
+      <!-- 2. CATÁLOGO Y BÚSQUEDA DE CURSOS PÚBLICO -->
+      <section id="cursos" style="margin-bottom: 3.5rem;">
+        <div class="section-heading">
+          <h2 class="section-title">Oferta Académica</h2>
+        </div>
+        <div id="lista-trayectos-cards" class="features-grid">
+          <!-- Trayectos insertados por trayectos.js -->
+        </div>
+      </section>
+
+      <!-- 3. ¿POR QUÉ ELEGIR EL CFP 403? -->
+      <section id="por-que" class="value-props-grid">
+        <div class="prop-card">
+          <div class="prop-icon">📜</div>
+          <div>
+            <h3 class="prop-title">Títulos Oficiales</h3>
+            <p class="prop-desc">Certificación avalada por DGCyE de Buenos Aires.</p>
+          </div>
+        </div>
+        <div class="prop-card">
+          <div class="prop-icon">🎓</div>
+          <div>
+            <h3 class="prop-title">100% Gratuito</h3>
+            <p class="prop-desc">Educación técnica pública y accesible para todos.</p>
+          </div>
+        </div>
+        <div class="prop-card">
+          <div class="prop-icon">🛠️</div>
+          <div>
+            <h3 class="prop-title">Salida Laboral</h3>
+            <p class="prop-desc">Capacitación práctica adaptada al mercado actual.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. ¿CÓMO INSCRIBIRSE? -->
+      <section id="inscripcion" class="steps-section">
+        <h2 class="section-title-center">¿Cómo inscribirse?</h2>
+        <div class="steps-grid">
+          <div class="step-card">
+            <span class="step-number">01</span>
+            <h3 class="step-title">Elegí tu curso</h3>
+            <p class="step-desc">Explorá nuestra oferta académica y elegí tu especialidad.</p>
+          </div>
+          <div class="step-card">
+            <span class="step-number">02</span>
+            <h3 class="step-title">Requisitos</h3>
+            <p class="step-desc">Conocé los horarios, vacantes y documentación necesaria.</p>
+          </div>
+          <div class="step-card">
+            <span class="step-number">03</span>
+            <h3 class="step-title">Inscripción</h3>
+            <p class="step-desc">Completá el formulario de preinscripción digital o presencial.</p>
+          </div>
+          <div class="step-card">
+            <span class="step-number">04</span>
+            <h3 class="step-title">¡Comenzá!</h3>
+            <p class="step-desc">Presentá tu documentación y empezá a capacitarte.</p>
+          </div>
+        </div>
+        <a href="https://cursosipfl.trabajo.gba.gob.ar/" target="_blank" rel="noopener noreferrer" class="btn-inscripcion-gold">
+          📝 Iniciar preinscripción en IPFL
+        </a>
+      </section>
+
+      <!-- 5. NOVEDADES Y NOTICIAS -->
+      <section id="noticias" class="news-section">
+        <div class="section-heading">
+          <h2 class="section-title">Noticias y Novedades</h2>
+        </div>
+        <div class="news-grid">
+          <div class="news-card">
+            <div class="news-icon">📰</div>
+            <div>
+              <h3 class="news-title">Inscripciones abiertas</h3>
+              <p class="news-desc">Nueva etapa de inscripción para el próximo ciclo lectivo.</p>
+            </div>
+          </div>
+          <div class="news-card">
+            <div class="news-icon">📢</div>
+            <div>
+              <h3 class="news-title">Inicio de clases</h3>
+              <p class="news-desc">Consultá las comisiones y los horarios de cursada.</p>
+            </div>
+          </div>
+          <div class="news-card">
+            <div class="news-icon">🎓</div>
+            <div>
+              <h3 class="news-title">Entrega de certificados</h3>
+              <p class="news-desc">Fechas de acto de egresados para trayectos finalizados.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- FOOTER INSTITUCIONAL -->
+    <footer id="contacto" class="main-footer">
+      <div class="footer-container">
+        <div>
+          <h3 class="footer-title-gold">CFP N° 403 "Oscar Smith"</h3>
+          <p class="footer-description">
+            Centro de Formación Profesional de Luján, Buenos Aires. Brindando educación técnica pública, gratuita y de calidad para toda la comunidad.
+          </p>
+        </div>
+
+        <div class="footer-contact-group">
+          <h4 class="footer-title">Contacto y Ubicación</h4>
+          <a href="https://maps.google.com/?q=Lavalle+740+Lujan+Buenos+Aires" target="_blank" rel="noopener" class="contact-link-location">
+            📍 Lavalle 740, Luján, Buenos Aires
+          </a>
+          <a href="mailto:cfp403lujan@abc.gob.ar" class="btn-contact btn-email">
+            ✉️ cfp403lujan@abc.gob.ar
+          </a>
+          <a href="https://wa.me/5492323000000" target="_blank" rel="noopener" class="btn-contact btn-whatsapp">
+            🟢 Enviar WhatsApp
+          </a>
+        </div>
+
+        <div class="footer-community-group">
+          <h4 class="footer-title">Comunidad</h4>
+          <a href="https://instagram.com/cfp403lujan" target="_blank" rel="noopener" class="btn-instagram">
+            📷 @cfp403lujan en Instagram
+          </a>
+        </div>
+      </div>
+
+      <div class="footer-copyright">
+        © 2026 CFP N° 403. Todos los derechos reservados.
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- PANTALLA DE ACCESO / LOGIN -->
+  <div id="login-screen" class="auth-screen" style="display: none;">
+    <div class="auth-card">
+      
+      <div class="auth-header">
+        <img src="logo.png" alt="CFP N° 403 Logo" class="auth-logo">
+        <h2>Acceso al Sistema</h2>
+        <p>CFP N° 403 "Oscar Smith"</p>
+      </div>
+
+      <!-- Pestañas -->
+      <div class="auth-tabs">
+        <button id="tab-btn-login" class="auth-tab active" onclick="UI.toggleAuthTab('login')">Ingresar</button>
+        <button id="tab-btn-register" class="auth-tab" onclick="UI.toggleAuthTab('register')">Solicitar Cuenta</button>
+      </div>
+
+      <!-- Formulario de Login -->
+      <form id="form-login" onsubmit="event.preventDefault(); Auth.iniciarSesion();">
+        <div class="form-group">
+          <label for="role-select">Rol de Ingreso</label>
+          <div class="select-wrapper">
+            <select id="role-select" class="form-control custom-select">
+              <option value="estudiante">Estudiante</option>
+              <option value="docente">Docente</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="login-user">Usuario / DNI / Email</label>
+          <input type="text" id="login-user" class="form-control" placeholder="Ej: 38123456" required>
+        </div>
+
+        <div class="form-group">
+          <label for="login-pass">Contraseña</label>
+          <input type="password" id="login-pass" class="form-control" placeholder="••••••••" autocomplete="current-password" required>
+        </div>
+
+        <button type="submit" class="btn-block btn-gold">Iniciar Sesión</button>
+        <button type="button" class="btn-block btn-outline" style="margin-top: 0.5rem;" onclick="UI.showLanding()">← Volver al Inicio</button>
+      </form>
+
+      <!-- Formulario de Registro -->
+      <form id="form-register" style="display: none;" onsubmit="event.preventDefault(); Auth.solicitarRegistro();">
+        <div class="form-group">
+          <label for="reg-nombre">Nombre y Apellido</label>
+          <input type="text" id="reg-nombre" class="form-control" placeholder="Nombre completo" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-dni">DNI</label>
+          <input type="text" id="reg-dni" class="form-control" placeholder="Sin puntos" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-pass">Contraseña</label>
+          <input type="password" id="reg-pass" class="form-control" placeholder="••••••••" autocomplete="new-password" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-rol">Rol Solicitado</label>
+          <select id="reg-rol" class="form-control custom-select">
+            <option value="estudiante">Estudiante</option>
+            <option value="docente">Docente</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-block btn-gold">Enviar Solicitud</button>
+        <button type="button" class="btn-block btn-outline" style="margin-top: 0.5rem;" onclick="UI.showLanding()">← Volver al Inicio</button>
+      </form>
+
+    </div>
+  </div>
+  
+  <!-- 3. DASHBOARD / PLATAFORMA ADMIN -->
+  <div id="app-screen" class="dashboard-layout" style="display: none;">
+    
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <img src="logo.png" alt="CFP N° 403">
+        <div class="sidebar-brand-text">
+          <h3>CFP N° 403</h3>
+          <span>Panel de Control</span>
+        </div>
+      </div>
+
+<!-- index.html (Navegación Sidebar) -->
+<nav class="sidebar-nav">
+  <button id="btn-dashboard" class="nav-item-btn active" onclick="UI.showTab('dashboard')">
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></span> Dashboard
+  </button>
+  <button id="btn-progreso" class="nav-item-btn" style="display:none" onclick="UI.showTab('progreso')">
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg></span> Mi progreso
+  </button>
+  <button id="btn-seguimiento" class="nav-item-btn" style="display:none" onclick="UI.showTab('seguimiento')">
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9"/></svg></span> Seguimiento
+  </button>
+  <button id="btn-trayectos" class="nav-item-btn" onclick="UI.showTab('trayectos')">
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2z"/><path d="M8 7h6"/></svg></span> Trayectos Formativos
+  </button>
+
+  <!-- NUEVO BOTÓN: FICHAS DE CURSO / ACTAS DE EXAMEN -->
+  <button id="btn-actas" class="nav-item-btn admin-only" onclick="UI.showTab('actas')">
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 11h6M9 15h6"/></svg></span> Fichas / Actas de Examen
+  </button>
+
+  <button id="btn-nuevo-trayecto" class="nav-item-btn admin-only" onclick="UI.showTab('nuevo-trayecto')">
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg></span> Cargar Trayecto
+  </button>
+  <button id="btn-certificados" class="nav-item-btn admin-only" onclick="UI.showTab('certificados')">
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h9a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8z"/><path d="M8 3v5H5M9 13h6M9 17h4"/></svg></span> Emitir Certificados
+  </button>
+  <button id="btn-novedades" class="nav-item-btn admin-only" onclick="UI.showTab('novedades')">
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg></span> Novedades
+  </button>
+  <button id="btn-usuarios" class="nav-item-btn admin-only" onclick="UI.showTab('usuarios')">
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 3-6 6.5-6s6.500 2.400 6.500 6"/><path d="M16 4.500a3.500 3.500 0 0 1 0 7M18 14c2.200.800 3.500 2.700 3.500 6"/></svg></span> Usuarios y Roles
+  </button>
+  <button id="btn-backups" class="nav-item-btn admin-only" onclick="UI.showTab('backups')">
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.700 3.600 3 8 3s8-1.300 8-3V6M4 12v6c0 1.700 3.600 3 8 3s8-1.300 8-3v-6"/></svg></span> Base de Datos
+  </button>
+  <button id="btn-auditoria" class="nav-item-btn admin-only" onclick="UI.showTab('auditoria')">
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 3.400 8.200 8 9 4.600-.800 8-4 8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></span> Auditoría
+  </button>
+</nav>
+
+      <button class="btn btn-outline" style="margin-top: auto; width: 100%; margin-bottom: 0.5rem;" onclick="Auth.cambiarMiClave()">
+        Cambiar mi contraseña
+      </button>
+      <button class="btn btn-danger" style="width: 100%;" onclick="Auth.cerrarSesion()">
+        Cerrar sesión
+      </button>
+    </aside>
+
+    <!-- WRAPPER DERECHO: HEADER + CONTENIDO -->
+    <div class="main-wrapper">
+      
+      <!-- HEADER PROFESIONAL -->
+      <header class="admin-header">
+        <div class="admin-header-title">
+          <h2 id="current-section-title">Dashboard</h2>
+        </div>
+        <div class="admin-user-profile">
+          <div class="user-badge">
+            <span class="username" id="display-username">Administrador</span>
+            <span class="role" id="display-role">ADMIN</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- CONTENIDO PRINCIPAL -->
+      <main class="main-content-body">
+
+      <!-- VISTA 1: DASHBOARD DE RESUMEN ANALÍTICO -->
+        <section id="sec-dashboard" class="section-tab active">
+          <!-- Encabezado del Dashboard con Filtro por Ciclo Lectivo -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+            <div>
+              <h3 style="margin: 0; color: var(--text-main);">📊 Panel General de Control</h3>
+              <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">Estadísticas académicas y rendimiento del CFP</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <label for="filtro-ciclo-dashboard" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Ciclo Lectivo:</label>
+              <select id="filtro-ciclo-dashboard" class="form-control custom-select" style="width: auto; padding: 0.4rem 0.8rem; font-size: 0.85rem;" onchange="if(window.DashboardAdmin) DashboardAdmin.cargarEstadisticas();">
+                <option value="2026" selected>Ciclo Lectivo 2026</option>
+                <option value="2027">Ciclo Lectivo 2027</option>
+                <option value="TODOS">Todos los Ciclos</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Grilla de Tarjetas KPI -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#E6F3FC;color:#1D5FA8;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c0 1.500 2.700 3 6 3s6-1.500 6-3v-5"/></svg></div>
+              <div class="stat-info">
+                <h4>Trayectos Activos</h4>
+                <p class="stat-value" id="stat-count-trayectos">--</p>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#EAE8FB;color:#5B4BC4;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 3-6 6.5-6s6.500 2.400 6.500 6"/><path d="M16 4.500a3.500 3.500 0 0 1 0 7M18 14c2.200.800 3.500 2.700 3.500 6"/></svg></div>
+              <div class="stat-info">
+                <h4>Matrícula / Inscriptos</h4>
+                <p class="stat-value" id="stat-count-inscriptos">--</p>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#DDF5EA;color:#146B47;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg></div>
+              <div class="stat-info">
+                <h4>Aprobados / Aptos</h4>
+                <p class="stat-value" id="stat-count-aprobados">--</p>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#FFF4D1;color:#7A5600;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h9a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8z"/><path d="M8 3v5H5M9 13h6M9 17h4"/></svg></div>
+              <div class="stat-info">
+                <h4>Certificados Emitidos</h4>
+                <p class="stat-value" id="stat-count-certificados">--</p>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon" style="background:#FDE7E5;color:#B42318;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20z"/><path d="M12 10v5M12 18h.01"/></svg></div>
+              <div class="stat-info">
+                <h4>Sin certificar</h4>
+                <p class="stat-value" id="stat-count-desaprobados">--</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Desglose por Trayecto y Acciones Rápidas -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+            <!-- Tabla de Rendimiento por Trayecto -->
+            <div class="card-panel" style="margin: 0;">
+              <div class="card-panel-header">
+                <h4 style="margin: 0; color: #f8fafc;">Rendimiento por trayecto</h4>
+              </div>
+              <div id="desglose-trayectos-dashboard" style="overflow-x: auto;">
+                <p style="color: #94a3b8; font-size: 0.85rem;">Cargando resumen de trayectos...</p>
+              </div>
+            </div>
+
+            <!-- Acciones Rápidas -->
+            <div class="card-panel" style="margin: 0;">
+              <div class="card-panel-header">
+                <h4 style="margin: 0; color: #f8fafc;">Acciones rápidas</h4>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <button type="button" class="btn btn-primary" style="text-align: left; justify-content: flex-start;" onclick="if(window.UsuariosAdmin && UsuariosAdmin.abrirModal) { UsuariosAdmin.abrirModal(); } else if(window.UI && UI.abrirModalNuevoUsuario) { UI.abrirModalNuevoUsuario(); }">
+                  + Crear Nuevo Usuario
+                </button>
+                <button type="button" class="btn btn-secondary" style="text-align: left; justify-content: flex-start;" onclick="UI.showTab('trayectos')">
+                  📚 Gestionar Trayectos Formativos
+                </button>
+                <button type="button" class="btn btn-gold" style="text-align: left; justify-content: flex-start;" onclick="UI.showTab('certificados')">
+                  📜 Emitir Certificados PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VISTA 2: LISTA DE TRAYECTOS DENTRO DEL DASHBOARD -->
+        <section id="novedades" class="section-tab admin-only" style="display: none;"><div id="novedades-admin"></div></section>
+
+        <section id="seguimiento" class="section-tab" style="display: none;"><div id="seguimiento-contenido"></div></section>
+
+        <section id="progreso" class="section-tab" style="display: none;"><div data-novedades-usuario></div><div id="progreso-contenido"></div></section>
+
+        <section id="trayectos" class="section-tab" style="display: none;">
+          <div data-novedades-usuario></div>
+          <div class="card-panel-header">
+            <div>
+              <h2>Trayectos Formativos</h2>
+              <p style="font-size: 0.85rem; color: #94a3b8;">Gestión de la oferta académica e itinerarios de formación</p>
+            </div>
+            <div style="display: flex; gap: 0.75rem; align-items: center;">
+              <!-- FILTRO POR CICLO LECTIVO -->
+              <select id="filtro-ciclo-lectivo" class="form-control custom-select" style="width: auto; padding: 0.4rem 0.8rem;" onchange="Trayectos.cargarTrayectos()">
+                <option value="2026" selected>Ciclo Lectivo 2026</option>
+                <option value="2027">Ciclo Lectivo 2027</option>
+                <option value="TODOS">Todos los Ciclos</option>
+              </select>
+              <button class="btn btn-primary admin-only" onclick="UI.showTab('nuevo-trayecto')">+ Nuevo Trayecto</button>
+            </div>
+          </div>
+          <!-- Contenedor único para el panel admin -->
+          <div id="lista-trayectos-admin"></div>
+        </section>
+        
+        <!-- VISTA 3: CARGA / EDICIÓN DE TRAYECTO (FORMULARIO) -->
+        <section id="nuevo-trayecto" class="section-tab admin-only" style="display: none;">
+          <div class="card-panel">
+            <div class="card-panel-header">
+              <h3 id="titulo-form-trayecto">Nuevo Trayecto Formativo</h3>
+            </div>
+            <form id="form-trayecto" onsubmit="event.preventDefault(); Trayectos.guardarTrayecto();">
+              
+              <!-- CAMPO OCULTO PARA EL ID AL EDITAR -->
+              <input type="hidden" id="trayecto-id" value="">
+
+              <div class="form-grid-2">
+                <div class="form-group">
+                  <label for="trayecto-nombre">Nombre del Trayecto *</label>
+                  <input type="text" id="trayecto-nombre" class="form-control" placeholder="Ej: Programación Web" required>
+                </div>
+                <div class="form-group">
+                  <label for="trayecto-ciclo">Ciclo Lectivo *</label>
+                  <input type="number" id="trayecto-ciclo" class="form-control" value="2026" min="2020" max="2035" required>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-top: 1rem;">
+                <label for="trayecto-docente">Docente Asignado</label>
+                <select id="trayecto-docente" class="form-control custom-select">
+                  <option value="">Seleccionar Docente...</option>
+                </select>
+              </div>
+             <!-- CAMPOS PARA CERTIFICACIÓN Y RESOLUCIÓN -->
+<div class="form-grid-2" style="margin-top: 1rem;">
+  <div class="form-group">
+    <label for="trayecto-certificacion">N° de Curso Oficial</label>
+    <input type="text" id="trayecto-certificacion" class="form-control" placeholder="Ej: 1025">
+  </div>
+  <div class="form-group">
+    <label for="trayecto-resolucion">Resolución N° / Disposición</label>
+    <input type="text" id="trayecto-resolucion" class="form-control" placeholder="Ej: Res. N° 1234/20">
+  </div>
+</div>
+
+              <div class="form-group" style="margin-top: 1rem;">
+                <label for="trayecto-descripcion">Descripción</label>
+                <textarea id="trayecto-descripcion" class="form-control" rows="3" placeholder="Resumen del trayecto..."></textarea>
+              </div>
+
+              <div class="form-group" style="margin-top: 1rem;">
+                <label for="trayecto-requisitos">Requisitos de Inscripción</label>
+                <textarea id="trayecto-requisitos" class="form-control" rows="2" placeholder="Ej: DNI, mayor de 16 años..."></textarea>
+              </div>
+
+              <hr style="margin: 1.5rem 0; border-color: rgba(255,255,255,0.08);">
+              
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h4>Módulos Asociados</h4>
+                <button type="button" class="btn btn-secondary" onclick="UI.agregarFilaModulo()">+ Agregar Módulo</button>
+              </div>
+
+              <div id="contenedor-modulos">
+                <div class="modulo-item-card">
+                  <div class="form-grid-2">
+                    <input type="text" class="mod-nombre form-control" placeholder="Nombre del Módulo">
+                    <input type="text" class="mod-codigo form-control" placeholder="Código (Ej: GH 0050)">
+                  </div>
+                  <div class="form-grid-2" style="margin-top: 0.75rem;">
+                    <div>
+                      <label style="font-size: 0.75rem;">Fecha Inicio</label>
+                      <input type="date" class="mod-inicio form-control">
+                    </div>
+                    <div>
+                      <label style="font-size: 0.75rem;">Fecha Fin</label>
+                      <input type="date" class="mod-fin form-control">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary" style="margin-top: 1.5rem; width: 100%;">Guardar Trayecto Completo</button>
+            </form>
+          </div>
+        </section>
+
+<!-- VISTA 4: CERTIFICADOS POR TRAYECTO (ADMIN) -->
+        <section id="certificados" class="section-tab admin-only" style="display: none;">
+          <div class="card-panel">
+            <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+              <div>
+                <h3 style="margin: 0;">Emisión de Certificados de Egresados</h3>
+                <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.25rem;">
+                  Nómina de estudiantes con todos los módulos acreditados, agrupados por Trayecto Formativo.
+                </p>
+              </div>
+              <button class="btn btn-secondary" onclick="CertificadosAdmin.cargarNominaCertificados()">
+                🔄 Actualizar Nómina
+              </button>
+            </div>
+
+           <!-- Contenedor donde se renderizan las tarjetas/tablas por Trayecto -->
+            <div id="contenedor-certificados-trayectos">
+              <!-- Carga dinámica desde js/pdf-lab.js -->
+            </div>
+          </div>
+        </section>
+
+        <!-- VISTA NUEVA: FICHAS DE CURSO / ACTAS DE EXAMEN -->
+        <section id="actas" class="section-tab admin-only" style="display: none;">
+          <div class="card-panel">
+            <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+              <div>
+                <h3 style="margin: 0; font-size: 1.25rem;">📋 Fichas de Curso / Actas de Examen</h3>
+                <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #94a3b8;">
+                  Consolidado de calificaciones por módulo y actas oficiales de examen.
+                </p>
+              </div>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <label for="filtro-ciclo-actas" style="font-size: 0.85rem; font-weight: 600; color: #94a3b8;">Ciclo Lectivo:</label>
+                <select id="filtro-ciclo-actas" class="form-control custom-select" style="width: auto; padding: 0.4rem 0.8rem;" onchange="ActasModulo.cargarTrayectosActas()">
+                  <!-- Se completa dinámicamente desde js/actas.js -->
+                </select>
+              </div>
+            </div>
+
+            <!-- Contenedor dinámico donde se renderizan las solapas por trayecto y la planilla del acta -->
+            <div id="contenedor-modulo-actas" style="margin-top: 1.25rem;">
+              <!-- Generado por js/actas.js -->
+            </div>
+          </div>
+        </section>
+
+        <!-- VISTA 5: GESTIÓN DE USUARIOS -->
+        <section id="usuarios" class="section-tab admin-only" style="display: none;">
+          <div class="card-panel">
+            <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+              <div>
+                <h3 style="margin: 0; font-size: 1.25rem;">Gestión de Usuarios y Solicitudes</h3>
+                <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #94a3b8;">
+                  Aprobación de registros pendientes, alta manual y asignación de roles.
+                </p>
+              </div>
+              <button type="button" class="btn btn-primary" onclick="if(window.UsuariosAdmin && UsuariosAdmin.abrirModal) { UsuariosAdmin.abrirModal(); } else if(window.UI && UI.abrirModalNuevoUsuario) { UI.abrirModalNuevoUsuario(); }">
+                + Crear Nuevo Usuario
+              </button>
+            </div>
+
+            <div style="overflow-x: auto; margin-top: 1.25rem;">
+              <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                <thead>
+                  <tr style="border-bottom: 2px solid rgba(255,255,255,0.1); color: #94a3b8;">
+                    <th style="padding: 0.75rem;">Usuario / DNI</th>
+                    <th style="padding: 0.75rem;">Contacto / Ubicación</th>
+                    <th style="padding: 0.75rem;">Rol</th>
+                    <th style="padding: 0.75rem;">Estado</th>
+                    <th style="padding: 0.75rem; text-align: right;">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="tabla-usuarios">
+                  <!-- Carga dinámica desde js/usuarios.js -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- VISTA 6: BASE DE DATOS Y RESPALDO (EXCLUSIVO ADMIN) -->
+        <section id="backups" class="section-tab admin-only" style="display: none;">
+          <div class="card-panel" style="max-width: 750px; margin: 0 auto; padding: 2rem;">
+            <div class="card-panel-header" style="margin-bottom: 1.5rem;">
+              <div>
+                <h2 style="color: #f8fafc; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                  💾 Gestor de Base de Datos y Backups
+                </h2>
+                <p style="color: #94a3b8; font-size: 0.875rem; margin-top: 0.25rem;">
+                  Herramientas exclusivas de administración para respaldar o restaurar toda la base de datos de Supabase.
+                </p>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem;">
+              <!-- Descargar Backup -->
+              <div style="background: rgba(15, 23, 42, 0.6); padding: 1.25rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                  <h4 style="color: #38bdf8; margin-top: 0; margin-bottom: 0.5rem; font-size: 1.05rem;">📥 Descargar Backup</h4>
+                  <p style="color: #94a3b8; font-size: 0.8rem; line-height: 1.4;">
+                    Genera una copia completa de todas las tablas (usuarios, trayectos, módulos, clases, inscripciones, entregas, asistencias, excepciones y notificaciones) en formato JSON.
+                  </p>
+                </div>
+                <button class="btn" style="background: #0284c7; color: white; border: none; padding: 0.65rem; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 1rem; width: 100%;" onclick="ReportesModulo.descargarBackupCompletoJSON()">
+                  ⬇️ Descargar Copia JSON
+                </button>
+              </div>
+
+              <!-- Restaurar Backup -->
+              <div style="background: rgba(15, 23, 42, 0.6); padding: 1.25rem; border-radius: 8px; border: 1px solid rgba(248, 113, 113, 0.25); display: flex; flex-direction: column; justify-content: space-between;">
+                <div>
+                  <h4 style="color: #f87171; margin-top: 0; margin-bottom: 0.5rem; font-size: 1.05rem;">📤 Restaurar Backup</h4>
+                  <p style="color: #94a3b8; font-size: 0.8rem; line-height: 1.4;">
+                    Sube un archivo JSON previamente descargado para sobrescribir y actualizar los datos directamente en Supabase.
+                  </p>
+                </div>
+                <button class="btn" style="background: #dc2626; color: white; border: none; padding: 0.65rem; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 1rem; width: 100%;" onclick="ReportesModulo.restaurarBackupDesdeJSON()">
+                  ⚠️ Subir y Restaurar
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VISTA 7: AUDITORÍA DE CAMBIOS (EXCLUSIVO ADMIN) -->
+        <section id="auditoria" class="section-tab admin-only" style="display: none;">
+          <div class="card-panel" style="padding: 1.5rem;">
+            <div class="card-panel-header" style="margin-bottom: 1rem;">
+              <div>
+                <h2 style="color: #f8fafc; margin: 0;">🕵️ Auditoría de cambios</h2>
+                <p style="color: #94a3b8; font-size: 0.875rem; margin-top: 0.25rem;">
+                  Quién modificó notas, roles, inscripciones y otros datos, y cuándo. Los datos anteriores quedan guardados.
+                </p>
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem;">
+              <select id="auditoria-filtro-tabla" class="form-control" style="width: auto;" onchange="AuditoriaModulo.cargar()">
+                <option value="">Todo</option>
+                <option value="entregas_actividades">Entregas y notas</option>
+                <option value="profiles">Usuarios / roles</option>
+                <option value="inscripciones">Inscripciones</option>
+                <option value="asistencias">Asistencias</option>
+                <option value="clases">Clases</option>
+                <option value="trayectos">Trayectos</option>
+                <option value="modulos">Módulos</option>
+              </select>
+              <input id="auditoria-filtro-texto" class="form-control" style="width: 220px;" placeholder="DNI o N° de registro" onkeydown="if(event.key==='Enter') AuditoriaModulo.cargar()">
+              <button type="button" class="btn btn-outline" onclick="AuditoriaModulo.cargar()">🔍 Buscar</button>
+            </div>
+            <div id="auditoria-contenido"></div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- MODAL PARA ALTA MANUAL DE USUARIO -->
+  <div id="modal-alta-usuario" class="modal-overlay" style="display: none;">
+    <div class="card-panel" style="max-width: 650px; width: 100%; max-height: 90vh; overflow-y: auto; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem;">
+      <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 style="margin: 0;">Crear Nuevo Usuario</h3>
+        <button type="button" class="btn btn-outline" onclick="if(window.UsuariosAdmin && UsuariosAdmin.cerrarModal) { UsuariosAdmin.cerrarModal(); } else { document.getElementById('modal-alta-usuario').classList.remove('open'); document.getElementById('modal-alta-usuario').style.display='none'; }" style="padding: 0.2rem 0.6rem;">✕</button>
+      </div>
+
+      <form id="form-alta-usuario">
+        <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label for="usr-alta-apellido">Apellido *</label>
+            <input type="text" id="usr-alta-apellido" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label for="usr-alta-nombre">Nombre *</label>
+            <input type="text" id="usr-alta-nombre" class="form-control" required>
+          </div>
+        </div>
+        <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.75rem;">
+          <div class="form-group">
+            <label for="usr-alta-dni">DNI / Documento *</label>
+            <input type="text" id="usr-alta-dni" class="form-control" required placeholder="Sin puntos">
+          </div>
+          <div class="form-group">
+            <label for="usr-alta-email">Email</label>
+            <input type="email" id="usr-alta-email" class="form-control" placeholder="correo@ejemplo.com">
+          </div>
+        </div>
+
+        <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.75rem;">
+          <div class="form-group">
+            <label for="usr-alta-rol">Rol asignado</label>
+            <select id="usr-alta-rol" class="form-control custom-select">
+              <option value="estudiante">Estudiante</option>
+              <option value="docente">Docente</option>
+              <option value="admin">Administrador</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="usr-alta-fecha">Fecha de Nacimiento</label>
+            <input type="date" id="usr-alta-fecha" class="form-control">
+          </div>
+        </div>
+
+        <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.75rem;">
+          <div class="form-group">
+            <label for="usr-alta-domicilio">Domicilio</label>
+            <input type="text" id="usr-alta-domicilio" class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="usr-alta-ciudad">Ciudad</label>
+            <input type="text" id="usr-alta-ciudad" class="form-control" value="Luján">
+          </div>
+        </div>
+
+        <div class="form-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.75rem;">
+          <div class="form-group">
+            <label for="usr-alta-provincia">Provincia</label>
+            <input type="text" id="usr-alta-provincia" class="form-control" value="Buenos Aires">
+          </div>
+          <div class="form-group">
+            <label for="usr-alta-nacionalidad">Nacionalidad</label>
+            <input type="text" id="usr-alta-nacionalidad" class="form-control" value="Argentina">
+          </div>
+        </div>
+
+        <div style="margin-top: 1rem;">
+          <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;">Inscribir en Trayectos:</label>
+          <div id="usr-alta-trayectos" style="background: rgba(0,0,0,0.2); padding: 0.75rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); max-height: 120px; overflow-y: auto;">
+            <!-- Carga dinámica de trayectos -->
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem;">
+          <button type="button" class="btn btn-outline" onclick="if(window.UsuariosAdmin && UsuariosAdmin.cerrarModal) { UsuariosAdmin.cerrarModal(); } else { document.getElementById('modal-alta-usuario').classList.remove('open'); document.getElementById('modal-alta-usuario').style.display='none'; }">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar Usuario</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+ <!-- Librerías Externas -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+  
+  <!-- Lógica Interna (Sin caracteres sueltos y con versión actualizada) -->
+  <script src="js/entorno-prueba.js?v=70007" defer></script>
+  <script src="js/supabase-config.js?v=70007" defer></script>
+  <script src="js/avisos.js?v=70008" defer></script>
+  <script src="js/pdf-lab.js?v=70007" defer></script>
+  <script src="js/ui.js?v=70010" defer></script>
+  <script src="js/auth.js?v=70007" defer></script>
+  <script src="js/trayectos.js?v=70008" defer></script>
+  <script src="js/usuarios.js?v=70010" defer></script>
+  <script src="js/auditoria.js?v=70007" defer></script>
+  <script src="js/progreso.js?v=70010" defer></script>
+  <script src="js/seguimiento.js?v=70010" defer></script>
+  <script src="js/ficha.js?v=70010" defer></script>
+  <script src="js/novedades.js?v=70010" defer></script>
+  <script src="js/importador.js?v=70007" defer></script>
+  <script src="js/clases.js?v=70007" defer></script>
+  <script src="js/asistencias.js?v=70007" defer></script>
+  <script src="js/reportes.js?v=70007" defer></script>
+  <script src="js/notificaciones.js?v=70007" defer></script>
+  <script src="js/actas.js?v=70007" defer></script>
+</body>
+</html>
