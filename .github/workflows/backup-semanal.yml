@@ -1,0 +1,55 @@
+# Copia de seguridad automática de la base de datos (cada domingo, y a pedido).
+# Guarda el archivo CIFRADO en "Artifacts" de GitHub durante 90 días.
+# Configuración: ver docs/GUIA_PROTECCION.md, sección 1.
+name: Backup semanal de la base de datos
+
+on:
+  schedule:
+    - cron: '0 6 * * 0'      # domingos 03:00 hora Argentina
+  workflow_dispatch: {}       # botón "Run workflow" para hacerlo a mano
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verificar que estén cargados los secretos
+        env:
+          DB: ${{ secrets.SUPABASE_DB_URL }}
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$DB" ] || [ -z "$PASS" ]; then
+            echo "Faltan los secretos SUPABASE_DB_URL y/o BACKUP_PASSPHRASE (ver docs/GUIA_PROTECCION.md)"; exit 1
+          fi
+
+      - name: Volcar tablas de la plataforma (schema public)
+        env:
+          DB: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          docker run --rm postgres:17 pg_dump "$DB" --schema=public --no-owner --no-privileges > respaldo_public.sql
+          test -s respaldo_public.sql
+
+      - name: Volcar cuentas de acceso (usuarios y contraseñas cifradas)
+        continue-on-error: true
+        env:
+          DB: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          docker run --rm postgres:17 pg_dump "$DB" --data-only --no-owner \
+            --table=auth.users --table=auth.identities > respaldo_auth.sql
+
+      - name: Comprimir y cifrar
+        env:
+          PASS: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          FECHA=$(date +%Y-%m-%d)
+          tar czf respaldo.tar.gz respaldo_public.sql $(test -s respaldo_auth.sql && echo respaldo_auth.sql)
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$PASS" --symmetric --cipher-algo AES256 \
+              -o "respaldo-$FECHA.tar.gz.gpg" respaldo.tar.gz
+          rm -f respaldo_public.sql respaldo_auth.sql respaldo.tar.gz
+          ls -la
+
+      - name: Guardar el respaldo cifrado (90 días)
+        uses: actions/upload-artifact@v4
+        with:
+          name: respaldo-cifrado
+          path: respaldo-*.tar.gz.gpg
+          retention-days: 90
