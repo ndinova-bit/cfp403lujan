@@ -477,3 +477,33 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 [style*="background: rgba(56, 189, 248"], [style*="background:rgba(56,189,248"] {
   background: var(--cfp-celeste-soft) !important; color: var(--cfp-blue) !important; border-color: #BFE0F5 !important;
 }
+
+/* ==========================================================================
+   8. SEGUIMIENTO (docentes y administración)
+   ========================================================================== */
+.seg-cargando { color: var(--cfp-muted); }
+.seg-resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+.seg-resumen .stat-card { padding: 1.1rem 1.25rem; }
+.seg-panel { margin-bottom: 1.5rem; padding: 1.5rem !important; }
+.seg-panel .card-panel-header { margin-bottom: 1rem; padding-bottom: .75rem; border-bottom: 1px solid var(--cfp-line); }
+.seg-ayuda { font-size: .82rem; color: var(--cfp-muted); margin: 0 0 1rem; }
+.seg-grupo { margin-bottom: 1.25rem; }
+.seg-grupo h4 { display: flex; align-items: center; gap: .5rem; margin: 0 0 .6rem; font-size: .95rem; font-weight: 800; color: var(--cfp-navy); }
+.seg-cuenta { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 22px; padding: 0 .45rem; border-radius: 999px; background: var(--cfp-yellow-soft); color: #7A5600; font-size: .75rem; font-weight: 800; }
+.seg-cuenta.riesgo { background: var(--cfp-bad-soft); color: var(--cfp-bad); }
+.seg-item { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem .75rem; padding: .75rem .9rem; border: 1px solid var(--cfp-line); border-radius: 12px; margin-bottom: .5rem; background: #fff; }
+.seg-item.riesgo { border-left: 3px solid var(--cfp-bad); }
+.seg-item-info { flex: 1 1 220px; min-width: 0; }
+.seg-item-info strong { display: block; font-size: .9rem; color: var(--cfp-ink); }
+.seg-item-info span { font-size: .78rem; color: var(--cfp-muted); }
+.seg-ver { font-size: .8rem; font-weight: 700; color: var(--cfp-blue); text-decoration: none; padding: .4rem .7rem; border-radius: 8px; background: var(--cfp-celeste-soft); }
+.seg-ver:hover { background: #D3EAFA; }
+.seg-sinlink { font-size: .78rem; color: var(--cfp-muted); }
+.seg-item .form-control { padding: .45rem .6rem !important; font-size: .85rem; margin: 0; }
+.seg-nota { width: 80px !important; flex: 0 0 80px; }
+.seg-coment { flex: 1 1 180px; width: auto !important; }
+.seg-guardar { padding: .45rem .9rem !important; font-size: .85rem !important; }
+.seg-chips { display: flex; flex-wrap: wrap; gap: .35rem; }
+.seg-chip { font-size: .75rem; font-weight: 700; padding: .25rem .6rem; border-radius: 999px; background: var(--cfp-bad-soft); color: var(--cfp-bad); }
+.seg-ok { padding: 1rem 1.25rem; border-radius: 12px; background: var(--cfp-ok-soft); color: var(--cfp-ok); font-weight: 700; font-size: .9rem; }
+.seg-badge { margin-left: auto; min-width: 22px; height: 20px; padding: 0 .4rem; border-radius: 999px; background: var(--cfp-yellow); color: var(--cfp-navy-deep); font-size: .72rem; font-weight: 800; align-items: center; justify-content: center; }
