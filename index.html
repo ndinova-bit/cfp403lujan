@@ -740,7 +740,7 @@
                 <div>
                   <h4 style="color: #38bdf8; margin-top: 0; margin-bottom: 0.5rem; font-size: 1.05rem;">📥 Descargar Backup</h4>
                   <p style="color: #94a3b8; font-size: 0.8rem; line-height: 1.4;">
-                    Genera una copia completa de todas las tablas (usuarios, trayectos, módulos, clases, inscripciones, entregas, asistencias, excepciones y notificaciones) en formato JSON.
+                    Copia de todas las tablas de la plataforma en un archivo JSON. Tiene datos personales: guardalo en un lugar seguro. Además, cada domingo se hace solo un respaldo completo y cifrado (GitHub → Actions).
                   </p>
                 </div>
                 <button class="btn" style="background: #0284c7; color: white; border: none; padding: 0.65rem; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 1rem; width: 100%;" onclick="ReportesModulo.descargarBackupCompletoJSON()">
@@ -753,7 +753,7 @@
                 <div>
                   <h4 style="color: #f87171; margin-top: 0; margin-bottom: 0.5rem; font-size: 1.05rem;">📤 Restaurar Backup</h4>
                   <p style="color: #94a3b8; font-size: 0.8rem; line-height: 1.4;">
-                    Sube un archivo JSON previamente descargado para sobrescribir y actualizar los datos directamente en Supabase.
+                    Vuelve a cargar un respaldo JSON: agrega o actualiza filas (no borra nada). Para recuperar todo ante un problema grave, usar el respaldo semanal cifrado (ver docs/GUIA_PROTECCION.md).
                   </p>
                 </div>
                 <button class="btn" style="background: #dc2626; color: white; border: none; padding: 0.65rem; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 1rem; width: 100%;" onclick="ReportesModulo.restaurarBackupDesdeJSON()">
@@ -883,7 +883,7 @@
   <script src="js/reglas.js?v=70022" defer></script>
   <script src="js/ui.js?v=70018" defer></script>
   <script src="js/auth.js?v=70024" defer></script>
-  <script src="js/trayectos.js?v=70024" defer></script>
+  <script src="js/trayectos.js?v=70025" defer></script>
   <script src="js/usuarios.js?v=70017" defer></script>
   <script src="js/auditoria.js?v=70023" defer></script>
   <script src="js/progreso.js?v=70022" defer></script>
@@ -895,7 +895,7 @@
   <script src="js/actividades.js?v=70022" defer></script>
   <script src="js/clases.js?v=70024" defer></script>
   <script src="js/asistencias.js?v=70024" defer></script>
-  <script src="js/reportes.js?v=70007" defer></script>
+  <script src="js/reportes.js?v=70025" defer></script>
   <script src="js/notificaciones.js?v=70007" defer></script>
   <script src="js/actas.js?v=70021" defer></script>
   <script src="js/usobase.js?v=70020" defer></script>

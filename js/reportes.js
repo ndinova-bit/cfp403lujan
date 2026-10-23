@@ -23,136 +23,86 @@ const ReportesModulo = {
     link.click();
   },
 
-  // Copia de seguridad integral en JSON (Todas las tablas de Supabase)
+  /* ---------- Copia de seguridad (JSON) ----------
+     Descarga TODAS las tablas de la plataforma, de a 1000 filas (Supabase devuelve como
+     máximo 1000 por consulta: antes las tablas grandes quedaban cortadas). */
+  TABLAS_BACKUP: [
+    'profiles', 'padron_estudiantes', 'trayectos', 'modulos', 'trayecto_docentes', 'inscripciones', 'datos_estudiante',
+    'observaciones_estudiante', 'clases', 'claves_actividad', 'banco_preguntas', 'entregas_actividades', 'asistencias',
+    'excepciones_estudiantes', 'modulos_acreditados', 'actas_examen', 'certificados_emitidos', 'novedades',
+    'notificaciones', 'auditoria'
+  ],
+
+  async leerTablaCompleta(tabla) {
+    const filas = [];
+    for (let desde = 0; desde < 500000; desde += 1000) {
+      const { data, error } = await supabase.from(tabla).select('*').range(desde, desde + 999);
+      if (error) throw error;
+      filas.push(...(data || []));
+      if (!data || data.length < 1000) break;
+    }
+    return filas;
+  },
+
   async descargarBackupCompletoJSON() {
+    const aviso = (t) => { if (typeof Swal !== 'undefined') Swal.fire({ title: t, allowOutsideClick: false, didOpen: () => Swal.showLoading() }); };
     try {
-      const [
-        rUsuarios,
-        rTrayectos,
-        rModulos,
-        rClases,
-        rInscripciones,
-        rEntregas,
-        rAsistencias,
-        rExcepciones,
-        rNotificaciones
-      ] = await Promise.all([
-        supabase.from('usuarios').select('*'),
-        supabase.from('trayectos').select('*'),
-        supabase.from('modulos').select('*'),
-        supabase.from('clases').select('*'),
-        supabase.from('inscripciones').select('*'),
-        supabase.from('entregas_actividades').select('*'),
-        supabase.from('asistencias').select('*'),
-        supabase.from('excepciones_estudiantes').select('*'),
-        supabase.from('notificaciones').select('*')
-      ]);
-
-      const backup = {
-        fecha_backup: new Date().toISOString(),
-        usuarios: rUsuarios.data || [],
-        trayectos: rTrayectos.data || [],
-        modulos: rModulos.data || [],
-        clases: rClases.data || [],
-        inscripciones: rInscripciones.data || [],
-        entregas_actividades: rEntregas.data || [],
-        asistencias: rAsistencias.data || [],
-        excepciones_estudiantes: rExcepciones.data || [],
-        notificaciones: rNotificaciones.data || []
-      };
-
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backup, null, 2));
-      const downloadAnchor = document.createElement('a');
-      const fechaHoy = new Date().toISOString().split('T')[0];
-
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `Backup_Plataforma_${fechaHoy}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-
-      alert('✅ Copia de seguridad integral descargada en JSON.');
-
+      const backup = { fecha_backup: new Date().toISOString(), version: 2, tablas: {} };
+      const omitidas = [];
+      for (const t of this.TABLAS_BACKUP) {
+        aviso(`Copiando ${t}…`);
+        try { backup.tablas[t] = await this.leerTablaCompleta(t); } catch (e) { omitidas.push(t); }
+      }
+      const blob = new Blob([JSON.stringify(backup)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `Respaldo_CFP403_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+      const resumen = Object.entries(backup.tablas).map(([t, f]) => `${t}: ${f.length}`).join(' · ');
+      if (typeof Swal !== 'undefined') Swal.fire({ icon: 'success', title: 'Respaldo descargado', html: `<p style="font-size:.85rem">${resumen}</p>${omitidas.length ? `<p style="font-size:.8rem;color:#9b1c1c">No se pudieron copiar: ${omitidas.join(', ')}</p>` : ''}<p style="font-size:.8rem">Tiene datos personales: guardalo en un lugar seguro (no lo compartas ni lo subas a GitHub).</p>` });
     } catch (err) {
       console.error('Error al generar backup:', err);
-      alert('Error al generar backup de seguridad: ' + err.message);
+      alert('Error al generar el respaldo: ' + err.message);
     }
   },
 
-  // Restaurar Base de Datos completa desde un archivo JSON (Exclusivo Admin)
+  // Restaurar desde un respaldo JSON (solo administración). Agrega o actualiza filas; no borra nada.
   async restaurarBackupDesdeJSON() {
-    const perfilRaw = localStorage.getItem('usuario_actual') || 
-                      localStorage.getItem('usuario_logueado') || 
-                      sessionStorage.getItem('usuario_logueado');
-    const perfil = perfilRaw ? JSON.parse(perfilRaw) : {};
-    const rolNorm = String(perfil.rol || '').toLowerCase().trim();
-
-    if (rolNorm !== 'admin' && rolNorm !== 'administrador') {
-      alert('⛔ Acceso denegado. Esta acción está reservada únicamente para el Administrador.');
+    const perfil = (window.Auth && Auth.usuarioActual) || {};
+    if (!['admin', 'administrador'].includes(String(perfil.rol || '').toLowerCase())) {
+      alert('⛔ Esta acción está reservada a la Dirección.');
       return;
     }
-
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json';
-
     input.onchange = async (e) => {
       const archivo = e.target.files[0];
       if (!archivo) return;
-
-      if (!confirm('⚠️ ¿Estás seguro de que deseas restaurar la base de datos? Esto insertará o actualizará la información existente.')) {
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        try {
-          const data = JSON.parse(event.target.result);
-
-          if (!data || typeof data !== 'object') {
-            throw new Error('El archivo cargado no contiene un formato JSON válido.');
+      try {
+        const data = JSON.parse(await archivo.text());
+        // Formato nuevo { tablas: {...} } o anterior (tablas sueltas)
+        const tablas = data && data.tablas ? data.tablas : data;
+        const orden = this.TABLAS_BACKUP.filter(t => t !== 'auditoria' && Array.isArray(tablas[t]) && tablas[t].length);
+        if (!orden.length) throw new Error('El archivo no tiene tablas de la plataforma.');
+        const resumen = orden.map(t => `${t}: ${tablas[t].length}`).join('\n');
+        if (!confirm(`Respaldo del ${data.fecha_backup ? new Date(data.fecha_backup).toLocaleString('es-AR') : '(sin fecha)'}.\n\nSe van a agregar o actualizar estas filas (no se borra nada):\n${resumen}\n\n¿Continuar?`)) return;
+        const errores = [];
+        for (const t of orden) {
+          const filas = tablas[t];
+          for (let i = 0; i < filas.length; i += 500) {
+            const clave = t === 'claves_actividad' ? 'clase_id' : (t === 'datos_estudiante' ? 'dni' : 'id');
+            const { error } = await supabase.from(t).upsert(filas.slice(i, i + 500), { onConflict: clave });
+            if (error) { errores.push(`${t}: ${error.message}`); break; }
           }
-
-          const tablas = [
-            'usuarios',
-            'trayectos',
-            'modulos',
-            'clases',
-            'inscripciones',
-            'entregas_actividades',
-            'asistencias',
-            'excepciones_estudiantes',
-            'notificaciones'
-          ];
-
-          let errores = [];
-
-          for (const tabla of tablas) {
-            if (Array.isArray(data[tabla]) && data[tabla].length > 0) {
-              const { error } = await supabase.from(tabla).upsert(data[tabla]);
-              if (error) {
-                console.error(`Error procesando tabla ${tabla}:`, error);
-                errores.push(`${tabla}: ${error.message}`);
-              }
-            }
-          }
-
-          if (errores.length > 0) {
-            alert('⚠️ Restauración realizada con observaciones en algunas tablas:\n\n' + errores.join('\n'));
-          } else {
-            alert('🎉 ¡Base de datos restaurada con éxito!');
-            window.location.reload();
-          }
-
-       } catch (err) {
-          console.error('Error al restaurar backup:', err);
-          alert('❌ Error al procesar la restauración: ' + err.message);
         }
-      };
-
-      reader.readAsText(archivo);
+        if (errores.length) alert('⚠️ Restauración con observaciones:\n\n' + errores.join('\n'));
+        else { alert('✅ Respaldo restaurado.'); window.location.reload(); }
+      } catch (err) {
+        console.error('Error al restaurar:', err);
+        alert('❌ No se pudo restaurar: ' + err.message);
+      }
     };
-
     input.click();
   }
 };
