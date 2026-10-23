@@ -114,7 +114,7 @@ const UI = {
     const btnProg = document.getElementById('btn-progreso');
     if (btnProg) btnProg.style.setProperty('display', rolNorm === 'estudiante' ? 'flex' : 'none', 'important');
     const btnSeg = document.getElementById('btn-seguimiento');
-    const puedeSeguir = isAdmin || rolNorm === 'docente';
+    const puedeSeguir = isAdmin || rolNorm === 'docente' || rolNorm === 'preceptor';
     if (btnSeg) btnSeg.style.setProperty('display', puedeSeguir ? 'flex' : 'none', 'important');
     if (puedeSeguir && window.SeguimientoModulo) setTimeout(() => SeguimientoModulo.contarPendientes(), 800);
 
@@ -140,7 +140,7 @@ const UI = {
     }
 
     const rolActual = String(perfil.rol || '').toLowerCase().trim();
-    if (tabId === 'seguimiento' && !isAdmin && rolActual !== 'docente') tabId = 'trayectos';
+    if (tabId === 'seguimiento' && !isAdmin && rolActual !== 'docente' && rolActual !== 'preceptor') tabId = 'trayectos';
 
     document.querySelectorAll('.section-tab').forEach(sec => {
       sec.style.setProperty('display', 'none', 'important');
@@ -167,7 +167,7 @@ const UI = {
         'progreso': 'Mi progreso',
         'seguimiento': 'Seguimiento',
         'novedades': 'Novedades y calendario',
-        'trayectos': isAdmin ? 'Trayectos Formativos' : 'Mis Trayectos Formativos',
+        'trayectos': (isAdmin || rolActual === 'preceptor') ? 'Trayectos Formativos' : 'Mis Trayectos Formativos',
         'actas': 'Fichas de Curso / Actas de Examen',
         'nuevo-trayecto': 'Cargar Trayecto',
         'certificados': 'Emitir Certificados',

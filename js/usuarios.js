@@ -153,6 +153,7 @@ const UsuariosAdmin = {
             <select class="form-control" style="padding: 0.3rem 0.5rem; font-size: 0.85rem; width: auto;" onchange="UsuariosAdmin.cambiarRol('${idPrimario}', this.value)">
               <option value="estudiante" ${u.rol === 'estudiante' ? 'selected' : ''}>Estudiante</option>
               <option value="docente" ${u.rol === 'docente' ? 'selected' : ''}>Docente</option>
+              <option value="preceptor" ${u.rol === 'preceptor' ? 'selected' : ''}>Preceptor/a</option>
               <option value="admin" ${u.rol === 'admin' ? 'selected' : ''}>Administrador</option>
             </select>
           </td>

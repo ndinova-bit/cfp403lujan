@@ -109,6 +109,26 @@ var ImportadorModulo = {
         const idxNombre = colsHeader.findIndex(c => c.includes('nombre'));
         const idxApellido = colsHeader.findIndex(c => c.includes('apellido'));
         const idxEmail = colsHeader.findIndex(c => c.includes('email') || c.includes('correo'));
+        // Columnas opcionales de la Ficha de Curso
+        const idxCol = (fn) => colsHeader.findIndex(fn);
+        const extra = {
+          fecha_nacimiento: idxCol(c => c.includes('nacimiento') && c.includes('fecha')),
+          lugar_nacimiento: idxCol(c => c.includes('lugar') && c.includes('nac')),
+          domicilio: idxCol(c => c.includes('domicilio') || c.includes('direcci')),
+          localidad: idxCol(c => c.includes('localidad')),
+          codigo_postal: idxCol(c => c.includes('postal') || c.trim() === 'cp'),
+          telefono: idxCol(c => c.includes('tel') || c.includes('celular')),
+          estudios: idxCol(c => c.includes('estudio'))
+        };
+        const hayExtra = Object.values(extra).some(i => i !== -1);
+        const fechaISO = (v) => {
+          const t = String(v || '').trim();
+          let m = t.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+          if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+          m = t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+          return m ? t : null;
+        };
+        const datosPersonales = [];
 
         if (idxDni === -1) {
           this.cerrarEspera(prevenirSalida);
@@ -149,6 +169,17 @@ var ImportadorModulo = {
             apellido: apellido || 'SIN APELLIDO',
             email: emailRaw.includes('@') ? emailRaw : null
           });
+
+          if (hayExtra) {
+            const d = { dni };
+            Object.entries(extra).forEach(([k, idx]) => {
+              if (idx === -1) return;
+              const v = String(valores[idx] || '').trim();
+              if (!v) return;
+              d[k] = k === 'fecha_nacimiento' ? fechaISO(v) : v.slice(0, 160);
+            });
+            if (Object.keys(d).length > 1) datosPersonales.push(d);
+          }
         }
 
         if (estudiantes.length === 0) {
@@ -231,6 +262,17 @@ var ImportadorModulo = {
           }
         }
 
+        // ---- 3b. Datos personales para la Ficha de Curso (si el CSV los trae) ----
+        let datosGuardados = 0;
+        if (datosPersonales.length) {
+          if (contador()) contador().innerText = 'Guardando datos personales…';
+          for (let i = 0; i < datosPersonales.length; i += 200) {
+            const { error } = await supabase.from('datos_estudiante').upsert(datosPersonales.slice(i, i + 200), { onConflict: 'dni' });
+            if (error) { errores.push('Datos personales: ' + error.message); break; }
+            datosGuardados += Math.min(200, datosPersonales.length - i);
+          }
+        }
+
         this.cerrarEspera(prevenirSalida);
 
         // ---- 4. Resumen ----
@@ -256,6 +298,7 @@ var ImportadorModulo = {
           <div style="text-align:left; font-size: 14px; line-height: 1.6;">
             ${detalle}
             ${filasInvalidas ? `⚠️ <b>${filasInvalidas}</b> filas ignoradas por DNI inválido<br>` : ''}
+            ${datosGuardados ? `🗂️ <b>${datosGuardados}</b> con datos personales para la Ficha de Curso<br>` : ''}
             ${errores.length ? `<br><span style="color:#f87171">❌ Hubo errores:<br>${errores.map(x => esc(x)).join('<br>')}</span><br>` : ''}
             <br><small style="color:#94a3b8">${pie}</small>
           </div>`;

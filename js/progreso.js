@@ -29,7 +29,7 @@ const ProgresoModulo = {
   async cargarPara(key, cont, opciones = {}) {
     cont.innerHTML = '<p style="color:#5B6B82">Cargando progreso…</p>';
     try {
-      const { data: insc } = await supabase.from('inscripciones').select('trayecto_id, num_egresado').eq('estudiante_user', key);
+      const { data: insc } = await supabase.from('inscripciones').select('*').eq('estudiante_user', key);
       const ids = (insc || []).map(i => Number(i.trayecto_id));
       if (!ids.length) {
         cont.innerHTML = `<div class="prog-vacio">${opciones.boton ? 'Todavía no estás inscripto/a en ningún trayecto.' : 'No tiene inscripciones en trayectos.'}</div>`;
@@ -119,6 +119,7 @@ const ProgresoModulo = {
         <div class="prog-top-info">
           <span class="prog-chip">${this.esc(t.modalidad || (ev.computaAsistencia ? 'Trayecto formativo' : 'Trayecto virtual'))}</span>
           <h2 class="prog-title">${this.esc(t.nombre)}</h2>
+          ${(() => { const c = ReglasFP.estadoCursada(ev, modulos, ins, { excepcion: habExc }); return c.baja ? `<div class="prog-baja">${c.tipo === 'automatica' ? 'Baja automática' : 'Baja'}${c.fecha ? ' · ' + this.esc(String(c.fecha).split('-').reverse().join('/')) : ''}: ${this.esc(c.motivo)}</div>` : ''; })()}
           <p class="prog-sub">Para certificar ${vos ? 'necesitás' : 'se necesita'} aprobar <strong>todos los módulos con ${this.MINIMO} o más</strong>. ${total > 1 ? `Aprobados: <strong>${aprobados} de ${total}</strong>.` : ''}</p>
           <div class="prog-bar"><div class="prog-bar-fill" style="width:${grados}%"></div><div class="prog-bar-mark"></div></div>
           <div class="prog-bar-legend"><span>0</span><span>Mínimo para aprobar: ${this.MINIMO}</span><span>100</span></div>

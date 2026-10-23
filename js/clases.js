@@ -100,6 +100,10 @@ const ClasesModulo = {
 
     const rolNorm = String(perfil.rol || '').toLowerCase().trim();
     const esEstudiante = rolNorm === 'estudiante';
+    const esPreceptor = rolNorm === 'preceptor';
+    const esAdminG = rolNorm === 'admin' || rolNorm === 'administrador';
+    const puedeImportar = esAdminG || esPreceptor;     // la función del servidor acepta admin y preceptor
+    this.rolGestor = rolNorm;
 
     let modal = document.getElementById('modal-gestor-clases');
     if (!modal) {
@@ -115,7 +119,7 @@ const ClasesModulo = {
         <div style="padding:1.2rem 1.5rem; background:#0f172a; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
           <h3 style="margin:0; font-size:1.15rem;">📚 Trayecto: <span style="color:#38bdf8;">${this.esc(nombreTrayecto)}</span></h3>
           <div style="display:flex; gap:0.5rem; align-items:center;">
-            ${!esEstudiante ? `
+            ${esAdminG ? `
               <button type="button" onclick="ReportesModulo.descargarBackupCompletoJSON()" style="padding:0.35rem 0.7rem; background:rgba(34,197,94,0.2); border:1px solid rgba(34,197,94,0.4); color:#4ade80; border-radius:6px; font-size:0.78rem; font-weight:600; cursor:pointer;">
                 💾 Backup DB
               </button>
@@ -137,9 +141,9 @@ const ClasesModulo = {
           <button type="button" id="btn-tab-asistencias" onclick="ClasesModulo.cambiarVistaPestana('asistencias')" style="padding:0.4rem 1rem; border:none; border-radius:6px; background:rgba(255,255,255,0.05); color:#94a3b8; font-weight:600; cursor:pointer;">
             📅 Tomar Asistencia
           </button>
-          <button type="button" id="btn-tab-entregas" onclick="ClasesModulo.cambiarVistaPestana('entregas')" style="padding:0.4rem 1rem; border:none; border-radius:6px; background:rgba(255,255,255,0.05); color:#94a3b8; font-weight:600; cursor:pointer;">
+          ${esPreceptor ? '' : `<button type="button" id="btn-tab-entregas" onclick="ClasesModulo.cambiarVistaPestana('entregas')" style="padding:0.4rem 1rem; border:none; border-radius:6px; background:rgba(255,255,255,0.05); color:#94a3b8; font-weight:600; cursor:pointer;">
             📝 Entregas y Calificaciones
-          </button>
+          </button>`}
         </div>
       `;
     }
@@ -149,7 +153,7 @@ const ClasesModulo = {
         <div id="vista-tab-clases">
     `;
 
-    if (!esEstudiante) {
+    if (!esEstudiante && !esPreceptor) {
       htmlModal += `
         <details id="details-form-clase" open style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem; margin-bottom:1.5rem;">
           <summary id="summary-clase-titulo" style="cursor:pointer; font-weight:600; color:#38bdf8;">➕ Cargar Nueva Clase, Actividad o Recuperatorio</summary>
@@ -219,11 +223,12 @@ const ClasesModulo = {
 
       <div id="vista-tab-alumnos" style="display:none;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem; flex-wrap:wrap; gap:0.5rem;">
-            <div>
-              <label for="input-importar-csv" style="padding:0.4rem 0.8rem; background:#0284c7; color:#fff; border-radius:6px; font-weight:600; font-size:0.8rem; cursor:pointer; display:inline-block;">
+            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+              ${puedeImportar ? `<label for="input-importar-csv" style="padding:0.4rem 0.8rem; background:#0284c7; color:#fff; border-radius:6px; font-weight:600; font-size:0.8rem; cursor:pointer; display:inline-block;">
                 📥 Importar Nómina de Alumnos (CSV)
               </label>
               <input type="file" id="input-importar-csv" accept=".csv" style="display:none;" onchange="ClasesModulo.importarEstudiantesCSV(this.files[0])">
+              <button type="button" class="btn btn-secondary" style="padding:0.4rem 0.8rem; font-size:0.8rem;" onclick="FichaCurso.descargar(ClasesModulo.trayectoActualId)">📄 Ficha de Curso (Excel)</button>` : ''}
             </div>
             <button type="button" onclick="ReportesModulo.exportarExcelTabla('tabla-sabana-notas', 'Sabana_Notas.csv')" style="padding:0.4rem 0.8rem; background:#10b981; color:#fff; border:none; border-radius:6px; font-weight:600; font-size:0.8rem; cursor:pointer;">
               📊 Exportar Sábana a Excel
@@ -252,11 +257,13 @@ const ClasesModulo = {
     modal.innerHTML = htmlModal;
     modal.style.display = 'flex';
 
-    if (!esEstudiante) {
+    if (!esEstudiante && !esPreceptor) {
       await this.poblarComboModulos();
       await this.poblarComboEstudiantes();
     }
     await this.cargarListaClases(esEstudiante);
+    // El preceptor entra directo a la toma de asistencia
+    if (esPreceptor) this.cambiarVistaPestana('asistencias');
   },
 
   async poblarComboModulos() {
@@ -839,7 +846,7 @@ const ClasesModulo = {
     try {
       const { data: inscripciones, error: errIns } = await supabase
         .from('inscripciones')
-        .select('estudiante_user')
+        .select('*')
         .eq('trayecto_id', Number(this.trayectoActualId));
 
       if (errIns) throw errIns;
@@ -946,19 +953,38 @@ const ClasesModulo = {
         });
 
         const exEspecial = (excepciones || []).find(x => String(x.estudiante_user) === userKey && x.habilitado);
+        const insRow = (inscripciones || []).find(x => String(x.estudiante_user) === userKey) || {};
+        const cursada = ReglasFP.estadoCursada(ev, modulos || [], insRow, { excepcion: !!exEspecial });
+        const dniSeguro = String(userKey).replace(/[^0-9A-Za-z_-]/g, '');
+        const rolG = this.rolGestor || '';
+        const esAdminG = rolG === 'admin' || rolG === 'administrador';
+        // Baja manual: la dirección en cualquier trayecto; docente y preceptor en trayectos sin módulos
+        const puedeBaja = esAdminG || (!tieneModulos && (rolG === 'docente' || rolG === 'preceptor'));
+        let situacionHTML = '<span class="sit sit-ok">Cursando</span>';
+        if (cursada.baja && cursada.tipo === 'manual') {
+          situacionHTML = `<span class="sit sit-baja">Baja${cursada.fecha ? ' · ' + this.esc(String(cursada.fecha).split('-').reverse().join('/')) : ''}</span><span class="sabana-det">${this.esc(cursada.motivo)}</span>
+            ${puedeBaja ? `<button type="button" class="sit-btn" onclick="ClasesModulo.reincorporar('${dniSeguro}')">Reincorporar</button>` : ''}`;
+        } else if (cursada.baja) {
+          situacionHTML = `<span class="sit sit-baja">Baja automática</span><span class="sabana-det">${this.esc(cursada.motivo)}</span>`;
+        } else if (puedeBaja) {
+          situacionHTML += `<button type="button" class="sit-btn" onclick="ClasesModulo.darBaja('${dniSeguro}')">Dar de baja</button>`;
+        }
 
         filasHTML += `
-          <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.05);" class="${cursada.baja ? 'fila-baja' : ''}">
             <td style="padding:0.75rem 1rem; color:#94a3b8;">${i + 1}</td>
             <td style="padding:0.75rem 1rem; font-weight:600; color:#f8fafc;">
-              ${this.esc(nombreCompleto)}
+              <button type="button" class="seg-nombre" title="Ver ficha del alumno" onclick="FichaAlumno.abrir('${dniSeguro}')">${this.esc(nombreCompleto)}</button>
               <span style="display:block; font-size:0.75rem; color:#94a3b8;">DNI: ${this.esc(userKey)}</span>
             </td>
             ${celdasNotasHTML}
+            <td style="padding:0.75rem 1rem; text-align:center;">${situacionHTML}</td>
             <td style="padding:0.75rem 1rem; text-align:center;">
-              <button type="button" onclick="ClasesModulo.toggleExcepcionEstudiante('${String(userKey).replace(/[^0-9A-Za-z_-]/g, '')}', ${exEspecial ? 'false' : 'true'})" style="padding:0.3rem 0.6rem; border-radius:6px; border:none; font-size:0.75rem; font-weight:600; cursor:pointer; ${exEspecial ? 'background:#eab308; color:#000;' : 'background:rgba(255,255,255,0.08); color:#cbd5e1;'}">
+              ${rolG === 'preceptor'
+                ? `<span class="sabana-det">${exEspecial ? '🔓 Activa' : '🔒 Inactiva'}</span>`
+                : `<button type="button" onclick="ClasesModulo.toggleExcepcionEstudiante('${dniSeguro}', ${exEspecial ? 'false' : 'true'})" style="padding:0.3rem 0.6rem; border-radius:6px; border:none; font-size:0.75rem; font-weight:600; cursor:pointer; ${exEspecial ? 'background:#eab308; color:#000;' : 'background:rgba(255,255,255,0.08); color:#cbd5e1;'}">
                 ${exEspecial ? '🔓 Excepción Activa' : '🔒 Excepción Inactiva'}
-              </button>
+              </button>`}
             </td>
           </tr>
         `;
@@ -972,6 +998,7 @@ const ClasesModulo = {
                 <th style="padding:0.75rem 1rem;">N°</th>
                 <th style="padding:0.75rem 1rem;">Estudiante</th>
                 ${thModulosHTML}
+                <th style="padding:0.75rem 1rem; text-align:center;">Situación</th>
                 <th style="padding:0.75rem 1rem; text-align:center;">Permiso Excepcional</th>
               </tr>
             </thead>
@@ -985,6 +1012,50 @@ const ClasesModulo = {
     } catch (err) {
       console.error('Error al cargar sábana de estudiantes:', err);
       contenedor.innerHTML = '<p style="color:#f87171; text-align:center;">Error al cargar la información.</p>';
+    }
+  },
+
+  /* ---------- Bajas manuales ---------- */
+  async darBaja(dni) {
+    if (typeof Swal === 'undefined') return;
+    const hoy = ReglasFP.hoyISO();
+    const r = await Swal.fire({
+      title: 'Dar de baja en este trayecto',
+      html: `<p style="margin:0 0 .75rem">DNI ${this.esc(dni)} — deja de figurar en la toma de asistencia. Se puede reincorporar después.</p>
+        <label class="eq-label" for="baja-motivo">Motivo</label>
+        <select id="baja-motivo" class="swal2-select" style="width:100%;margin:.35rem 0 0">
+          <option>Abandono / dejó de asistir</option><option>Superó el límite de inasistencias</option>
+          <option>Cambio de trayecto o de turno</option><option>Razones de salud</option><option>Razones laborales</option><option>Otro</option>
+        </select>
+        <input id="baja-detalle" class="swal2-input eq-motivo" maxlength="200" placeholder="Detalle (opcional)">
+        <label class="eq-label" for="baja-fecha">Fecha de la baja</label>
+        <input id="baja-fecha" type="date" class="swal2-input eq-motivo" value="${hoy}" max="${hoy}">`,
+      showCancelButton: true, confirmButtonText: 'Dar de baja', cancelButtonText: 'Cancelar', focusConfirm: false,
+      preConfirm: () => ({
+        motivo: [document.getElementById('baja-motivo').value, document.getElementById('baja-detalle').value.trim()].filter(Boolean).join(': '),
+        fecha: document.getElementById('baja-fecha').value || hoy
+      })
+    });
+    if (!r.isConfirmed) return;
+    await this.actualizarInscripcion(dni, { estado: 'BAJA', motivo_baja: r.value.motivo, fecha_baja: r.value.fecha });
+  },
+
+  async reincorporar(dni) {
+    if (!confirm('¿Reincorporar al estudiante en este trayecto?')) return;
+    await this.actualizarInscripcion(dni, { estado: 'ACTIVA', motivo_baja: null, fecha_baja: null });
+  },
+
+  async actualizarInscripcion(dni, cambios) {
+    try {
+      const perfil = window.Auth && Auth.usuarioActual;
+      const datos = { ...cambios, baja_por: cambios.estado === 'BAJA' && perfil ? perfil.id : null };
+      const { error } = await supabase.from('inscripciones').update(datos)
+        .eq('trayecto_id', Number(this.trayectoActualId)).eq('estudiante_user', String(dni));
+      if (error) throw error;
+      if (typeof Swal !== 'undefined') Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: cambios.estado === 'BAJA' ? 'Baja registrada' : 'Estudiante reincorporado', showConfirmButton: false, timer: 2000 });
+      await this.cargarSabanaEstudiantes();
+    } catch (err) {
+      alert('No se pudo actualizar la inscripción: ' + (err.message || '') + (/estado|motivo_baja|fecha_baja/.test(err.message || '') ? '\n\nFalta ejecutar sql/09_preceptores_ficha_observaciones.sql en Supabase.' : ''));
     }
   },
 

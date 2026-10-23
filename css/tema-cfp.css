@@ -725,3 +725,45 @@ button.seg-ver { border: none; cursor: pointer; font-family: inherit; }
 #contenedor-modulos .modulo-item-card::before { content: attr(data-numero); position: absolute; top: .6rem; left: 1rem; font-size: .75rem; font-weight: 800; color: var(--cfp-blue); text-transform: uppercase; letter-spacing: .03em; }
 .mod-quitar { position: absolute; top: .45rem; right: .75rem; background: none; border: none; color: var(--cfp-bad); font-size: .78rem; font-weight: 700; cursor: pointer; font-family: inherit; }
 .mod-quitar:hover { text-decoration: underline; }
+
+/* ==========================================================================
+   14. PRECEPTORÍA · BAJAS · OBSERVACIONES · FICHA DE CURSO
+   ========================================================================== */
+.sit { display: inline-block; font-size: .72rem; font-weight: 800; padding: .2rem .55rem; border-radius: 999px; }
+.sit-ok { background: var(--cfp-ok-soft); color: var(--cfp-ok); }
+.sit-baja { background: var(--cfp-bad-soft); color: var(--cfp-bad); }
+.sit-btn { display: block; margin: .35rem auto 0; background: none; border: 1px solid var(--cfp-line-2); border-radius: 8px; padding: .2rem .55rem; font-size: .72rem; font-weight: 700; color: var(--cfp-ink-2); cursor: pointer; font-family: inherit; }
+.sit-btn:hover { border-color: var(--cfp-bad); color: var(--cfp-bad); }
+tr.fila-baja td { opacity: .65; }
+.asis-sede { background: var(--cfp-celeste-soft); color: var(--cfp-blue); border-radius: 12px; padding: .6rem 1rem; font-size: .85rem; font-weight: 600; margin-bottom: 1rem; }
+.asis-bajas { background: #fff; border: 1px solid var(--cfp-line); border-radius: 12px; padding: .6rem 1rem; margin-bottom: 1rem; font-size: .85rem; }
+.asis-bajas summary { cursor: pointer; font-weight: 700; color: var(--cfp-bad); }
+.asis-bajas ul { margin: .5rem 0 0 1.1rem; padding: 0; color: var(--cfp-ink-2); }
+.seg-motivo { font-size: .78rem; color: var(--cfp-ink-2); align-self: center; }
+.prog-baja { display: inline-block; margin: 0 0 .75rem; background: var(--cfp-bad-soft); color: var(--cfp-bad); font-weight: 700; font-size: .85rem; padding: .45rem .8rem; border-radius: 10px; }
+
+.ficha-datos { margin-bottom: 1.5rem; margin-top: 0 !important; }
+.ficha-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0 .9rem; }
+.ficha-form .form-group { margin-bottom: .75rem; }
+.ficha-form input[readonly] { background: #F5F8FC !important; }
+.ficha-form-acciones { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
+#ficha-observaciones { margin-bottom: 1.5rem; margin-top: 0 !important; }
+.obs-lista { list-style: none; margin: 0 0 1rem; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
+.obs-item { border: 1px solid var(--cfp-line); border-left: 4px solid var(--cfp-celeste); border-radius: 10px; padding: .6rem .85rem; }
+.obs-item.tipo-salud { border-left-color: var(--cfp-bad); }
+.obs-item.tipo-modulos_previos { border-left-color: var(--cfp-ok); }
+.obs-item p { margin: .3rem 0 0; font-size: .88rem; color: var(--cfp-ink); }
+.obs-cab { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.obs-tipo { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .03em; color: var(--cfp-blue); }
+.obs-meta { font-size: .75rem; color: var(--cfp-muted); }
+.obs-borrar { margin-left: auto; background: none; border: none; color: var(--cfp-bad); font-size: .75rem; font-weight: 700; cursor: pointer; font-family: inherit; }
+.obs-form { display: flex; flex-direction: column; gap: .5rem; }
+.obs-form-fila { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+.obs-form-fila .form-control { width: auto !important; min-width: 240px; }
+.obs-check { display: flex; align-items: center; gap: .4rem; font-size: .85rem; color: var(--cfp-ink-2); }
+.obs-ayuda { margin: 0; font-size: .76rem; color: var(--cfp-muted); }
+
+.ficha-curso-campos { border: 1px solid var(--cfp-line); border-radius: 14px; padding: .5rem 1rem .25rem; margin: 1rem 0 0; background: #F8FAFD; }
+.ficha-curso-campos legend { font-size: .8rem; font-weight: 800; color: var(--cfp-blue); padding: 0 .4rem; text-transform: uppercase; letter-spacing: .03em; }
+.ficha-curso-campos .form-group { margin-bottom: .75rem; }
+@media print { body.ficha-imprimiendo .ficha-form-acciones, body.ficha-imprimiendo .obs-form, body.ficha-imprimiendo .obs-borrar { display: none !important; } }

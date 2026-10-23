@@ -34,7 +34,7 @@
   <!-- 4. CSS Panel de Administración -->
   <link rel="stylesheet" href="css/admin-dashboard.css?v=60005">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/tema-cfp.css?v=70015">
+  <link rel="stylesheet" href="css/tema-cfp.css?v=70017">
   <style>
     /* Los avisos de SweetAlert (progreso, resúmenes, errores) tienen que verse por encima de los paneles de la plataforma */
     .swal2-container { z-index: 20000 !important; }
@@ -542,6 +542,33 @@
   <small style="color:var(--cfp-muted)">Va en el certificado después de «CERTIFICADO DE». Respetá mayúsculas, minúsculas y puntos del Catálogo. El nombre del trayecto (arriba) es la columna «Nombre del Trayecto».</small>
 </div>
 
+              <fieldset class="ficha-curso-campos">
+                <legend>Datos para la Ficha de Curso</legend>
+                <div class="form-grid-2">
+                  <div class="form-group"><label for="trayecto-sede">Dónde se dicta</label>
+                    <select id="trayecto-sede" class="form-control custom-select" onchange="document.getElementById('grupo-lugar-dictado').style.display = this.value === 'fuera' ? '' : 'none'">
+                      <option value="sede">En sede (CFP N.º 403) · asistencia: preceptoría o docente</option>
+                      <option value="fuera">Fuera de sede · asistencia: el docente</option>
+                    </select></div>
+                  <div class="form-group" id="grupo-lugar-dictado" style="display:none"><label for="trayecto-lugar">Lugar de dictado (fuera de sede)</label>
+                    <input type="text" id="trayecto-lugar" class="form-control" maxlength="160" placeholder="Ej: Sociedad de Fomento Barrio San Fermín, Calle 123"></div>
+                  <div class="form-group"><label for="trayecto-localidad">Localidad</label>
+                    <input type="text" id="trayecto-localidad" class="form-control" maxlength="80" value="Luján"></div>
+                  <div class="form-group"><label for="trayecto-horario">Horario</label>
+                    <input type="text" id="trayecto-horario" class="form-control" maxlength="80" placeholder="Ej: Lunes y miércoles de 18 a 21 hs"></div>
+                  <div class="form-group"><label for="trayecto-fecha-inicio">Fecha de inicio</label>
+                    <input type="date" id="trayecto-fecha-inicio" class="form-control"></div>
+                  <div class="form-group"><label for="trayecto-fecha-cierre">Fecha de cierre</label>
+                    <input type="date" id="trayecto-fecha-cierre" class="form-control"></div>
+                  <div class="form-group"><label for="trayecto-tipo">Tipo (Catálogo)</label>
+                    <input type="text" id="trayecto-tipo" class="form-control" maxlength="80" placeholder="Ej: Nivel II de FP inicial"></div>
+                  <div class="form-group"><label for="trayecto-codigo">Código (Catálogo)</label>
+                    <input type="text" id="trayecto-codigo" class="form-control" maxlength="20" placeholder="Ej: EE21"></div>
+                  <div class="form-group"><label for="trayecto-acto">Acto administrativo</label>
+                    <input type="text" id="trayecto-acto" class="form-control" maxlength="120" placeholder="Ej: Disposición N.º …"></div>
+                </div>
+              </fieldset>
+
               <div class="form-group" style="margin-top: 1rem;">
                 <label for="trayecto-descripcion">Descripción</label>
                 <textarea id="trayecto-descripcion" class="form-control" rows="3" placeholder="Resumen del trayecto..."></textarea>
@@ -784,6 +811,7 @@
             <select id="usr-alta-rol" class="form-control custom-select">
               <option value="estudiante">Estudiante</option>
               <option value="docente">Docente</option>
+              <option value="preceptor">Preceptor/a</option>
               <option value="admin">Administrador</option>
             </select>
           </div>
@@ -842,22 +870,23 @@
   <script src="js/entorno-prueba.js?v=70007" defer></script>
   <script src="js/supabase-config.js?v=70007" defer></script>
   <script src="js/avisos.js?v=70008" defer></script>
-  <script src="js/reglas.js?v=70013" defer></script>
-  <script src="js/ui.js?v=70015" defer></script>
-  <script src="js/auth.js?v=70007" defer></script>
-  <script src="js/trayectos.js?v=70015" defer></script>
-  <script src="js/usuarios.js?v=70010" defer></script>
+  <script src="js/reglas.js?v=70017" defer></script>
+  <script src="js/ui.js?v=70017" defer></script>
+  <script src="js/auth.js?v=70017" defer></script>
+  <script src="js/trayectos.js?v=70017" defer></script>
+  <script src="js/usuarios.js?v=70017" defer></script>
   <script src="js/auditoria.js?v=70007" defer></script>
-  <script src="js/progreso.js?v=70013" defer></script>
-  <script src="js/seguimiento.js?v=70011" defer></script>
-  <script src="js/ficha.js?v=70010" defer></script>
+  <script src="js/progreso.js?v=70017" defer></script>
+  <script src="js/seguimiento.js?v=70017" defer></script>
+  <script src="js/ficha.js?v=70017" defer></script>
   <script src="js/novedades.js?v=70010" defer></script>
-  <script src="js/importador.js?v=70007" defer></script>
-  <script src="js/clases.js?v=70013" defer></script>
-  <script src="js/asistencias.js?v=70011" defer></script>
+  <script src="js/importador.js?v=70017" defer></script>
+  <script src="js/clases.js?v=70017" defer></script>
+  <script src="js/asistencias.js?v=70017" defer></script>
   <script src="js/reportes.js?v=70007" defer></script>
   <script src="js/notificaciones.js?v=70007" defer></script>
-  <script src="js/actas.js?v=70013" defer></script>
+  <script src="js/actas.js?v=70017" defer></script>
+  <script src="js/fichacurso.js?v=70017" defer></script>
   <script src="js/certificados.js?v=70016" defer></script>
 </body>
 </html>
