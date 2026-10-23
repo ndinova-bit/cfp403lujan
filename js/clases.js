@@ -239,8 +239,8 @@ const ClasesModulo = {
       await this.poblarComboEstudiantes();
     }
     await this.cargarListaClases(esEstudiante);
-    // El preceptor entra directo a la toma de asistencia
-    if (esPreceptor) this.cambiarVistaPestana('asistencias');
+    // El preceptor entra directo a la toma de asistencia; sin señal, también el docente
+    if (esPreceptor || (!esEstudiante && !navigator.onLine)) this.cambiarVistaPestana('asistencias');
   },
 
   async poblarComboModulos() {

@@ -52,6 +52,9 @@ const AsistenciasModulo = {
         supabase.from('modulos').select('id, nombre').eq('trayecto_id', this.trayectoActualId).order('id', { ascending: true }),
         supabase.from('asistencias').select('*').eq('trayecto_id', this.trayectoActualId).order('fecha', { ascending: false })
       ]);
+      const errRed = [rT, rI, rM, rH].map(r => r.error).find(Boolean);
+      if (errRed) throw errRed;
+      this.sinConexion = false;
       this.trayecto = rT.data || {};
       this.modulos = rM.data || [];
       this.historial = rH.data || [];
@@ -81,12 +84,112 @@ const AsistenciasModulo = {
         this.alumnos = this.alumnos.filter(a => !idsBaja.has(a.dni));
       } catch (e) { /* si falla, se muestran todos */ }
 
+      this.guardarCopia();
+      this.aplicarPendientes();
       this.dibujar();
       this.cargarFecha();
     } catch (err) {
       console.error('Asistencia:', err);
-      cont.innerHTML = '<div class="prog-vacio">No se pudo cargar la asistencia. Probá recargar la página.</div>';
+      if (this.usarCopia()) {
+        this.sinConexion = true;
+        this.aplicarPendientes();
+        this.dibujar();
+        this.cargarFecha();
+        return;
+      }
+      cont.innerHTML = `<div class="prog-vacio">${this.esErrorRed(err) ? 'Sin conexión, y todavía no hay una lista guardada de este trayecto en el dispositivo. Abrí la asistencia una vez con señal para poder usarla después sin conexión.' : 'No se pudo cargar la asistencia. Probá recargar la página.'}</div>`;
     }
+  },
+
+  /* ---------- Sin señal ----------
+     Cada vez que se abre la asistencia con conexión se guarda una copia de la lista en el
+     dispositivo. Sin señal se usa esa copia, y lo que se guarde queda "pendiente" en el
+     dispositivo hasta que vuelva la conexión (se envía solo, ver js/app.js). */
+  CLAVE_PEND: 'cfp_asis_pendientes',
+  esErrorRed(e) { return !navigator.onLine || /failed to fetch|networkerror|load failed|network request failed|fetch/i.test(String((e && (e.message || e)) || '')); },
+  miDni() { const p = (window.Auth && Auth.usuarioActual) || {}; return String(p.dni || p.usuario || ''); },
+  claveCopia() { return `cfp_cache_asis_${this.trayectoActualId}`; },
+  guardarCopia() {
+    try {
+      localStorage.setItem(this.claveCopia(), JSON.stringify({
+        dni: this.miDni(), fecha: Date.now(), trayecto: this.trayecto, modulos: this.modulos, alumnos: this.alumnos,
+        bajas: this.bajas || [], historial: (this.historial || []).slice(0, 4000)
+      }));
+    } catch (e) { /* sin espacio: se sigue sin copia */ }
+  },
+  usarCopia() {
+    try {
+      const c = JSON.parse(localStorage.getItem(this.claveCopia()) || 'null');
+      if (!c || String(c.dni) !== this.miDni()) return false;
+      Object.assign(this, { trayecto: c.trayecto || {}, modulos: c.modulos || [], alumnos: c.alumnos || [], bajas: c.bajas || [], historial: c.historial || [] });
+      this.copiaFecha = c.fecha;
+      return this.alumnos.length > 0;
+    } catch (e) { return false; }
+  },
+  pendientes() {
+    try { return JSON.parse(localStorage.getItem(this.CLAVE_PEND) || '[]'); } catch (e) { return []; }
+  },
+  guardarPendientes(lista) {
+    try { localStorage.setItem(this.CLAVE_PEND, JSON.stringify(lista)); } catch (e) { alert('No hay espacio en el dispositivo para guardar la asistencia sin conexión.'); }
+  },
+  misPendientes(tid = null) {
+    const yo = this.miDni();
+    return this.pendientes().filter(p => String(p.por) === yo && (tid === null || Number(p.tid) === Number(tid)));
+  },
+  encolar(item) {
+    const otras = this.pendientes().filter(x => !(Number(x.tid) === Number(item.tid) && x.fecha === item.fecha && String(x.modulo) === String(item.modulo) && String(x.por) === String(item.por)));
+    otras.push(item);
+    this.guardarPendientes(otras);
+  },
+  // Muestra en pantalla lo pendiente como si ya estuviera cargado
+  aplicarPendientes() {
+    this.misPendientes(this.trayectoActualId).forEach(p => {
+      this.historial = (this.historial || []).filter(h => !(String(h.fecha).slice(0, 10) === p.fecha && this.mismoModulo(h.modulo_id, p.modulo)));
+      p.registros.forEach(r => this.historial.unshift({ trayecto_id: p.tid, modulo_id: p.modulo, fecha: p.fecha, estudiante_user: r.estudiante_user, estado: r.estado, _pendiente: true }));
+    });
+  },
+  mostrarPendientes() {
+    const box = document.getElementById('asis-pend-box');
+    if (!box) return;
+    const n = this.misPendientes(this.trayectoActualId).length;
+    const total = this.misPendientes().length;
+    box.innerHTML = total ? `<div class="asis-pend">📤 ${n ? `${n} toma(s) de asistencia de este trayecto` : `${total} toma(s) de asistencia`} guardada(s) en este dispositivo, esperando señal para enviarse.
+      <button type="button" onclick="AsistenciasModulo.enviarAhora()">Enviar ahora</button></div>` : '';
+  },
+  async enviarAhora() {
+    if (!navigator.onLine) return alert('Todavía no hay conexión. Se va a enviar sola cuando vuelva la señal.');
+    const n = await this.enviarPendientes();
+    const quedan = this.misPendientes().length;
+    if (typeof Swal !== 'undefined') Swal.fire({ toast: true, position: 'top-end', icon: quedan ? 'warning' : 'success', title: quedan ? `Se enviaron ${n}; quedan ${quedan} (revisá la conexión)` : `Se enviaron ${n} toma(s) de asistencia`, showConfirmButton: false, timer: 3000 });
+  },
+  // Envía lo pendiente del usuario actual. Devuelve cuántas tomas se enviaron.
+  async enviarPendientes() {
+    if (this._enviando) return 0;
+    this._enviando = true;
+    let enviadas = 0;
+    try {
+      for (const p of this.misPendientes()) {
+        const { error } = await supabase.rpc('guardar_asistencia', { p_trayecto: Number(p.tid), p_modulo: p.modulo, p_fecha: p.fecha, p_registros: p.registros });
+        if (error) {
+          if (this.esErrorRed(error)) break;
+          // Otro problema (por ejemplo, ya no tiene permiso en ese trayecto): se deja anotado y se sigue
+          const l = this.pendientes();
+          const x = l.find(y => Number(y.tid) === Number(p.tid) && y.fecha === p.fecha && String(y.modulo) === String(p.modulo) && String(y.por) === String(p.por));
+          if (x) { x.error = error.message; this.guardarPendientes(l); }
+          continue;
+        }
+        this.guardarPendientes(this.pendientes().filter(y => !(Number(y.tid) === Number(p.tid) && y.fecha === p.fecha && String(y.modulo) === String(p.modulo) && String(y.por) === String(p.por))));
+        enviadas++;
+      }
+    } finally {
+      this._enviando = false;
+    }
+    if (enviadas && this.trayectoActualId && document.getElementById(this.contenedorId || '')) {
+      const { data, error } = await supabase.from('asistencias').select('*').eq('trayecto_id', this.trayectoActualId).order('fecha', { ascending: false });
+      if (!error) { this.historial = data || []; this.sinConexion = false; this.aplicarPendientes(); this.guardarCopia(); this.dibujar(); this.cargarFecha(); }
+    }
+    this.mostrarPendientes();
+    return enviadas;
   },
 
   dibujar() {
@@ -95,6 +198,8 @@ const AsistenciasModulo = {
     const mesActual = this.hoy().slice(0, 7);
 
     cont.innerHTML = `
+      ${this.sinConexion ? `<div class="asis-offline">📵 Sin conexión. Estás usando la lista guardada en este dispositivo${this.copiaFecha ? ' (del ' + new Date(this.copiaFecha).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }) + ')' : ''}. Lo que guardes se envía solo cuando vuelva la señal.</div>` : ''}
+      <div id="asis-pend-box"></div>
       ${computa ? '' : `<div class="asis-aviso">Este trayecto <strong>no computa asistencia</strong> (por ejemplo, virtual): podés registrarla, pero no se promedia en las notas.</div>`}
       ${this.trayecto && this.trayecto.sede === 'fuera' ? `<div class="asis-sede">Fuera de sede${this.trayecto.lugar_dictado ? ': ' + this.esc(this.trayecto.lugar_dictado) : ''} · la asistencia la carga el docente.</div>` : ''}
       ${(this.bajas || []).length ? `<details class="asis-bajas"><summary>${this.bajas.length} estudiante(s) dado(s) de baja no aparecen en la lista</summary><ul>${this.bajas.map(b => `<li><b>${this.esc(b.nombre)}</b> · ${this.esc(b.tipo === 'automatica' ? 'Baja automática: ' + b.motivo : 'Baja: ' + b.motivo)}</li>`).join('')}</ul></details>` : ''}
@@ -133,6 +238,7 @@ const AsistenciasModulo = {
         <div id="asis-historial"></div>
       </div>`;
     this.dibujarHistorial();
+    this.mostrarPendientes();
   },
 
   // % de asistencia acumulado de cada alumno (todas las fechas y módulos)
@@ -158,7 +264,10 @@ const AsistenciasModulo = {
     const info = document.getElementById('asis-estado-dia');
     if (info) {
       info.className = 'asis-estado-dia ' + (this.cargadoPrevio ? 'editando' : 'nuevo');
-      info.innerHTML = this.cargadoPrevio
+      const pend = regs.some(h => h._pendiente);
+      info.innerHTML = pend
+        ? `📤 Guardado en este dispositivo (${this.fechaAR(fecha)} · ${this.esc(this.nombreModulo(mod))}), <strong>pendiente de envío</strong>. Podés corregirlo.`
+        : this.cargadoPrevio
         ? `Este día ya está cargado (${this.fechaAR(fecha)} · ${this.esc(this.nombreModulo(mod))}). Estás <strong>corrigiendo</strong> lo registrado.`
         : `Día nuevo: ${this.fechaAR(fecha)} · ${this.esc(this.nombreModulo(mod))}. Todos empiezan como presentes.`;
     }
@@ -214,10 +323,29 @@ const AsistenciasModulo = {
     const btn = document.getElementById('asis-btn-guardar');
     if (btn) btn.disabled = true;
 
+    // Sin señal: se guarda en el dispositivo y se envía sola después
+    const guardarSinSenal = () => {
+      this.encolar({ tid: this.trayectoActualId, modulo, fecha, registros, por: this.miDni(), guardado: Date.now(), trayecto: (this.trayecto && this.trayecto.nombre) || '' });
+      this.aplicarPendientes();
+      this.dibujarHistorial();
+      this.cargarFecha();
+      this.mostrarPendientes();
+      if (typeof Swal !== 'undefined') Swal.fire({ icon: 'info', title: 'Guardada en el dispositivo', text: `No hay conexión. La asistencia del ${this.fechaAR(fecha)} quedó guardada en este dispositivo y se envía sola cuando vuelva la señal. No cierres la sesión hasta que se envíe.` });
+    };
+    if (!navigator.onLine) {
+      guardarSinSenal();
+      if (btn) btn.disabled = false;
+      return;
+    }
+
     try {
       const { error } = await supabase.rpc('guardar_asistencia', {
         p_trayecto: this.trayectoActualId, p_modulo: modulo, p_fecha: fecha, p_registros: registros
       });
+      if (error && this.esErrorRed(error)) {
+        guardarSinSenal();
+        return;
+      }
       if (error) {
         // Si todavía no se ejecutó el SQL 07, se guarda igual pero solo para esta fecha + módulo
         const faltaFuncion = /guardar_asistencia|function|PGRST202|42883/i.test(error.message || '') || error.code === 'PGRST202';
@@ -234,10 +362,15 @@ const AsistenciasModulo = {
       if (typeof Swal !== 'undefined') {
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `Asistencia guardada (${this.fechaAR(fecha)})`, showConfirmButton: false, timer: 2200 });
       }
+      // Si había una versión pendiente de este mismo día, ya no hace falta
+      this.guardarPendientes(this.pendientes().filter(x => !(Number(x.tid) === Number(this.trayectoActualId) && x.fecha === fecha && String(x.modulo) === String(modulo) && String(x.por) === this.miDni())));
       const { data } = await supabase.from('asistencias').select('*').eq('trayecto_id', this.trayectoActualId).order('fecha', { ascending: false });
       this.historial = data || [];
+      this.aplicarPendientes();
+      this.guardarCopia();
       this.dibujarHistorial();
       this.cargarFecha();
+      this.mostrarPendientes();
     } catch (err) {
       console.error('Guardar asistencia:', err);
       alert('Error al guardar la asistencia: ' + (err.message || 'error de conexión'));
@@ -255,6 +388,7 @@ const AsistenciasModulo = {
       if (!mapa[k]) mapa[k] = { fecha: String(h.fecha).slice(0, 10), modulo: mod, p: 0, t: 0, a: 0, j: 0, total: 0 };
       const e = String(h.estado).toLowerCase();
       mapa[k].total++;
+      if (h._pendiente) mapa[k].pend = true;
       if (e === 'presente') mapa[k].p++;
       else if (e === 'tarde') mapa[k].t++;
       else if (e === 'justificado') mapa[k].j++;
@@ -273,7 +407,7 @@ const AsistenciasModulo = {
       return `<button type="button" class="asis-dia" onclick="AsistenciasModulo.abrirDia('${d.fecha}','${d.modulo}')" title="Abrir para corregir">
         <strong>${this.fechaAR(d.fecha)}</strong>
         <span class="asis-dia-mod">${this.esc(this.nombreModulo(d.modulo))}</span>
-        <span class="asis-dia-cnt">${d.p + d.t}/${d.total} presentes · ${pct}%</span>
+        <span class="asis-dia-cnt">${d.p + d.t}/${d.total} presentes · ${pct}%${d.pend ? ' · 📤 sin enviar' : ''}</span>
       </button>`;
     }).join('')}</div>`;
   },

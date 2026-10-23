@@ -1,21 +1,17 @@
 {
+  "id": "./",
+  "name": "CFP N.º 403 «Oscar Smith» · Plataforma",
   "short_name": "CFP 403",
-  "name": "CFP N° 403 Oscar Smith - Luján",
-  "icons": [
-    {
-      "src": "logo.png",
-      "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "logo.png",
-      "type": "image/png",
-      "sizes": "512x512"
-    }
-  ],
-  "start_url": "./index.html",
-  "background_color": "#0b111e",
-  "theme_color": "#0b111e",
+  "description": "Plataforma de Formación Profesional del CFP N.º 403 de Luján: clases, asistencia, notas y certificados.",
+  "lang": "es-AR",
+  "start_url": "./?app=1",
+  "scope": "./",
   "display": "standalone",
-  "orientation": "portrait"
+  "background_color": "#F5F8FC",
+  "theme_color": "#071B38",
+  "icons": [
+    { "src": "img/app/icono-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
+    { "src": "img/app/icono-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any" },
+    { "src": "img/app/icono-maskable-512.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
+  ]
 }

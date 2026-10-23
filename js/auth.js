@@ -75,9 +75,24 @@ const Auth = {
 
     if (error) {
       console.error('No se pudo leer el perfil:', error.message);
+      this.errorDeRed = this.esErrorDeRed(error);
       return null;
     }
     return this.normalizarPerfil(data);
+  },
+
+  esErrorDeRed(e) {
+    return !navigator.onLine || /failed to fetch|networkerror|load failed|network request failed|fetch/i.test(String((e && (e.message || e)) || ''));
+  },
+
+  // Sin señal: se usa el último perfil guardado en este dispositivo (solo para mostrar la
+  // interfaz y la asistencia guardada; los datos igual los protege la base de datos).
+  perfilSinConexion(userId) {
+    try {
+      const p = JSON.parse(localStorage.getItem('usuario_actual') || 'null');
+      if (p && (!userId || !p.id || p.id === userId)) return this.normalizarPerfil(p);
+    } catch (e) { /* nada */ }
+    return null;
   },
 
   // Convierte lo que escribió la persona en el email con el que está registrada.
@@ -97,21 +112,37 @@ const Auth = {
 
     try {
       const { data, error } = await supabase.auth.getSession();
-      if (error || !data?.session?.user) return null;
+      if (error || !data?.session?.user) {
+        if (this.esErrorDeRed(error)) {
+          const guardado = this.perfilSinConexion(null);
+          if (guardado) { this.guardarPerfil(guardado); return guardado; }
+        }
+        return null;
+      }
 
-      const perfil = await this.cargarPerfilPorId(data.session.user.id);
+      this.errorDeRed = false;
+      let perfil = await this.cargarPerfilPorId(data.session.user.id);
+      if (!perfil && this.errorDeRed) perfil = this.perfilSinConexion(data.session.user.id);
       if (!perfil) return null;
 
       this.guardarPerfil(perfil);
       return perfil;
     } catch (err) {
       console.warn('Error obteniendo la sesión:', err);
+      if (this.esErrorDeRed(err)) {
+        const guardado = this.perfilSinConexion(null);
+        if (guardado) { this.guardarPerfil(guardado); return guardado; }
+      }
       return null;
     }
   },
 
   async cerrarSesion() {
+    const pend = window.AsistenciasModulo && AsistenciasModulo.pendientes ? AsistenciasModulo.pendientes().length : 0;
+    if (pend && !confirm(`Hay ${pend} asistencia(s) guardadas en este dispositivo que todavía no se enviaron (falta señal). Si cerrás la sesión, se envían cuando vuelvas a entrar con tu usuario. ¿Cerrar igual?`)) return;
     this.limpiarPerfil();
+    // Las listas guardadas para usar sin señal se borran al salir (la asistencia pendiente no)
+    try { Object.keys(localStorage).filter(k => k.startsWith('cfp_cache_')).forEach(k => localStorage.removeItem(k)); } catch (e) { /* nada */ }
     try {
       await supabase.auth.signOut();
     } catch (e) {
