@@ -4,8 +4,7 @@
 // Qué hace, para cada estudiante que le manda la plataforma (CSV):
 //   1. Lo guarda en el padrón (padron_estudiantes).
 //   2. Si no tiene cuenta, la crea en Supabase Auth ya confirmada, con
-//      usuario = DNI@cfp403.ar y una contraseña inicial ALEATORIA (se devuelve a la plataforma
-//      para armar la planilla de credenciales; no se guarda en ningún otro lado),
+//      usuario = DNI@cfp403.ar y contraseña inicial CFP403_<DNI>,
 //      y deja su perfil como ESTUDIANTE / ACTIVO.
 //      Si ya tenía cuenta pendiente de aprobación, la aprueba.
 //   3. Lo inscribe en el trayecto elegido (si todavía no estaba).
@@ -19,14 +18,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-// Contraseña inicial aleatoria y fácil de dictar (sin 0/O, 1/l/I)
-const generarClave = (largo = 9) => {
-  const abc = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-  const bytes = new Uint32Array(largo);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (b) => abc[b % abc.length]).join('');
 };
 
 const json = (body: unknown, status = 200) =>
@@ -87,7 +78,6 @@ Deno.serve(async (req: Request) => {
       inscriptos_nuevos: 0,
       ya_inscriptos: 0,
       errores: [] as string[],
-      credenciales: [] as { dni: string; nombre: string; apellido: string; clave: string }[],
     };
 
     // 3. Estudiante por estudiante
@@ -165,7 +155,7 @@ Deno.serve(async (req: Request) => {
           }
         }
 
-        const clave = generarClave();
+        const clave = `CFP403_${dni}`;
         const { data: nuevo, error: errCrear } = await admin.auth.admin.createUser({
           email,
           password: clave,
@@ -191,7 +181,6 @@ Deno.serve(async (req: Request) => {
           continue;
         }
         resultado.creados++;
-        resultado.credenciales.push({ dni, nombre, apellido, clave });
       }
 
       // 3.3 Inscripción
