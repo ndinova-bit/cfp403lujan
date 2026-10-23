@@ -11,6 +11,11 @@
      – Si el trayecto no computa asistencia (virtual) o no hay asistencia
        cargada, la nota es solo el promedio de actividades (nunca se promedia con 0).
      – Si no hay actividades calificadas pero sí asistencia, la nota es la asistencia.
+   • Solo cuentan las actividades con nota: no cuentan el material, las encuestas
+     ni las bitácoras marcadas "sin nota".
+   • Una actividad no entregada cuenta como 0 cuando vence su plazo (o, si no tiene
+     fecha límite, cuando cierra el módulo). Un recuperatorio es otra actividad más
+     y se promedia con las demás.
    • Un módulo se aprueba con 70 o más, o si está acreditado por equivalencia.
    • El trayecto se aprueba cuando TODOS sus módulos están aprobados o acreditados.
    • Correlatividad: un módulo solo se califica si el anterior está aprobado o
@@ -57,18 +62,23 @@ const ReglasFP = {
   evaluar(datos) {
     const key = String(datos.key);
     const computa = datos.computaAsistencia !== false;
-    const clases = datos.clases || [];
+    // Las encuestas, el material y las bitácoras sin nota no cuentan para el promedio
+    const clases = (datos.clases || []).filter(c => c.calificable !== false && c.tipo !== 'encuesta' && c.tipo !== 'material');
     const entregas = (datos.entregas || []).filter(e => String(e.estudiante_user) === key);
     const asis = (datos.asistencias || []).filter(a => String(a.estudiante_user) === key);
     const acred = (datos.acreditados || []).filter(a => String(a.estudiante_user) === key);
     const modulos = (datos.modulos && datos.modulos.length) ? datos.modulos : [{ id: null, nombre: 'Trayecto completo' }];
 
+    const hoy = datos.hoy || this.hoyISO();
     const res = modulos.map(m => {
-      const idsC = clases.filter(c => m.id === null || Number(c.modulo_id) === Number(m.id)).map(c => Number(c.id));
+      const clasesM = clases.filter(c => m.id === null || Number(c.modulo_id) === Number(m.id));
+      const idsC = clasesM.map(c => Number(c.id));
       const ent = entregas.filter(e => idsC.includes(Number(e.clase_id)));
       const as = m.id === null ? asis : asis.filter(a => a.modulo_id === null || a.modulo_id === undefined || Number(a.modulo_id) === Number(m.id));
       const eq = m.id !== null ? acred.find(a => Number(a.modulo_id) === Number(m.id)) : null;
-      const promAct = this.promedioActividades(ent);
+      // Actividades vencidas sin entregar: cuentan como 0
+      const faltantes = clasesM.filter(c => this.venceSinEntrega(c, m, key, hoy) && !ent.some(e => Number(e.clase_id) === Number(c.id)));
+      const promAct = this.promedioActividades(ent.concat(faltantes.map(c => ({ clase_id: c.id, nota: '0' }))));
       const pctAsis = this.porcentajeAsistencia(as);
       const nota = eq ? null : this.combinar(promAct, pctAsis, computa);
       return {
@@ -81,6 +91,7 @@ const ReglasFP = {
         promAct: promAct === null ? null : Math.round(promAct),
         pctAsis: (computa && pctAsis !== null) ? Math.round(pctAsis) : null,
         entregas: ent.length,
+        sinEntregar: faltantes.length,
         pendientes: ent.filter(e => isNaN(parseFloat(e.nota))).length,
         sinDatos: !eq && nota === null
       };
@@ -111,6 +122,24 @@ const ReglasFP = {
     };
   },
 
+  /* ¿Esta actividad ya cuenta como 0 si el alumno no la entregó?
+     – Con fecha límite: desde que vence.
+     – Sin fecha límite: cuando cierra el módulo (su fecha de fin).
+     Solo para actividades que el alumno entrega en la plataforma (no la práctica en
+     taller, que la califica el docente) y que son para él (los recuperatorios
+     personales no cuentan para el resto del grupo). */
+  TIPOS_CON_ENTREGA: ['tp', 'cuestionario', 'escrita', 'diagnostico', 'presupuesto', 'bitacora'],
+  venceSinEntrega(c, modulo, key, hoy) {
+    if (!this.TIPOS_CON_ENTREGA.includes(c.tipo)) return false;
+    if (c.estudiante_user && String(c.estudiante_user) !== String(key)) return false;
+    if (c.fecha_limite) {
+      const fin = new Date(c.fecha_limite).getTime();
+      return !isNaN(fin) && fin < Date.now();
+    }
+    const finMod = modulo && modulo.fecha_fin ? String(modulo.fecha_fin).slice(0, 10) : '';
+    return !!finMod && finMod < (hoy || this.hoyISO());
+  },
+
   // Marca como bloqueados los módulos cuyo anterior no está aprobado (salvo equivalencia o excepción).
   // Guarda la nota que tendría en "notaSinCorrelativa" por si se corrige el módulo anterior.
   aplicarCorrelatividad(mods, excepcion = false) {
@@ -134,6 +163,16 @@ const ReglasFP = {
     if (tieneExcepcion || idx <= 0) return true;
     const ant = evaluacion.modulos[idx - 1];
     return !!(ant && ant.aprobado);
+  },
+
+  /* Lee clases con la columna "calificable" (sql/11). Si la base todavía no la tiene,
+     las lee sin ella para que nada deje de funcionar.
+     Uso: ReglasFP.selectClases('id, modulo_id', q => q.eq('trayecto_id', 8)) */
+  async selectClases(columnas, filtro) {
+    const armar = (cols) => filtro(supabase.from('clases').select(cols));
+    let r = await armar(columnas + ', calificable, tipo, fecha_limite, estudiante_user');
+    if (r.error && /calificable|tipo|fecha_limite|column/i.test(r.error.message || '')) r = await armar(columnas);
+    return r;
   },
 
   /* ---------- Bajas ----------
@@ -177,7 +216,7 @@ const ReglasFP = {
       supabase.from('trayectos').select('*').eq('id', tid).maybeSingle(),
       supabase.from('inscripciones').select('*').eq('trayecto_id', tid),
       supabase.from('modulos').select('*').eq('trayecto_id', tid).order('id', { ascending: true }),
-      supabase.from('clases').select('id, modulo_id').eq('trayecto_id', tid),
+      this.selectClases('id, modulo_id', q => q.eq('trayecto_id', tid)),
       supabase.from('asistencias').select('estudiante_user, modulo_id, estado').eq('trayecto_id', tid),
       supabase.from('modulos_acreditados').select('*').eq('trayecto_id', tid),
       supabase.from('excepciones_estudiantes').select('estudiante_user, habilitado').eq('trayecto_id', tid)

@@ -37,5 +37,7 @@ end $$;
 revoke all on function public.uso_base() from public, anon;
 grant execute on function public.uso_base() to authenticated;
 
--- Comprobación: tiene que devolver un número de bytes y una lista de tablas
-select public.uso_base() is not null as funciona;
+-- Comprobación: tiene que aparecer una fila con "uso_base".
+-- (La función en sí solo responde a un administrador conectado a la plataforma;
+--  desde el SQL Editor no hay usuario, por eso se prueba en Base de Datos.)
+select proname as funcion_creada from pg_proc where proname = 'uso_base';

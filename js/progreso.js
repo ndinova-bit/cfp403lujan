@@ -38,7 +38,7 @@ const ProgresoModulo = {
       const [rT, rM, rC, rA, rX, rQ] = await Promise.all([
         supabase.from('trayectos').select('*').in('id', ids),
         supabase.from('modulos').select('*').in('trayecto_id', ids).order('id', { ascending: true }),
-        supabase.from('clases').select('id, titulo, modulo_id, trayecto_id').in('trayecto_id', ids),
+        ReglasFP.selectClases('id, titulo, modulo_id, trayecto_id', q => q.in('trayecto_id', ids)),
         supabase.from('asistencias').select('*').eq('estudiante_user', key),
         supabase.from('excepciones_estudiantes').select('*').eq('estudiante_user', key).eq('habilitado', true),
         supabase.from('modulos_acreditados').select('*').eq('estudiante_user', key)
@@ -98,7 +98,7 @@ const ProgresoModulo = {
       if (m.pctAsis !== null) partes.push(`asistencia ${m.pctAsis}%`);
       const detalle = m.aprobado ? 'Aprobado' : (m.nota === null ? 'Sin calificaciones todavía' : `En curso · ${vos ? 'necesitás' : 'se necesita'} ${this.MINIMO} o más`);
       const clsNota = m.aprobado ? 'ok' : (m.nota !== null ? 'bad' : 'curso');
-      filas += `<div class="prog-mod ${estado === 'curso' ? 'curso' : ''}"><span class="prog-mod-ico ${estado}">${this.ICO[estado]}</span><div class="prog-mod-info"><strong>${titulo}</strong><span>${detalle}${partes.length ? ' · ' + partes.join(' · ') : ''} · ${m.entregas} entrega(s)${m.pendientes ? `, ${m.pendientes} sin corregir` : ''}</span></div>${m.nota !== null ? `<span class="prog-mod-nota ${clsNota}">${m.nota}</span>` : ''}</div>`;
+      filas += `<div class="prog-mod ${estado === 'curso' ? 'curso' : ''}"><span class="prog-mod-ico ${estado}">${this.ICO[estado]}</span><div class="prog-mod-info"><strong>${titulo}</strong><span>${detalle}${partes.length ? ' · ' + partes.join(' · ') : ''} · ${m.entregas} entrega(s)${m.pendientes ? `, ${m.pendientes} sin corregir` : ''}${m.sinEntregar ? `, ${m.sinEntregar} vencida(s) sin entregar (cuentan 0)` : ''}</span></div>${m.nota !== null ? `<span class="prog-mod-nota ${clsNota}">${m.nota}</span>` : ''}</div>`;
     });
 
     const prom = ev.promedio;
