@@ -34,7 +34,7 @@
   <!-- 4. CSS Panel de Administración -->
   <link rel="stylesheet" href="css/admin-dashboard.css?v=60005">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/tema-cfp.css?v=70010">
+  <link rel="stylesheet" href="css/tema-cfp.css?v=70011">
   <style>
     /* Los avisos de SweetAlert (progreso, resúmenes, errores) tienen que verse por encima de los paneles de la plataforma */
     .swal2-container { z-index: 20000 !important; }
@@ -546,6 +546,13 @@
                 <textarea id="trayecto-requisitos" class="form-control" rows="2" placeholder="Ej: DNI, mayor de 16 años..."></textarea>
               </div>
 
+              <div class="form-group" style="margin-top: 1rem;">
+                <label class="nov-check" for="trayecto-computa-asistencia" style="margin:0;">
+                  <input type="checkbox" id="trayecto-computa-asistencia" checked>
+                  Computa asistencia en la nota <small style="color:var(--cfp-muted)">(desmarcar en trayectos virtuales: la nota sale solo de las actividades)</small>
+                </label>
+              </div>
+
               <hr style="margin: 1.5rem 0; border-color: rgba(255,255,255,0.08);">
               
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
@@ -829,21 +836,22 @@
   <script src="js/entorno-prueba.js?v=70007" defer></script>
   <script src="js/supabase-config.js?v=70007" defer></script>
   <script src="js/avisos.js?v=70008" defer></script>
+  <script src="js/reglas.js?v=70011" defer></script>
   <script src="js/pdf-lab.js?v=70007" defer></script>
   <script src="js/ui.js?v=70010" defer></script>
   <script src="js/auth.js?v=70007" defer></script>
-  <script src="js/trayectos.js?v=70008" defer></script>
+  <script src="js/trayectos.js?v=70011" defer></script>
   <script src="js/usuarios.js?v=70010" defer></script>
   <script src="js/auditoria.js?v=70007" defer></script>
-  <script src="js/progreso.js?v=70010" defer></script>
-  <script src="js/seguimiento.js?v=70010" defer></script>
+  <script src="js/progreso.js?v=70011" defer></script>
+  <script src="js/seguimiento.js?v=70011" defer></script>
   <script src="js/ficha.js?v=70010" defer></script>
   <script src="js/novedades.js?v=70010" defer></script>
   <script src="js/importador.js?v=70007" defer></script>
-  <script src="js/clases.js?v=70007" defer></script>
-  <script src="js/asistencias.js?v=70007" defer></script>
+  <script src="js/clases.js?v=70011" defer></script>
+  <script src="js/asistencias.js?v=70011" defer></script>
   <script src="js/reportes.js?v=70007" defer></script>
   <script src="js/notificaciones.js?v=70007" defer></script>
-  <script src="js/actas.js?v=70007" defer></script>
+  <script src="js/actas.js?v=70011" defer></script>
 </body>
 </html>

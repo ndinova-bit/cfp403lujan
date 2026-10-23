@@ -110,7 +110,7 @@ const SeguimientoModulo = {
       insc.filter(i => Number(i.trayecto_id) === tid).forEach(i => {
         const key = String(i.estudiante_user);
         const a = asis.filter(x => Number(x.trayecto_id) === tid && String(x.estudiante_user) === key);
-        const pctAs = a.length ? Math.round(a.filter(x => x.estado === 'presente').length / a.length * 100) : null;
+        const pctAs = (ReglasFP.computaAsistencia(t) && a.length) ? Math.round(ReglasFP.porcentajeAsistencia(a)) : null;
         const ent = entregas.filter(e => idsC.includes(Number(e.clase_id)) && String(e.estudiante_user) === key);
         const notas = ent.map(e => parseFloat(e.nota)).filter(v => !isNaN(v));
         const prom = notas.length ? Math.round(notas.reduce((x, y) => x + y, 0) / notas.length) : null;

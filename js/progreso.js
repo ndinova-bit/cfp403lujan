@@ -14,16 +14,7 @@ const ProgresoModulo = {
     bloq: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>'
   },
 
-  // Combina actividades y asistencia en una nota 0-100 (o null si no hay datos)
-  nota(entregas, asist) {
-    const vals = entregas.map(e => parseFloat(e.nota)).filter(v => !isNaN(v));
-    const prom = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-    const pct = asist.length ? (asist.filter(a => a.estado === 'presente').length / asist.length) * 100 : null;
-    if (prom !== null && pct !== null) return Math.round((prom + pct) / 2);
-    if (prom !== null) return Math.round(prom);
-    if (pct !== null) return Math.round(pct);
-    return null;
-  },
+  // La nota de cada módulo se calcula con ReglasFP (js/reglas.js)
 
   async cargar() {
     const cont = document.getElementById('progreso-contenido');
@@ -44,13 +35,15 @@ const ProgresoModulo = {
         cont.innerHTML = `<div class="prog-vacio">${opciones.boton ? 'Todavía no estás inscripto/a en ningún trayecto.' : 'No tiene inscripciones en trayectos.'}</div>`;
         return { entregas: [], clases: [] };
       }
-      const [rT, rM, rC, rA, rX] = await Promise.all([
+      const [rT, rM, rC, rA, rX, rQ] = await Promise.all([
         supabase.from('trayectos').select('*').in('id', ids),
         supabase.from('modulos').select('*').in('trayecto_id', ids).order('id', { ascending: true }),
         supabase.from('clases').select('id, titulo, modulo_id, trayecto_id').in('trayecto_id', ids),
         supabase.from('asistencias').select('*').eq('estudiante_user', key),
-        supabase.from('excepciones_estudiantes').select('*').eq('estudiante_user', key).eq('habilitado', true)
+        supabase.from('excepciones_estudiantes').select('*').eq('estudiante_user', key).eq('habilitado', true),
+        supabase.from('modulos_acreditados').select('*').eq('estudiante_user', key)
       ]);
+      const acreditados = (rQ && !rQ.error && rQ.data) || [];
       const clases = rC.data || [];
       const claseIds = clases.map(c => c.id);
       let entregas = [];
@@ -63,7 +56,7 @@ const ProgresoModulo = {
 
       cont.innerHTML = '<div class="prog-wrap">' + (rT.data || []).map(t => {
         const ins = (insc || []).find(i => Number(i.trayecto_id) === Number(t.id));
-        return this.tarjeta(t, (rM.data || []).filter(m => Number(m.trayecto_id) === Number(t.id)), clases, entregas, asis, exc, opciones, ins);
+        return this.tarjeta(t, (rM.data || []).filter(m => Number(m.trayecto_id) === Number(t.id)), clases, entregas, asis, exc, { ...opciones, key, acreditados }, ins);
       }).join('') + '</div>';
       return { entregas, clases, trayectos: rT.data || [] };
     } catch (e) {
@@ -75,56 +68,61 @@ const ProgresoModulo = {
 
   tarjeta(t, modulos, clases, entregas, asis, exc, opciones = { boton: true }, ins = null) {
     const tid = Number(t.id);
-    const asT = asis.filter(a => Number(a.trayecto_id) === tid);
+    const vos = !!opciones.boton;   // true = lo ve el propio alumno
     const habExc = exc.some(x => Number(x.trayecto_id) === tid);
-    let aprobadoAnterior = true;
-    let enCursoMarcado = false;
-    const notas = [];
+    const ev = ReglasFP.evaluar({
+      key: opciones.key,
+      modulos,
+      clases: clases.filter(c => Number(c.trayecto_id) === tid),
+      entregas,
+      asistencias: asis.filter(a => Number(a.trayecto_id) === tid),
+      acreditados: (opciones.acreditados || []).filter(a => Number(a.trayecto_id) === tid),
+      computaAsistencia: ReglasFP.computaAsistencia(t)
+    });
+
     let filas = '';
-
-    const lista = modulos.length ? modulos : [{ id: null, nombre: 'Contenidos generales' }];
-    lista.forEach((m, i) => {
-      const cids = clases.filter(c => m.id === null ? true : Number(c.modulo_id) === Number(m.id)).map(c => Number(c.id));
-      const ent = entregas.filter(e => cids.includes(Number(e.clase_id)));
-      const as = m.id === null ? asT : asT.filter(a => Number(a.modulo_id) === Number(m.id) || a.modulo_id === null);
-      const nota = this.nota(ent, as);
-      const titulo = `Módulo ${i + 1} · ${this.esc(m.nombre || '')}`;
-      const bloqueado = i > 0 && !aprobadoAnterior && !habExc;
-
-      if (bloqueado) {
+    let bloquearDesde = -1;
+    ev.modulos.forEach((m, i) => {
+      const titulo = `Módulo ${i + 1} · ${this.esc(m.nombre || 'Contenidos generales')}`;
+      if (bloquearDesde === -1 && !ReglasFP.moduloHabilitado(ev, i, habExc)) bloquearDesde = i;
+      if (bloquearDesde !== -1 && i >= bloquearDesde) {
         filas += `<div class="prog-mod bloq"><span class="prog-mod-ico bloq">${this.ICO.bloq}</span><div class="prog-mod-info"><strong style="color:#5B6B82">${titulo}</strong><span>Se habilita al aprobar el módulo anterior (mínimo ${this.MINIMO})</span></div></div>`;
         return;
       }
-      if (nota !== null) notas.push(nota);
-      const aprobado = nota !== null && nota >= this.MINIMO;
-      let estado = 'curso';
-      if (aprobado) estado = 'ok';
-      else if (enCursoMarcado) estado = 'curso';
-      if (!aprobado) enCursoMarcado = true;
-      const detalle = aprobado ? 'Aprobado' : (nota === null ? 'Sin calificaciones todavía' : `En curso · ${opciones.boton ? 'necesitás' : 'se necesita'} ${this.MINIMO} o más`);
-      const clsNota = aprobado ? 'ok' : (nota !== null && nota < this.MINIMO ? 'bad' : 'curso');
-      filas += `<div class="prog-mod ${estado === 'curso' ? 'curso' : ''}"><span class="prog-mod-ico ${estado}">${this.ICO[estado]}</span><div class="prog-mod-info"><strong>${titulo}</strong><span>${detalle} · ${ent.length} actividad(es) entregada(s)</span></div>${nota !== null ? `<span class="prog-mod-nota ${clsNota}">${nota}</span>` : ''}</div>`;
-      aprobadoAnterior = aprobado;
+      if (m.equivalencia) {
+        filas += `<div class="prog-mod"><span class="prog-mod-ico ok">${this.ICO.ok}</span><div class="prog-mod-info"><strong>${titulo}</strong><span>Acreditado por equivalencia${m.motivoEquivalencia ? ' · ' + this.esc(m.motivoEquivalencia) : ''}</span></div><span class="prog-mod-nota ok">EQ</span></div>`;
+        return;
+      }
+      const estado = m.aprobado ? 'ok' : 'curso';
+      const partes = [];
+      if (m.promAct !== null) partes.push(`actividades ${m.promAct}`);
+      if (m.pctAsis !== null) partes.push(`asistencia ${m.pctAsis}%`);
+      const detalle = m.aprobado ? 'Aprobado' : (m.nota === null ? 'Sin calificaciones todavía' : `En curso · ${vos ? 'necesitás' : 'se necesita'} ${this.MINIMO} o más`);
+      const clsNota = m.aprobado ? 'ok' : (m.nota !== null ? 'bad' : 'curso');
+      filas += `<div class="prog-mod ${estado === 'curso' ? 'curso' : ''}"><span class="prog-mod-ico ${estado}">${this.ICO[estado]}</span><div class="prog-mod-info"><strong>${titulo}</strong><span>${detalle}${partes.length ? ' · ' + partes.join(' · ') : ''} · ${m.entregas} entrega(s)${m.pendientes ? `, ${m.pendientes} sin corregir` : ''}</span></div>${m.nota !== null ? `<span class="prog-mod-nota ${clsNota}">${m.nota}</span>` : ''}</div>`;
     });
 
-    const prom = notas.length ? Math.round(notas.reduce((a, b) => a + b, 0) / notas.length) : null;
-    const pctAs = asT.length ? Math.round(asT.filter(a => a.estado === 'presente').length / asT.length * 100) : null;
+    const prom = ev.promedio;
+    const total = ev.modulos.length;
+    const aprobados = ev.modulos.filter(m => m.aprobado).length;
     const grados = prom === null ? 0 : Math.min(100, prom);
     let chip = '<span class="prog-estado none">Sin datos aún</span>';
-    if (prom !== null) chip = prom >= this.MINIMO
-      ? (opciones.boton ? '<span class="prog-estado ok">Vas en camino</span>' : '<span class="prog-estado ok">En condiciones</span>')
-      : (prom >= this.MINIMO - 10 ? (opciones.boton ? '<span class="prog-estado mid">Casi llegás</span>' : '<span class="prog-estado mid">Cerca del mínimo</span>') : (opciones.boton ? '<span class="prog-estado bad">Necesitás recuperar</span>' : '<span class="prog-estado bad">Debajo del mínimo</span>'));
+    if (ev.aprobado) chip = `<span class="prog-estado ok">${vos ? '¡Trayecto aprobado!' : 'Trayecto aprobado'}</span>`;
+    else if (prom !== null) chip = prom >= this.MINIMO
+      ? `<span class="prog-estado ok">${vos ? 'Vas en camino' : 'En camino'}</span>`
+      : (prom >= this.MINIMO - 10 ? `<span class="prog-estado mid">${vos ? 'Casi llegás' : 'Cerca del mínimo'}</span>` : `<span class="prog-estado bad">${vos ? 'Necesitás recuperar' : 'Debajo del mínimo'}</span>`);
     const color = prom === null ? '#E3EBF5' : (prom >= this.MINIMO ? '#1E9E6A' : (prom >= this.MINIMO - 10 ? '#F6B81A' : '#D64545'));
+    const pctAs = ev.asistencia;
 
     return `
     <section class="prog-trayecto">
       <div class="prog-top">
         <div class="prog-top-info">
-          <span class="prog-chip">${this.esc(t.modalidad || 'Trayecto formativo')}</span>
+          <span class="prog-chip">${this.esc(t.modalidad || (ev.computaAsistencia ? 'Trayecto formativo' : 'Trayecto virtual'))}</span>
           <h2 class="prog-title">${this.esc(t.nombre)}</h2>
-          <p class="prog-sub">Para certificar ${opciones.boton ? 'necesitás' : 'se necesita'} un promedio de <strong>${this.MINIMO} o más</strong>.</p>
+          <p class="prog-sub">Para certificar ${vos ? 'necesitás' : 'se necesita'} aprobar <strong>todos los módulos con ${this.MINIMO} o más</strong>. ${total > 1 ? `Aprobados: <strong>${aprobados} de ${total}</strong>.` : ''}</p>
           <div class="prog-bar"><div class="prog-bar-fill" style="width:${grados}%"></div><div class="prog-bar-mark"></div></div>
-          <div class="prog-bar-legend"><span>0</span><span>Mínimo para certificar: ${this.MINIMO}</span><span>100</span></div>
+          <div class="prog-bar-legend"><span>0</span><span>Mínimo para aprobar: ${this.MINIMO}</span><span>100</span></div>
         </div>
         <div class="prog-ring">
           <div class="prog-ring-circle" style="background:conic-gradient(${color} 0 ${grados}%, #E3EBF5 ${grados}% 100%)">
@@ -138,11 +136,13 @@ const ProgresoModulo = {
         <div class="prog-side">
           <div class="prog-side-card">
             <h3>Asistencia</h3>
-            <div class="prog-asis-num">${pctAs === null ? '–' : pctAs + '%'} <small>de las clases</small></div>
-            <div class="prog-mini"><div style="width:${pctAs || 0}%"></div></div>
+            ${ev.computaAsistencia
+              ? `<div class="prog-asis-num">${pctAs === null ? '–' : pctAs + '%'} <small>de las clases</small></div>
+                 <div class="prog-mini"><div style="width:${pctAs || 0}%"></div></div>`
+              : '<p class="prog-sub" style="margin:0">Este trayecto no computa asistencia: la nota sale de las actividades.</p>'}
           </div>
           ${ins && ins.num_egresado ? `<div class="prog-side-card prog-egresado"><h3>Egresado/a</h3><div>N° de egresado: <strong>${this.esc(ins.num_egresado)}</strong></div></div>` : ''}
-          ${opciones.boton ? `<button class="prog-open" onclick="UI.showTab('trayectos')">Ir a mis clases y actividades</button>` : ''}
+          ${vos ? `<button class="prog-open" onclick="UI.showTab('trayectos')">Ir a mis clases y actividades</button>` : ''}
         </div>
       </div>
     </section>`;
