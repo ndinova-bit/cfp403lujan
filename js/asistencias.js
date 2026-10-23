@@ -71,6 +71,16 @@ const AsistenciasModulo = {
         return { dni: d, nombre: ap && no ? `${ap}, ${no}` : (ap || no || `DNI ${d}`) };
       }).sort((x, y) => x.nombre.localeCompare(y.nombre, 'es'));
 
+      // Los dados de baja (manual o automática) no aparecen en la toma de asistencia
+      this.bajas = [];
+      try {
+        const sit = await ReglasFP.cargarSituacion(this.trayectoActualId);
+        this.bajas = this.alumnos.filter(a => sit.alumnos[a.dni] && sit.alumnos[a.dni].cursada.baja)
+          .map(a => ({ ...a, motivo: sit.alumnos[a.dni].cursada.motivo, tipo: sit.alumnos[a.dni].cursada.tipo }));
+        const idsBaja = new Set(this.bajas.map(b => b.dni));
+        this.alumnos = this.alumnos.filter(a => !idsBaja.has(a.dni));
+      } catch (e) { /* si falla, se muestran todos */ }
+
       this.dibujar();
       this.cargarFecha();
     } catch (err) {
@@ -86,6 +96,8 @@ const AsistenciasModulo = {
 
     cont.innerHTML = `
       ${computa ? '' : `<div class="asis-aviso">Este trayecto <strong>no computa asistencia</strong> (por ejemplo, virtual): podés registrarla, pero no se promedia en las notas.</div>`}
+      ${this.trayecto && this.trayecto.sede === 'fuera' ? `<div class="asis-sede">Fuera de sede${this.trayecto.lugar_dictado ? ': ' + this.esc(this.trayecto.lugar_dictado) : ''} · la asistencia la carga el docente.</div>` : ''}
+      ${(this.bajas || []).length ? `<details class="asis-bajas"><summary>${this.bajas.length} estudiante(s) dado(s) de baja no aparecen en la lista</summary><ul>${this.bajas.map(b => `<li><b>${this.esc(b.nombre)}</b> · ${this.esc(b.tipo === 'automatica' ? 'Baja automática: ' + b.motivo : 'Baja: ' + b.motivo)}</li>`).join('')}</ul></details>` : ''}
       <div class="asis-panel">
         <div class="asis-controles">
           <div class="form-group"><label for="asistencia-fecha">Fecha de la clase</label>

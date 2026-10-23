@@ -223,6 +223,7 @@ const ActasModulo = {
       </div>
 
       <div class="acta-acciones">
+        <button type="button" class="btn btn-secondary" onclick="FichaCurso.descargar(${Number(trayecto.id)})">Ficha de Curso (Excel)</button>
         <button type="button" class="btn btn-outline" onclick="ActasModulo.guardarDatos()">Guardar datos y ajustes</button>
         <button type="button" class="btn btn-gold" onclick="ActasModulo.generarExcelOficialDesdePlantilla()" ${alumnos.length ? '' : 'disabled'}>Descargar acta (Excel)</button>
       </div>`;

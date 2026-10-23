@@ -93,6 +93,7 @@ const Trayectos = {
       const isAdmin = rolNorm === 'admin' || rolNorm === 'administrador';
       const esDocente = rolNorm === 'docente';
       const esEstudiante = rolNorm === 'estudiante';
+      const esPreceptor = rolNorm === 'preceptor';
 
       const selectFiltro = document.getElementById('filtro-ciclo-lectivo');
       const cicloSeleccionado = selectFiltro ? selectFiltro.value : 'TODOS';
@@ -100,7 +101,7 @@ const Trayectos = {
 
       let query = supabase.from('trayectos').select('*').order('nombre', { ascending: true });
 
-      if (isAdmin) {
+      if (isAdmin || esPreceptor) {
         if (hayFiltroCiclo) query = query.eq('ciclo_lectivo', Number(cicloSeleccionado));
       } else if (esDocente) {
         query = query.eq('docente_user', String(perfil.dni || ''));
@@ -163,6 +164,7 @@ const Trayectos = {
     const isAdmin = rolNorm === 'admin' || rolNorm === 'administrador';
     const esDocente = rolNorm === 'docente';
     const esEstudiante = rolNorm === 'estudiante';
+    const esPreceptor = rolNorm === 'preceptor';
 
     contenedores.forEach(contenedor => {
       contenedor.innerHTML = '';
@@ -198,7 +200,7 @@ const Trayectos = {
         card.style.flexDirection = 'column';
         card.style.justifyContent = 'space-between';
 
-        if (!esVistaPublica && (esDocente || esEstudiante || isAdmin)) {
+        if (!esVistaPublica && (esDocente || esEstudiante || isAdmin || esPreceptor)) {
           card.style.cursor = 'pointer';
           card.onclick = () => {
             if (window.ClasesModulo && typeof ClasesModulo.abrirGestor === 'function') {
@@ -214,7 +216,7 @@ const Trayectos = {
         `;
 
         let accionGestionHTML = '';
-        if (!esVistaPublica && (isAdmin || esDocente)) {
+        if (!esVistaPublica && (isAdmin || esDocente || esPreceptor)) {
           accionGestionHTML = `
             <button class="btn btn-gold" style="padding: 0.35rem 0.7rem; font-size: 0.8rem; background: #0284c7; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;" onclick="event.stopPropagation(); ClasesModulo.abrirGestor(${trayecto.id}, '${trayecto.nombre.replace(/'/g, "\\'")}')">
               ⚙️ Gestor / CSV
@@ -346,6 +348,14 @@ const Trayectos = {
     if (elComputa) elComputa.checked = trayecto.computa_asistencia !== false;
     const elHoras = document.getElementById('trayecto-horas');
     if (elHoras) elHoras.value = trayecto.horas || '';
+    this.CAMPOS_FICHA.forEach(([idEl, col]) => {
+      const el = document.getElementById(idEl);
+      if (!el) return;
+      const v = trayecto[col];
+      el.value = el.type === 'date' ? String(v || '').slice(0, 10) : (v || (col === 'sede' ? 'sede' : (col === 'localidad' ? 'Luján' : '')));
+    });
+    const grupoLugar = document.getElementById('grupo-lugar-dictado');
+    if (grupoLugar) grupoLugar.style.display = trayecto.sede === 'fuera' ? '' : 'none';
     this.cargarFilasModulos(modsEditar || []);
   },
 
@@ -390,6 +400,15 @@ const Trayectos = {
       if (elComputa) datosTrayecto.computa_asistencia = elComputa.checked;
       const elHoras = document.getElementById('trayecto-horas');
       if (elHoras) datosTrayecto.horas = elHoras.value ? Number(elHoras.value) : null;
+      // Datos de la Ficha de Curso (sql/09)
+      const camposFicha = {};
+      this.CAMPOS_FICHA.forEach(([idEl, col]) => {
+        const el = document.getElementById(idEl);
+        if (el) camposFicha[col] = el.value.trim() || null;
+      });
+      if (camposFicha.sede !== 'fuera') camposFicha.lugar_dictado = null;
+      Object.assign(datosTrayecto, camposFicha);
+      const quitarFicha = () => Object.keys(camposFicha).forEach(k => delete datosTrayecto[k]);
 
       if (idRaw && idRaw !== '') {
         const idQuery = !isNaN(idRaw) ? parseInt(idRaw, 10) : idRaw;
@@ -398,6 +417,10 @@ const Trayectos = {
           .from('trayectos')
           .update(datosTrayecto)
           .eq('id', idQuery);
+        if (error && /sede|lugar_dictado|localidad|horario|fecha_inicio|fecha_cierre|tipo_certificacion|codigo_catalogo|acto_administrativo/.test(error.message || '')) {
+          quitarFicha();   // todavía no se ejecutó sql/09
+          ({ error } = await supabase.from('trayectos').update(datosTrayecto).eq('id', idQuery));
+        }
         if (error && /computa_asistencia|horas/.test(error.message || '')) {
           // Todavía no se ejecutó sql/07 u 08: se guarda sin esos datos
           delete datosTrayecto.computa_asistencia;
@@ -412,6 +435,10 @@ const Trayectos = {
         let { data: nuevo, error } = await supabase
           .from('trayectos')
           .insert([datosTrayecto]).select('id').single();
+        if (error && /sede|lugar_dictado|localidad|horario|fecha_inicio|fecha_cierre|tipo_certificacion|codigo_catalogo|acto_administrativo/.test(error.message || '')) {
+          quitarFicha();
+          ({ data: nuevo, error } = await supabase.from('trayectos').insert([datosTrayecto]).select('id').single());
+        }
         if (error && /computa_asistencia|horas/.test(error.message || '')) {
           delete datosTrayecto.computa_asistencia;
           delete datosTrayecto.horas;
@@ -452,8 +479,12 @@ const Trayectos = {
     const t = document.getElementById('titulo-form-trayecto');
     if (t) t.innerText = 'Nuevo Trayecto Formativo';
     this.cargarFilasModulos([]);
+    const grupoLugar = document.getElementById('grupo-lugar-dictado');
+    if (grupoLugar) grupoLugar.style.display = 'none';
     if (typeof UI !== 'undefined') UI.showTab('nuevo-trayecto');
   },
+
+  CAMPOS_FICHA: [['trayecto-sede', 'sede'], ['trayecto-lugar', 'lugar_dictado'], ['trayecto-localidad', 'localidad'], ['trayecto-horario', 'horario'], ['trayecto-fecha-inicio', 'fecha_inicio'], ['trayecto-fecha-cierre', 'fecha_cierre'], ['trayecto-tipo', 'tipo_certificacion'], ['trayecto-codigo', 'codigo_catalogo'], ['trayecto-acto', 'acto_administrativo']],
 
   /* ---------- Módulos del formulario ---------- */
   filaModuloHTML(m = {}) {

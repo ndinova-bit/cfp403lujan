@@ -22,6 +22,15 @@ const Auth = {
     return r === 'admin' || r === 'administrador';
   },
 
+  esPreceptor(rol) {
+    return String(rol || '').toLowerCase().trim() === 'preceptor';
+  },
+
+  // Personal del CFP con acceso a todos los trayectos: administración y preceptoría
+  esPersonal(rol) {
+    return this.esAdmin(rol) || this.esPreceptor(rol);
+  },
+
   avisar(mensaje) {
     if (typeof alertError === 'function') alertError('Atención', mensaje);
     else alert(mensaje);

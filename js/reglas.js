@@ -136,6 +136,73 @@ const ReglasFP = {
     return !!(ant && ant.aprobado);
   },
 
+  /* ---------- Bajas ----------
+     • Manual: la inscripción tiene estado BAJA (la cargan docente o preceptor en trayectos
+       sin módulos, o la dirección en cualquiera).
+     • Automática (trayectos con módulos): un módulo ya cerró (pasó su fecha de fin) y el
+       alumno quedó con nota menor a 70. Si el docente dio habilitación excepcional, no hay baja.
+       Si el módulo cerró pero todavía no tiene nota, queda "en riesgo" (no es baja). */
+  hoyISO() {
+    const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Argentina/Buenos_Aires' }));
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  },
+
+  estadoCursada(ev, modulos, inscripcion, opciones = {}) {
+    const ins = inscripcion || {};
+    if (String(ins.estado || '').toUpperCase() === 'BAJA') {
+      return { baja: true, tipo: 'manual', motivo: ins.motivo_baja || 'Baja', fecha: ins.fecha_baja || null };
+    }
+    if (opciones.excepcion) return { baja: false };
+    const hoy = opciones.hoy || this.hoyISO();
+    const lista = modulos || [];
+    for (let i = 0; i < ev.modulos.length; i++) {
+      const m = ev.modulos[i], mod = lista[i];
+      if (!mod || m.equivalencia || m.bloqueado) continue;
+      const fin = mod.fecha_fin ? String(mod.fecha_fin).slice(0, 10) : '';
+      if (fin && fin < hoy && m.nota !== null && m.nota < this.MINIMO) {
+        return {
+          baja: true, tipo: 'automatica', fecha: fin,
+          motivo: `No alcanzó ${this.MINIMO} en el Módulo ${i + 1} (${m.nota}) al cierre del ${fin.split('-').reverse().join('/')}`
+        };
+      }
+    }
+    return { baja: false };
+  },
+
+  /* Situación de todos los inscriptos de un trayecto: { dni: { ev, cursada, inscripcion } }.
+     Lo usan Asistencia (no muestra a los dados de baja) y otras pantallas. */
+  async cargarSituacion(trayectoId) {
+    const tid = Number(trayectoId);
+    const [rT, rI, rM, rC, rA, rX, rE] = await Promise.all([
+      supabase.from('trayectos').select('*').eq('id', tid).maybeSingle(),
+      supabase.from('inscripciones').select('*').eq('trayecto_id', tid),
+      supabase.from('modulos').select('*').eq('trayecto_id', tid).order('id', { ascending: true }),
+      supabase.from('clases').select('id, modulo_id').eq('trayecto_id', tid),
+      supabase.from('asistencias').select('estudiante_user, modulo_id, estado').eq('trayecto_id', tid),
+      supabase.from('modulos_acreditados').select('*').eq('trayecto_id', tid),
+      supabase.from('excepciones_estudiantes').select('estudiante_user, habilitado').eq('trayecto_id', tid)
+    ]);
+    const clases = rC.data || [];
+    let entregas = [];
+    if (clases.length) {
+      const { data } = await supabase.from('entregas_actividades').select('clase_id, estudiante_user, nota').in('clase_id', clases.map(c => c.id));
+      entregas = data || [];
+    }
+    const modulos = rM.data || [];
+    const conExc = new Set(((rE && rE.data) || []).filter(x => x.habilitado).map(x => String(x.estudiante_user)));
+    const out = {};
+    (rI.data || []).forEach(ins => {
+      const key = String(ins.estudiante_user);
+      const excepcion = conExc.has(key);
+      const ev = this.evaluar({
+        key, modulos, clases, entregas, asistencias: rA.data || [],
+        acreditados: (!rX.error && rX.data) || [], computaAsistencia: this.computaAsistencia(rT.data), excepcion
+      });
+      out[key] = { ev, inscripcion: ins, excepcion, cursada: this.estadoCursada(ev, modulos, ins, { excepcion }) };
+    });
+    return { trayecto: rT.data, modulos, alumnos: out };
+  },
+
   /* Número en letras (0-100), en mayúsculas, como se escribe en las actas */
   enLetras(n) {
     const v = Math.round(Number(n));

@@ -27,7 +27,8 @@ const SeguimientoModulo = {
     cont.innerHTML = '<p class="seg-cargando">Cargando seguimiento…</p>';
     try {
       const perfil = await Auth.obtenerPerfilSesion();
-      const esAdmin = Auth.esAdmin(perfil.rol);
+      const esAdmin = Auth.esPersonal ? Auth.esPersonal(perfil.rol) : Auth.esAdmin(perfil.rol);   // admin o preceptor: todos
+      this.esPreceptor = Auth.esPreceptor ? Auth.esPreceptor(perfil.rol) : false;
       const anio = String(new Date().getFullYear());
 
       let q = supabase.from('trayectos').select('*');
@@ -40,11 +41,17 @@ const SeguimientoModulo = {
         return;
       }
       const ids = trayectos.map(t => Number(t.id));
-      const [rC, rI, rA] = await Promise.all([
+      const [rC, rI, rA, rM, rX, rE] = await Promise.all([
         supabase.from('clases').select('id, titulo, trayecto_id, modulo_id').in('trayecto_id', ids),
-        supabase.from('inscripciones').select('trayecto_id, estudiante_user').in('trayecto_id', ids),
-        supabase.from('asistencias').select('trayecto_id, estudiante_user, estado').in('trayecto_id', ids)
+        supabase.from('inscripciones').select('*').in('trayecto_id', ids),
+        supabase.from('asistencias').select('trayecto_id, estudiante_user, estado, modulo_id').in('trayecto_id', ids),
+        supabase.from('modulos').select('*').in('trayecto_id', ids).order('id', { ascending: true }),
+        supabase.from('modulos_acreditados').select('*').in('trayecto_id', ids),
+        supabase.from('excepciones_estudiantes').select('trayecto_id, estudiante_user, habilitado').in('trayecto_id', ids)
       ]);
+      const modulos = rM.data || [];
+      const acreditados = (!rX.error && rX.data) || [];
+      const excepciones = (!rE.error && rE.data) || [];
       const clases = rC.data || [];
       const insc = rI.data || [];
       const asis = rA.data || [];
@@ -60,7 +67,7 @@ const SeguimientoModulo = {
         const { data } = await supabase.from('usuarios').select('usuario, nombre, apellido').in('usuario', dnis);
         alumnos = data || [];
       }
-      this.datos = { trayectos, clases, insc, asis, entregas, alumnos };
+      this.datos = { trayectos, clases, insc, asis, entregas, alumnos, modulos, acreditados, excepciones };
       this.render();
     } catch (e) {
       console.error('Seguimiento:', e);
@@ -69,8 +76,27 @@ const SeguimientoModulo = {
   },
 
   render() {
-    const { trayectos, clases, insc, asis, entregas, alumnos } = this.datos;
+    const { trayectos, clases, insc, asis, entregas, alumnos, modulos = [], acreditados = [], excepciones = [] } = this.datos;
     const cont = document.getElementById('seguimiento-contenido');
+
+    // ---- Bajas (manuales y automáticas): no cuentan como "en riesgo"
+    const bajas = [];
+    const claveBaja = new Set();
+    trayectos.forEach(t => {
+      const tid = Number(t.id);
+      const modsT = modulos.filter(m => Number(m.trayecto_id) === tid);
+      insc.filter(i => Number(i.trayecto_id) === tid).forEach(i => {
+        const key = String(i.estudiante_user);
+        const excepcion = excepciones.some(x => Number(x.trayecto_id) === tid && String(x.estudiante_user) === key && x.habilitado);
+        const ev = ReglasFP.evaluar({
+          key, modulos: modsT, clases: clases.filter(c => Number(c.trayecto_id) === tid), entregas,
+          asistencias: asis.filter(a => Number(a.trayecto_id) === tid), acreditados: acreditados.filter(a => Number(a.trayecto_id) === tid),
+          computaAsistencia: ReglasFP.computaAsistencia(t), excepcion
+        });
+        const c = ReglasFP.estadoCursada(ev, modsT, i, { excepcion });
+        if (c.baja) { bajas.push({ t, key, ...c }); claveBaja.add(tid + '|' + key); }
+      });
+    });
     const pendientes = entregas.filter(e => this.sinNota(e));
 
     // ---- 1. Entregas por corregir
@@ -109,6 +135,7 @@ const SeguimientoModulo = {
       const filas = [];
       insc.filter(i => Number(i.trayecto_id) === tid).forEach(i => {
         const key = String(i.estudiante_user);
+        if (claveBaja.has(tid + '|' + key)) return;
         const a = asis.filter(x => Number(x.trayecto_id) === tid && String(x.estudiante_user) === key);
         const pctAs = (ReglasFP.computaAsistencia(t) && a.length) ? Math.round(ReglasFP.porcentajeAsistencia(a)) : null;
         const ent = entregas.filter(e => idsC.includes(Number(e.clase_id)) && String(e.estudiante_user) === key);
@@ -135,22 +162,36 @@ const SeguimientoModulo = {
     });
     if (!htmlRiesgo) htmlRiesgo = '<div class="seg-ok">Ningún alumno en riesgo por ahora.</div>';
 
+    const htmlBajas = bajas.length
+      ? bajas.sort((x, y) => String(x.t.nombre).localeCompare(String(y.t.nombre))).map(b => `<div class="seg-item riesgo">
+          <div class="seg-item-info"><strong>${this.esc(this.nombreDe(alumnos, b.key))}</strong><span>${this.esc(b.t.nombre)} · DNI ${this.esc(b.key)}</span></div>
+          <button type="button" class="seg-ver" onclick="FichaAlumno.abrir('${this.esc(String(b.key).replace(/\D/g, ''))}')">Ver ficha</button>
+          <div class="seg-chips"><span class="seg-chip">${b.tipo === 'automatica' ? 'Baja automática' : 'Baja'}</span><span class="seg-motivo">${this.esc(b.motivo)}</span></div>
+        </div>`).join('')
+      : '<div class="seg-ok">No hay bajas registradas.</div>';
+
     cont.innerHTML = `
       <div class="seg-resumen">
-        <div class="stat-card"><div class="stat-info"><h4>Entregas por corregir</h4><p class="stat-value">${pendientes.length}</p></div></div>
+        ${this.esPreceptor ? '' : `<div class="stat-card"><div class="stat-info"><h4>Entregas por corregir</h4><p class="stat-value">${pendientes.length}</p></div></div>`}
         <div class="stat-card"><div class="stat-info"><h4>Alumnos en riesgo</h4><p class="stat-value">${totalRiesgo}</p></div></div>
+        <div class="stat-card"><div class="stat-info"><h4>Bajas</h4><p class="stat-value">${bajas.length}</p></div></div>
         <div class="stat-card"><div class="stat-info"><h4>Trayectos del ciclo</h4><p class="stat-value">${trayectos.length}</p></div></div>
       </div>
-      <section class="card-panel seg-panel">
+      ${this.esPreceptor ? '' : `<section class="card-panel seg-panel">
         <div class="card-panel-header"><h3 style="margin:0">Entregas por corregir</h3></div>
         ${htmlPend}
-      </section>
+      </section>`}
       <section class="card-panel seg-panel">
         <div class="card-panel-header"><h3 style="margin:0">Alumnos en riesgo</h3></div>
         <p class="seg-ayuda">Se marcan quienes tienen asistencia menor a ${this.MINIMO}% (con 3 o más clases registradas), promedio de actividades menor a ${this.MINIMO}, o ninguna entrega cuando ya hay 2 o más clases publicadas.</p>
         ${htmlRiesgo}
+      </section>
+      <section class="card-panel seg-panel">
+        <div class="card-panel-header"><h3 style="margin:0">Bajas</h3></div>
+        <p class="seg-ayuda">Baja manual: cargada en la pestaña Estudiantes del trayecto. Baja automática: cerró un módulo (pasó su fecha de fin) y la nota quedó debajo de ${this.MINIMO}; no corre si el docente dio habilitación excepcional.</p>
+        ${htmlBajas}
       </section>`;
-    this.actualizarContador(pendientes.length);
+    this.actualizarContador(this.esPreceptor ? 0 : pendientes.length);
   },
 
   actualizarContador(n) {
