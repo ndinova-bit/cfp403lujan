@@ -181,6 +181,7 @@ const ActasModulo = {
         <div class="form-group"><label for="acta-inspector">Inspector/a</label><input id="acta-inspector" class="form-control" maxlength="120" value="${this.esc(a.inspector || '')}" placeholder="Nombre y apellido"></div>
       </div>
 
+      ${modulos.length > 10 ? `<div class="asis-aviso">Este trayecto tiene ${modulos.length} módulos y el acta tiene lugar para 10: en el Excel salen los 10 primeros.</div>` : ''}
       <p class="acta-ayuda">La nota de cada módulo sale de las actividades${computa ? ' y la asistencia' : ''}. Para el acta podés escribir otra nota en la casilla (queda marcada en amarillo); borrala para volver a la calculada. <b>EQ</b> = acreditado por equivalencia.</p>
 
       <div class="acta-tabla-wrap">
@@ -306,8 +307,12 @@ const ActasModulo = {
 
     const { trayecto, modulos, alumnos } = this.datos;
     const da = this.leerDatosActa();
-    const mods = modulos.length ? modulos : [{ id: null, nombre: 'Trayecto completo' }];
-    const nM = mods.length;
+    // El acta es siempre el mismo formulario: 10 columnas de módulos (ACTA I a X).
+    // Las que el trayecto no usa se cruzan con una línea, como en el acta en papel.
+    const MAX_MOD = 10;
+    const mods = (modulos.length ? modulos : [{ id: null, nombre: '' }]).slice(0, MAX_MOD);
+    const usados = mods.length;
+    const nM = MAX_MOD;
     const COL_MOD = 4;                   // D
     const COL_DOC = COL_MOD + nM * 2;    // tipo de documento
     const ULT = COL_DOC + 1;             // número de documento
@@ -315,16 +320,15 @@ const ActasModulo = {
 
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('ACTA EXAMEN', {
-      pageSetup: { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0,
+      pageSetup: { paperSize: 5, orientation: 'landscape', fitToPage: false,   // 5 = oficio (legal)
         margins: { left: 0.3, right: 0.3, top: 0.35, bottom: 0.35, header: 0.1, footer: 0.1 }, horizontalCentered: true }
     });
-    ws.getColumn(1).width = 8;   // N.º egresado
+    ws.getColumn(1).width = 7;   // N.º egresado
     ws.getColumn(2).width = 4;   // N.º de orden
-    const anchoNombre = 34 + Math.max(0, 3 - nM) * 14;     // con pocos módulos se ensancha para que el acta no quede angosta
-    ws.getColumn(3).width = anchoNombre;  // Apellido y nombres
-    for (let i = 0; i < nM; i++) { ws.getColumn(COL_MOD + i * 2).width = 6; ws.getColumn(COL_MOD + i * 2 + 1).width = 17; }
+    ws.getColumn(3).width = 32;  // Apellido y nombres
+    for (let i = 0; i < nM; i++) { ws.getColumn(COL_MOD + i * 2).width = 5; ws.getColumn(COL_MOD + i * 2 + 1).width = 14; }
     ws.getColumn(COL_DOC).width = 5;
-    ws.getColumn(ULT).width = 11;
+    ws.getColumn(ULT).width = 10;
 
     const fino = { style: 'thin', color: { argb: 'FF000000' } };
     const caja = { top: fino, left: fino, bottom: fino, right: fino };
@@ -389,26 +393,40 @@ const ActasModulo = {
       ws.mergeCells(h1, 1, h2, 1); ws.getCell(h1, 1).value = 'N°\nEgresado';
       ws.mergeCells(h1, 2, h2, 2); ws.getCell(h1, 2).value = 'N°';
       ws.mergeCells(h1, 3, h2, 3); ws.getCell(h1, 3).value = 'APELLIDO Y NOMBRES';
-      mods.forEach((m, i) => {
+      const colCruce = COL_MOD + usados * 2;          // primera columna sin módulo
+      const finTabla = h2 + POR_HOJA;                  // última fila de alumnos
+      const enCruce = (fila, c) => usados < MAX_MOD && c >= colCruce && c < COL_DOC && fila >= h2 && fila <= finTabla;
+      for (let i = 0; i < MAX_MOD; i++) {
         const c = COL_MOD + i * 2;
-        ws.getCell(h1, c).value = `ACTA ${this.ROMANOS[i] || i + 1}`;
+        ws.getCell(h1, c).value = `ACTA ${this.ROMANOS[i]}`;
         ws.getCell(h1, c + 1).value = 'NUMERO';
-        ws.mergeCells(h2, c, h2, c + 1);
-        ws.getCell(h2, c).value = m.nombre;
-        ws.getCell(h2, c).font = { size: 7, italic: true };
-      });
+        if (i < usados) {
+          ws.mergeCells(h2, c, h2, c + 1);
+          ws.getCell(h2, c).value = mods[i].nombre;
+          ws.getCell(h2, c).font = { size: 7, italic: true };
+        }
+      }
+      if (usados < MAX_MOD) {
+        // Bloque de módulos que no se usan: una sola celda cruzada con una diagonal
+        ws.mergeCells(h2, colCruce, finTabla, COL_DOC - 1);
+        ws.getCell(h2, colCruce).border = {
+          top: fino, left: fino, bottom: fino, right: fino,
+          diagonal: { up: true, down: false, style: 'thin', color: { argb: 'FF000000' } }
+        };
+      }
       cab(COL_DOC, ULT, 'DOCUMENTO');
       ws.getCell(h2, COL_DOC).value = 'TIPO';
       ws.getCell(h2, ULT).value = 'N°';
       for (const hr of [h1, h2]) {
         for (let c = 1; c <= ULT; c++) {
+          if (enCruce(hr, c)) continue;
           const cell = ws.getCell(hr, c);
           cell.border = caja;
           cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
           if (!cell.font || !cell.font.italic) cell.font = { bold: true, size: 8 };
         }
       }
-      ws.getRow(h1).height = 16;
+      ws.getRow(h1).height = 24;
       ws.getRow(h2).height = 22;
       r += 2;
 
@@ -421,7 +439,7 @@ const ActasModulo = {
         if (al) {
           row.getCell(1).value = al.numEgresado || '';
           row.getCell(3).value = al.nombre;
-          al.final.forEach((m, i) => {
+          al.final.slice(0, MAX_MOD).forEach((m, i) => {
             const c = COL_MOD + i * 2;
             if (m.valor === 'EQ') { row.getCell(c).value = 'EQ'; row.getCell(c + 1).value = 'EQUIVALENCIA'; }
             else if (m.valor === null) { row.getCell(c).value = '-'; row.getCell(c + 1).value = 'AUSENTE'; }
@@ -432,6 +450,7 @@ const ActasModulo = {
           row.getCell(ULT).numFmt = '0';
         }
         for (let c = 1; c <= ULT; c++) {
+          if (enCruce(r, c)) continue;
           const cell = row.getCell(c);
           cell.border = caja;
           cell.font = { size: 9 };
@@ -497,13 +516,13 @@ const ActasModulo = {
       r += 1;
     }
     ws.pageSetup.printArea = `A1:${ws.getColumn(ULT).letter}${r}`;
-    // Escala para que cada hoja del acta (30 alumnos) entre completa en una carilla A4 apaisada
+    // Escala para que cada hoja del acta (30 alumnos) entre completa en una carilla oficio apaisada
     let anchoPt = 0;
     for (let c = 1; c <= ULT; c++) anchoPt += ((ws.getColumn(c).width || 9) * 7 + 5) * 0.75;
     let altoPt = 0;
     for (let k = 1; k < r; k++) altoPt += (ws.getRow(k).height || 15);
     const altoHojaPt = altoPt / paginas + 10;
-    const escala = Math.floor(Math.min(798 / anchoPt, 545 / altoHojaPt) * 100);
+    const escala = Math.floor(Math.min(965 / anchoPt, 561 / altoHojaPt) * 100);
     ws.pageSetup.fitToPage = false;
     ws.pageSetup.scale = Math.max(40, Math.min(100, escala));
 
