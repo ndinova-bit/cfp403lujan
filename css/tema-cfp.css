@@ -696,3 +696,4 @@ button.seg-ver { border: none; cursor: pointer; font-family: inherit; }
 .sabana-nota.bad { background: var(--cfp-bad-soft); color: var(--cfp-bad); }
 .sabana-nota.eq { background: var(--cfp-celeste-soft); color: var(--cfp-blue); }
 .sabana-det { display: block; font-size: .7rem; color: var(--cfp-muted); margin-top: .2rem; }
+.acta-celda.bloq span, .sabana-nota.bloq { display: inline-block; font-size: .72rem; font-weight: 700; padding: .25rem .5rem; border-radius: 8px; background: #EEF3F9; color: var(--cfp-muted); }

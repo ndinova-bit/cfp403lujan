@@ -422,7 +422,8 @@ const ClasesModulo = {
         evalEstudiante = ReglasFP.evaluar({
           key: userEstudiante, modulos, clases, entregas: entregasGlobales,
           asistencias: rAs.data || [], acreditados: (!rAc.error && rAc.data) || [],
-          computaAsistencia: ReglasFP.computaAsistencia(rTr.data)
+          computaAsistencia: ReglasFP.computaAsistencia(rTr.data),
+          excepcion: tieneExcepcion
         });
       }
 
@@ -467,7 +468,7 @@ const ClasesModulo = {
           let estaBloqueado = false;
           if (!tieneExcepcion && c.modulo_id && evalEstudiante) {
             const idxModActual = (modulos || []).findIndex(m => Number(m.id) === Number(c.modulo_id));
-            estaBloqueado = idxModActual > 0 && !ReglasFP.moduloHabilitado(evalEstudiante, idxModActual, false);
+            estaBloqueado = idxModActual > 0 && !!(evalEstudiante.modulos[idxModActual] || {}).bloqueado;
           }
 
           const miEntrega = entregasGlobales.find(e => Number(e.clase_id) === Number(c.id) && String(e.estudiante_user) === userEstudiante);
@@ -923,12 +924,17 @@ const ClasesModulo = {
         // Regla única de FP (js/reglas.js): actividades + asistencia, equivalencias, 70 para aprobar
         const ev = ReglasFP.evaluar({
           key: userKey, modulos: modulos || [], clases: clases || [], entregas, asistencias: asistencias || [],
-          acreditados, computaAsistencia: computa
+          acreditados, computaAsistencia: computa,
+          excepcion: (excepciones || []).some(x => String(x.estudiante_user) === userKey && x.habilitado)
         });
         let celdasNotasHTML = '';
         ev.modulos.forEach(m => {
           if (m.equivalencia) {
             celdasNotasHTML += `<td style="padding:0.75rem; text-align:center;"><span class="sabana-nota eq" title="${this.esc(m.motivoEquivalencia)}">EQ</span><span class="sabana-det">Equivalencia</span></td>`;
+            return;
+          }
+          if (m.bloqueado) {
+            celdasNotasHTML += `<td style="padding:0.75rem; text-align:center;"><span class="sabana-nota bloq" title="El módulo anterior no está aprobado">🔒</span><span class="sabana-det">No habilitado</span></td>`;
             return;
           }
           if (m.nota === null) {
