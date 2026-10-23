@@ -42,7 +42,7 @@ const SeguimientoModulo = {
       }
       const ids = trayectos.map(t => Number(t.id));
       const [rC, rI, rA, rM, rX, rE] = await Promise.all([
-        supabase.from('clases').select('id, titulo, trayecto_id, modulo_id').in('trayecto_id', ids),
+        ReglasFP.selectClases('id, titulo, trayecto_id, modulo_id', q => q.in('trayecto_id', ids)),
         supabase.from('inscripciones').select('*').in('trayecto_id', ids),
         supabase.from('asistencias').select('trayecto_id, estudiante_user, estado, modulo_id').in('trayecto_id', ids),
         supabase.from('modulos').select('*').in('trayecto_id', ids).order('id', { ascending: true }),
@@ -97,7 +97,8 @@ const SeguimientoModulo = {
         if (c.baja) { bajas.push({ t, key, ...c }); claveBaja.add(tid + '|' + key); }
       });
     });
-    const pendientes = entregas.filter(e => this.sinNota(e));
+    const califIds = new Set(clases.filter(c => c.calificable !== false && c.tipo !== 'encuesta').map(c => Number(c.id)));
+    const pendientes = entregas.filter(e => this.sinNota(e) && califIds.has(Number(e.clase_id)));
 
     // ---- 1. Entregas por corregir
     let htmlPend = '';
@@ -116,7 +117,8 @@ const SeguimientoModulo = {
               <strong><button type="button" class="seg-nombre" onclick="FichaAlumno.abrir('${this.esc(String(e.estudiante_user).replace(/\D/g, ''))}')">${this.esc(this.nombreDe(alumnos, e.estudiante_user))}</button></strong>
               <span>${this.esc(c ? c.titulo : 'Actividad')}</span>
             </div>
-            ${url !== '#' ? `<a class="seg-ver" href="${this.esc(url)}" target="_blank" rel="noopener noreferrer">Ver trabajo</a>` : '<span class="seg-sinlink">Sin enlace</span>'}
+            ${url !== '#' ? `<a class="seg-ver" href="${this.esc(url)}" target="_blank" rel="noopener noreferrer">Ver trabajo</a>`
+              : (c && c.tipo && c.tipo !== 'tp' && window.Actividades ? `<button type="button" class="seg-ver" onclick="Actividades.verEntrega(${Number(c.id)}, '${this.esc(String(e.estudiante_user).replace(/[^0-9A-Za-z_-]/g, ''))}')">Ver respuestas</button>` : '<span class="seg-sinlink">Sin enlace</span>')}
             <input class="form-control seg-nota" id="seg-nota-${Number(e.id)}" inputmode="numeric" placeholder="Nota" aria-label="Nota de 0 a 100">
             <input class="form-control seg-coment" id="seg-coment-${Number(e.id)}" placeholder="Devolución (opcional)" aria-label="Devolución">
             <button type="button" class="btn btn-primary seg-guardar" onclick="SeguimientoModulo.calificar(${Number(e.id)}, ${Number(t.id)})">Guardar</button>
@@ -253,8 +255,8 @@ const SeguimientoModulo = {
       const anio = String(new Date().getFullYear());
       const ids = (tr || []).filter(t => String(t.ciclo_lectivo || anio) === anio).map(t => Number(t.id));
       if (!ids.length) return this.actualizarContador(0);
-      const { data: cl } = await supabase.from('clases').select('id').in('trayecto_id', ids);
-      const cids = (cl || []).map(c => c.id);
+      const { data: cl } = await ReglasFP.selectClases('id', q => q.in('trayecto_id', ids));
+      const cids = (cl || []).filter(c => c.calificable !== false && c.tipo !== 'encuesta').map(c => c.id);
       if (!cids.length) return this.actualizarContador(0);
       const { data: en } = await supabase.from('entregas_actividades').select('id, nota').in('clase_id', cids);
       this.actualizarContador((en || []).filter(e => this.sinNota(e)).length);

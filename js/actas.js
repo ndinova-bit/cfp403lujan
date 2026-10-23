@@ -79,7 +79,7 @@ const ActasModulo = {
       supabase.from('trayectos').select('*').eq('id', tid).single(),
       supabase.from('inscripciones').select('*').eq('trayecto_id', tid),
       supabase.from('modulos').select('id, nombre, codigo').eq('trayecto_id', tid).order('id', { ascending: true }),
-      supabase.from('clases').select('id, modulo_id').eq('trayecto_id', tid),
+      ReglasFP.selectClases('id, modulo_id', q => q.eq('trayecto_id', tid)),
       supabase.from('asistencias').select('estudiante_user, modulo_id, estado').eq('trayecto_id', tid),
       supabase.from('modulos_acreditados').select('*').eq('trayecto_id', tid),
       supabase.from('actas_examen').select('*').eq('trayecto_id', tid).maybeSingle(),

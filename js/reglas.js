@@ -11,6 +11,8 @@
      – Si el trayecto no computa asistencia (virtual) o no hay asistencia
        cargada, la nota es solo el promedio de actividades (nunca se promedia con 0).
      – Si no hay actividades calificadas pero sí asistencia, la nota es la asistencia.
+   • Solo cuentan las actividades con nota: no cuentan el material, las encuestas
+     ni las bitácoras marcadas "sin nota".
    • Un módulo se aprueba con 70 o más, o si está acreditado por equivalencia.
    • El trayecto se aprueba cuando TODOS sus módulos están aprobados o acreditados.
    • Correlatividad: un módulo solo se califica si el anterior está aprobado o
@@ -57,7 +59,8 @@ const ReglasFP = {
   evaluar(datos) {
     const key = String(datos.key);
     const computa = datos.computaAsistencia !== false;
-    const clases = datos.clases || [];
+    // Las encuestas, el material y las bitácoras sin nota no cuentan para el promedio
+    const clases = (datos.clases || []).filter(c => c.calificable !== false && c.tipo !== 'encuesta' && c.tipo !== 'material');
     const entregas = (datos.entregas || []).filter(e => String(e.estudiante_user) === key);
     const asis = (datos.asistencias || []).filter(a => String(a.estudiante_user) === key);
     const acred = (datos.acreditados || []).filter(a => String(a.estudiante_user) === key);
@@ -136,6 +139,16 @@ const ReglasFP = {
     return !!(ant && ant.aprobado);
   },
 
+  /* Lee clases con la columna "calificable" (sql/11). Si la base todavía no la tiene,
+     las lee sin ella para que nada deje de funcionar.
+     Uso: ReglasFP.selectClases('id, modulo_id', q => q.eq('trayecto_id', 8)) */
+  async selectClases(columnas, filtro) {
+    const armar = (cols) => filtro(supabase.from('clases').select(cols));
+    let r = await armar(columnas + ', calificable, tipo');
+    if (r.error && /calificable|tipo|column/i.test(r.error.message || '')) r = await armar(columnas);
+    return r;
+  },
+
   /* ---------- Bajas ----------
      • Manual: la inscripción tiene estado BAJA (la cargan docente o preceptor en trayectos
        sin módulos, o la dirección en cualquiera).
@@ -177,7 +190,7 @@ const ReglasFP = {
       supabase.from('trayectos').select('*').eq('id', tid).maybeSingle(),
       supabase.from('inscripciones').select('*').eq('trayecto_id', tid),
       supabase.from('modulos').select('*').eq('trayecto_id', tid).order('id', { ascending: true }),
-      supabase.from('clases').select('id, modulo_id').eq('trayecto_id', tid),
+      this.selectClases('id, modulo_id', q => q.eq('trayecto_id', tid)),
       supabase.from('asistencias').select('estudiante_user, modulo_id, estado').eq('trayecto_id', tid),
       supabase.from('modulos_acreditados').select('*').eq('trayecto_id', tid),
       supabase.from('excepciones_estudiantes').select('estudiante_user, habilitado').eq('trayecto_id', tid)
