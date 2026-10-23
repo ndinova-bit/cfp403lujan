@@ -16,7 +16,7 @@
 do $$
 declare c record; tipo text;
 begin
-  select data_type, udt_name into tipo from information_schema.columns
+  select data_type into tipo from information_schema.columns
    where table_schema = 'public' and table_name = 'profiles' and column_name = 'rol';
   if tipo = 'USER-DEFINED' then
     -- rol es un tipo enumerado
