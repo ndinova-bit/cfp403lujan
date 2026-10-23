@@ -182,6 +182,10 @@ const UI = {
       window.UsuariosAdmin.cargarUsuarios();
     }
 
+    if (tabId === 'backups' && window.UsoBase) {
+      window.UsoBase.cargar();
+    }
+
     if (tabId === 'certificados' && window.CertificadosAdmin) {
       window.CertificadosAdmin.cargarNominaCertificados();
     }
