@@ -34,7 +34,7 @@
   <!-- 4. CSS Panel de Administración -->
   <link rel="stylesheet" href="css/admin-dashboard.css?v=60005">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/tema-cfp.css?v=70014">
+  <link rel="stylesheet" href="css/tema-cfp.css?v=70015">
   <style>
     /* Los avisos de SweetAlert (progreso, resúmenes, errores) tienen que verse por encima de los paneles de la plataforma */
     .swal2-container { z-index: 20000 !important; }
@@ -328,7 +328,7 @@
     <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 11h6M9 15h6"/></svg></span> Fichas / Actas de Examen
   </button>
 
-  <button id="btn-nuevo-trayecto" class="nav-item-btn admin-only" onclick="UI.showTab('nuevo-trayecto')">
+  <button id="btn-nuevo-trayecto" class="nav-item-btn admin-only" onclick="Trayectos.nuevo()">
     <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg></span> Cargar Trayecto
   </button>
   <button id="btn-certificados" class="nav-item-btn admin-only" onclick="UI.showTab('certificados')">
@@ -843,9 +843,9 @@
   <script src="js/supabase-config.js?v=70007" defer></script>
   <script src="js/avisos.js?v=70008" defer></script>
   <script src="js/reglas.js?v=70013" defer></script>
-  <script src="js/ui.js?v=70014" defer></script>
+  <script src="js/ui.js?v=70015" defer></script>
   <script src="js/auth.js?v=70007" defer></script>
-  <script src="js/trayectos.js?v=70014" defer></script>
+  <script src="js/trayectos.js?v=70015" defer></script>
   <script src="js/usuarios.js?v=70010" defer></script>
   <script src="js/auditoria.js?v=70007" defer></script>
   <script src="js/progreso.js?v=70013" defer></script>
