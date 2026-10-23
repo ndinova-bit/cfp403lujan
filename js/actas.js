@@ -117,7 +117,8 @@ const ActasModulo = {
       const no = (u.nombre || '').toUpperCase().trim();
       const excepcion = conExcepcion.has(key);
       const ev = ReglasFP.evaluar({ key, modulos, clases, entregas, asistencias: rA.data || [], acreditados, computaAsistencia: computa, excepcion });
-      return { dni: key, nombre: ap && no ? `${ap}, ${no}` : (ap || no || `DNI ${key}`), numEgresado: ins.num_egresado || '', ev, excepcion };
+      const baja = String(ins.estado || '').toUpperCase() === 'BAJA';
+      return { dni: key, nombre: ap && no ? `${ap}, ${no}` : (ap || no || `DNI ${key}`), numEgresado: ins.num_egresado || '', ev, excepcion, baja, fechaBaja: ins.fecha_baja || null, motivoBaja: ins.motivo_baja || '' };
     }).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
 
     this.datos = { trayecto, modulos, alumnos, acreditados, acta, ajustes: JSON.parse(JSON.stringify(ajustes)), computa };
@@ -152,11 +153,23 @@ const ActasModulo = {
         }
         anteriorOk = m.aprobado;
       });
+      // Baja: conserva las notas de los módulos aprobados; el módulo donde abandonó sale AUSENTE
+      // y los siguientes quedan en blanco con una línea.
+      if (a.baja) {
+        let corte = false;
+        vals.forEach(m => {
+          if (corte) { m.valor = 'BAJA'; m.aprobado = false; m.manual = false; return; }
+          if (!m.aprobado) {
+            corte = true;
+            if (!m.manual) m.valor = null;
+          }
+        });
+      }
       a.final = vals;
       const habilitados = vals.filter(m => m.valor !== 'BLOQ');
       const sinDatos = habilitados.every(m => m.valor === null);
       const todos = vals.length > 0 && vals.every(m => m.aprobado);
-      a.resultado = todos ? 'APROBADO' : (sinDatos ? 'AUSENTE' : 'DESAPROBADO');
+      a.resultado = a.baja ? 'BAJA' : (todos ? 'APROBADO' : (sinDatos ? 'AUSENTE' : 'DESAPROBADO'));
       const nums = vals.filter(m => typeof m.valor === 'number').map(m => m.valor);
       a.promedio = nums.length ? Math.round(nums.reduce((x, y) => x + y, 0) / nums.length) : null;
     });
@@ -164,7 +177,7 @@ const ActasModulo = {
 
   totales(lista) {
     const ins = lista.length;
-    const aus = lista.filter(a => a.resultado === 'AUSENTE').length;
+    const aus = lista.filter(a => a.resultado === 'AUSENTE' || a.resultado === 'BAJA').length;
     const apr = lista.filter(a => a.resultado === 'APROBADO').length;
     return { inscriptos: ins, examinados: ins - aus, ausentes: aus, desaprobados: ins - aus - apr, aprobados: apr };
   },
@@ -213,7 +226,7 @@ const ActasModulo = {
             ${alumnos.length ? alumnos.map((al, idx) => `
               <tr>
                 <td>${idx + 1}</td>
-                <td><strong>${this.esc(al.nombre)}</strong><span>DNI ${this.esc(al.dni)}${al.numEgresado ? ' · Egresado N.º ' + this.esc(al.numEgresado) : ''}</span></td>
+                <td><strong>${this.esc(al.nombre)}</strong><span>DNI ${this.esc(al.dni)}${al.baja ? ' · BAJA' + (al.fechaBaja ? ' ' + String(al.fechaBaja).split('-').reverse().join('/') : '') : ''}${al.numEgresado ? ' · Egresado N.º ' + this.esc(al.numEgresado) : ''}</span></td>
                 ${al.final.map(m => this.celdaModulo(al, m)).join('')}
                 <td><span class="acta-res ${al.resultado.toLowerCase()}">${al.resultado}</span></td>
                 <td>${modulos.length ? `<button type="button" class="btn-ficha" onclick="ActasModulo.editarEquivalencias('${this.esc(al.dni)}')" title="Acreditar módulos por equivalencia">Equivalencias</button>` : ''}</td>
@@ -230,6 +243,9 @@ const ActasModulo = {
   },
 
   celdaModulo(al, m) {
+    if (m.valor === 'BAJA') {
+      return `<td class="acta-celda bloq" title="Baja: no cursó este módulo"><span>—</span></td>`;
+    }
     if (m.valor === 'BLOQ') {
       return `<td class="acta-celda bloq" title="No se califica: el módulo anterior no está aprobado (correlatividad)"><span>No habilitado</span></td>`;
     }
@@ -461,6 +477,7 @@ const ActasModulo = {
           al.final.slice(0, MAX_MOD).forEach((m, i) => {
             const c = COL_MOD + i * 2;
             if (m.valor === 'EQ') { row.getCell(c).value = 'EQ'; row.getCell(c + 1).value = 'EQUIVALENCIA'; }
+            else if (m.valor === 'BAJA') { row.getCell(c).value = '-'; row.getCell(c + 1).value = ''; }
             else if (m.valor === 'BLOQ') { row.getCell(c).value = '-'; row.getCell(c + 1).value = 'NO HABILITADO'; }
             else if (m.valor === null) { row.getCell(c).value = '-'; row.getCell(c + 1).value = 'AUSENTE'; }
             else { row.getCell(c).value = m.valor; row.getCell(c + 1).value = ReglasFP.enLetras(m.valor); }

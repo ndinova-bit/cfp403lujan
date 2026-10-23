@@ -683,6 +683,7 @@ button.seg-ver { border: none; cursor: pointer; font-family: inherit; }
 .acta-res.aprobado { background: var(--cfp-ok-soft); color: var(--cfp-ok) !important; }
 .acta-res.desaprobado { background: var(--cfp-bad-soft); color: var(--cfp-bad) !important; }
 .acta-res.ausente { background: #EEF3F9; color: var(--cfp-muted) !important; }
+.acta-res.baja { background: #FDECEC; color: var(--cfp-bad) !important; }
 .acta-acciones { display: flex; flex-wrap: wrap; gap: .75rem; justify-content: flex-end; margin-top: 1rem; }
 .eq-alumno { font-weight: 700; margin: 0 0 .75rem; }
 .eq-lista { display: flex; flex-direction: column; gap: .4rem; text-align: left; margin-bottom: .75rem; }
