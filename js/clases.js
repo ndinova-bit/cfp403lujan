@@ -527,7 +527,7 @@ const ClasesModulo = {
       if (nota) {
         h += `<div class="act-res-linea"><span>Calificación: <strong>${this.esc(ent.nota)}</strong> ${parseFloat(ent.nota) >= 70 ? '✅' : '— no alcanza 70'}</span>${link ? `<a href="${this.esc(link)}" target="_blank" rel="noopener noreferrer">Ver mi trabajo</a>` : ''}<button type="button" class="act-mini" onclick="Actividades.verResultado(${id})">Ver devolución</button></div>`;
       } else if (vencida) {
-        h += link ? `<div class="act-res-linea">⏳ Entregado: falta la corrección. <a href="${this.esc(link)}" target="_blank" rel="noopener noreferrer">Ver mi trabajo</a></div>` : '<div class="act-res-linea bad">Venció el plazo de entrega.</div>';
+        h += link ? `<div class="act-res-linea">⏳ Entregado: falta la corrección. <a href="${this.esc(link)}" target="_blank" rel="noopener noreferrer">Ver mi trabajo</a></div>` : '<div class="act-res-linea bad">Venció el plazo de entrega: cuenta como 0.</div>';
       } else {
         h += `${ent ? `<div class="act-res-linea">⏳ Entregado: falta la corrección. Podés reemplazar el link hasta que te califiquen.</div>` : ''}
           <div class="act-entrega-link"><input type="url" id="input-entrega-${id}" class="act-in" placeholder="Pegá el link a tu trabajo (Google Drive, PDF, fotos)" value="${ent ? this.esc(ent.url_entrega || '') : ''}">
@@ -544,7 +544,7 @@ const ClasesModulo = {
       const puede = !vencida && inf.quedan > 0 && !(ent && nota && !inf.usados);
       if (ent) botones += `<button type="button" class="act-btn-sec" onclick="Actividades.verResultado(${id})">Ver resultado</button>`;
       if (puede) botones += `<button type="button" class="act-btn" onclick="Actividades.abrir(${id})">${ent ? `Intentar de nuevo${inf.maximo ? ` (te queda${inf.quedan > 1 ? 'n' : ''} ${inf.quedan})` : ''}` : (c.tipo === 'diagnostico' ? 'Empezar el caso' : 'Comenzar')}</button>`;
-      if (!ent && vencida) botones += '<span class="act-res-linea bad">Venció el plazo.</span>';
+      if (!ent && vencida) botones += '<span class="act-res-linea bad">Venció el plazo: cuenta como 0.</span>';
     } else {
       const editable = !nota && !vencida;
       if (c.tipo === 'bitacora') {
@@ -555,7 +555,7 @@ const ClasesModulo = {
       } else if (ent) {
         botones += `<button type="button" class="act-btn-sec" onclick="Actividades.verResultado(${id})">Ver ${nota ? 'resultado' : 'mi respuesta'}</button>`;
       } else {
-        botones += '<span class="act-res-linea bad">Venció el plazo.</span>';
+        botones += `<span class="act-res-linea bad">Venció el plazo${c.calificable !== false && c.tipo !== 'encuesta' ? ': cuenta como 0' : ''}.</span>`;
       }
     }
     return `<div class="act-accion act-accion-fila">${botones}</div>`;
@@ -861,7 +861,7 @@ const ClasesModulo = {
 
       const { data: modulos } = await supabase
         .from('modulos')
-        .select('id, nombre, codigo')
+        .select('*')
         .eq('trayecto_id', Number(this.trayectoActualId))
         .order('id', { ascending: true });
 
@@ -931,7 +931,7 @@ const ClasesModulo = {
             celdasNotasHTML += `<td style="padding:0.75rem; text-align:center; color:#64748b; font-size:0.8rem;">S/D</td>`;
             return;
           }
-          const det = [m.promAct !== null ? `Act: ${m.promAct}` : 'Sin act.', computa ? (m.pctAsis !== null ? `Asis: ${m.pctAsis}%` : 'Sin asis.') : null].filter(Boolean).join(' | ');
+          const det = [m.promAct !== null ? `Act: ${m.promAct}` : 'Sin act.', computa ? (m.pctAsis !== null ? `Asis: ${m.pctAsis}%` : 'Sin asis.') : null, m.sinEntregar ? `${m.sinEntregar} sin entregar (0)` : null].filter(Boolean).join(' | ');
           celdasNotasHTML += `<td style="padding:0.75rem; text-align:center;"><span class="sabana-nota ${m.aprobado ? 'ok' : 'bad'}">${m.nota}</span><span class="sabana-det">${det}</span></td>`;
         });
 

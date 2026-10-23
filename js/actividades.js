@@ -1316,7 +1316,7 @@ Object.assign(Actividades, {
   estadoEntrega(clase, a) {
     const e = a.entrega;
     const pl = this.plazo(clase);
-    if (!e) return { cls: pl && pl.vencida ? 'bad' : 'gris', txt: pl && pl.vencida ? 'No entregó' : (clase.tipo === 'practica' ? 'Sin calificar' : 'Sin entregar') };
+    if (!e) return { cls: pl && pl.vencida ? 'bad' : 'gris', txt: pl && pl.vencida ? (clase.calificable !== false && clase.tipo !== 'encuesta' ? 'No entregó (0)' : 'No respondió') : (clase.tipo === 'practica' ? 'Sin calificar' : 'Sin entregar') };
     if (this.tieneNota(e)) return { cls: parseFloat(e.nota) >= 70 ? 'ok' : 'bad', txt: 'Corregida' };
     if (clase.tipo === 'encuesta') return { cls: 'ok', txt: 'Respondió' };
     return { cls: 'mid', txt: 'Para corregir' };

@@ -98,7 +98,7 @@ const ProgresoModulo = {
       if (m.pctAsis !== null) partes.push(`asistencia ${m.pctAsis}%`);
       const detalle = m.aprobado ? 'Aprobado' : (m.nota === null ? 'Sin calificaciones todavía' : `En curso · ${vos ? 'necesitás' : 'se necesita'} ${this.MINIMO} o más`);
       const clsNota = m.aprobado ? 'ok' : (m.nota !== null ? 'bad' : 'curso');
-      filas += `<div class="prog-mod ${estado === 'curso' ? 'curso' : ''}"><span class="prog-mod-ico ${estado}">${this.ICO[estado]}</span><div class="prog-mod-info"><strong>${titulo}</strong><span>${detalle}${partes.length ? ' · ' + partes.join(' · ') : ''} · ${m.entregas} entrega(s)${m.pendientes ? `, ${m.pendientes} sin corregir` : ''}</span></div>${m.nota !== null ? `<span class="prog-mod-nota ${clsNota}">${m.nota}</span>` : ''}</div>`;
+      filas += `<div class="prog-mod ${estado === 'curso' ? 'curso' : ''}"><span class="prog-mod-ico ${estado}">${this.ICO[estado]}</span><div class="prog-mod-info"><strong>${titulo}</strong><span>${detalle}${partes.length ? ' · ' + partes.join(' · ') : ''} · ${m.entregas} entrega(s)${m.pendientes ? `, ${m.pendientes} sin corregir` : ''}${m.sinEntregar ? `, ${m.sinEntregar} vencida(s) sin entregar (cuentan 0)` : ''}</span></div>${m.nota !== null ? `<span class="prog-mod-nota ${clsNota}">${m.nota}</span>` : ''}</div>`;
     });
 
     const prom = ev.promedio;
