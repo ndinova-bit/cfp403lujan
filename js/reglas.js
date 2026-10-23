@@ -13,7 +13,8 @@
      – Si no hay actividades calificadas pero sí asistencia, la nota es la asistencia.
    • Solo cuentan las actividades con nota: no cuentan el material, las encuestas
      ni las bitácoras marcadas "sin nota".
-   • Una actividad no entregada cuenta como 0 cuando vence su plazo (o, si no tiene
+   • Una actividad no entregada cuenta con la nota mínima (10, como el 1 en las
+     escuelas) cuando vence su plazo (o, si no tiene
      fecha límite, cuando cierra el módulo). Un recuperatorio es otra actividad más
      y se promedia con las demás.
    • Un módulo se aprueba con 70 o más, o si está acreditado por equivalencia.
@@ -24,6 +25,7 @@
    ========================================================================== */
 const ReglasFP = {
   MINIMO: 70,
+  NOTA_NO_ENTREGADA: 10,   // nota mínima, como el 1 en las escuelas
 
   esPresente(estado) {
     const e = String(estado || '').toLowerCase();
@@ -76,9 +78,9 @@ const ReglasFP = {
       const ent = entregas.filter(e => idsC.includes(Number(e.clase_id)));
       const as = m.id === null ? asis : asis.filter(a => a.modulo_id === null || a.modulo_id === undefined || Number(a.modulo_id) === Number(m.id));
       const eq = m.id !== null ? acred.find(a => Number(a.modulo_id) === Number(m.id)) : null;
-      // Actividades vencidas sin entregar: cuentan como 0
+      // Actividades vencidas sin entregar: cuentan con la nota mínima (10)
       const faltantes = clasesM.filter(c => this.venceSinEntrega(c, m, key, hoy) && !ent.some(e => Number(e.clase_id) === Number(c.id)));
-      const promAct = this.promedioActividades(ent.concat(faltantes.map(c => ({ clase_id: c.id, nota: '0' }))));
+      const promAct = this.promedioActividades(ent.concat(faltantes.map(c => ({ clase_id: c.id, nota: String(this.NOTA_NO_ENTREGADA) }))));
       const pctAsis = this.porcentajeAsistencia(as);
       const nota = eq ? null : this.combinar(promAct, pctAsis, computa);
       return {
@@ -122,7 +124,7 @@ const ReglasFP = {
     };
   },
 
-  /* ¿Esta actividad ya cuenta como 0 si el alumno no la entregó?
+  /* ¿Esta actividad ya cuenta con la nota mínima (10) si el alumno no la entregó?
      – Con fecha límite: desde que vence.
      – Sin fecha límite: cuando cierra el módulo (su fecha de fin).
      Solo para actividades que el alumno entrega en la plataforma (no la práctica en
