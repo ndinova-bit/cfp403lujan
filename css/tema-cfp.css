@@ -1074,3 +1074,66 @@ textarea.act-in { resize: vertical; }
   .act-tarjeta-cab { flex-direction: column; }
   .act-tipos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* ==========================================================================
+   16. SUPLENTES Y AUDITORÍA
+   ========================================================================== */
+.sup-box { margin-top: 1rem; border: 1px solid var(--cfp-line); border-radius: 14px; padding: .75rem 1rem; background: #F8FAFD; }
+.sup-ayuda { margin: .3rem 0; font-size: .78rem; color: var(--cfp-muted); }
+.sup-lista { list-style: none; margin: 0 0 .6rem; padding: 0; display: flex; flex-direction: column; gap: .4rem; }
+.sup-lista li { display: flex; align-items: center; gap: .6rem; background: #fff; border: 1px solid var(--cfp-line); border-radius: 10px; padding: .5rem .75rem; font-size: .86rem; flex-wrap: wrap; }
+.sup-lista li > div { flex: 1; min-width: 200px; }
+.sup-periodo { font-size: .78rem; color: var(--cfp-muted); margin-left: .3rem; }
+.sup-estado { font-size: .72rem; font-weight: 800; padding: .15rem .55rem; border-radius: 999px; }
+.sup-estado.vigente { background: var(--cfp-ok-soft); color: var(--cfp-ok); }
+.sup-estado.futura { background: var(--cfp-celeste-soft); color: var(--cfp-blue); }
+.sup-estado.terminada { background: #EEF3F9; color: var(--cfp-muted); }
+.sup-quitar { background: none; border: none; color: var(--cfp-bad); font-weight: 700; font-size: .78rem; cursor: pointer; font-family: inherit; }
+.sup-form { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: .5rem; align-items: end; }
+.sup-form label { display: flex; flex-direction: column; gap: .2rem; font-size: .75rem; font-weight: 700; color: var(--cfp-ink-2); margin: 0; }
+.sup-form #sup-motivo { grid-column: 1 / 3; }
+.sup-badge { display: inline-block; margin-left: .4rem; font-size: .72rem; font-weight: 800; padding: .15rem .55rem; border-radius: 999px; background: var(--cfp-yellow-soft); color: #7A5600; }
+@media (max-width: 640px) { .sup-form { grid-template-columns: 1fr; } .sup-form #sup-motivo { grid-column: auto; } }
+.aud-filtros { display: flex; flex-direction: column; gap: .75rem; margin-bottom: 1.25rem; }
+.aud-chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+.aud-chip { padding: .4rem .9rem; border-radius: 999px; border: 1px solid var(--cfp-line-2); background: #fff; font: inherit; font-size: .82rem; font-weight: 700; color: var(--cfp-ink-2); cursor: pointer; }
+.aud-chip.sel { background: var(--cfp-navy); border-color: var(--cfp-navy); color: #fff; }
+.aud-fila { display: flex; flex-wrap: wrap; gap: .6rem; align-items: flex-end; }
+.aud-fila label { display: flex; flex-direction: column; gap: .25rem; font-size: .75rem; font-weight: 700; color: var(--cfp-ink-2); margin: 0; }
+.aud-fila .form-control { width: auto; min-width: 150px; }
+.aud-fila select.form-control { max-width: 280px; }
+.aud-limpiar { align-self: flex-end; }
+.aud-resumen { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: .5rem; margin-bottom: 1.25rem; }
+.aud-persona { display: flex; align-items: center; gap: .6rem; text-align: left; background: #fff; border: 1px solid var(--cfp-line); border-radius: 12px; padding: .5rem .65rem; cursor: pointer; font: inherit; }
+.aud-persona:hover { border-color: var(--cfp-blue); }
+.aud-persona-txt { display: flex; flex-direction: column; min-width: 0; }
+.aud-persona-txt strong { font-size: .82rem; color: var(--cfp-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aud-persona-txt small { font-size: .72rem; color: var(--cfp-muted); }
+.aud-avatar { flex-shrink: 0; width: 2.1rem; height: 2.1rem; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 800; color: #fff; background: var(--cfp-muted); }
+.aud-dia { margin: 1.1rem 0 .5rem; font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--cfp-muted); font-weight: 800; }
+.aud-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .4rem; }
+.aud-item { display: flex; gap: .8rem; background: #fff; border: 1px solid var(--cfp-line); border-radius: 12px; padding: .6rem .8rem; }
+.aud-hora { flex-shrink: 0; width: 3.2rem; font-size: .8rem; font-weight: 700; color: var(--cfp-muted); padding-top: .1rem; }
+.aud-cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .2rem; }
+.aud-quien { font-size: .8rem; color: var(--cfp-ink); display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.aud-rol { font-size: .68rem; font-weight: 800; padding: .1rem .5rem; border-radius: 999px; color: #fff; background: var(--cfp-muted); }
+.r-adm { background: var(--cfp-navy) !important; }
+.r-pre { background: #7C3AED !important; }
+.r-doc { background: var(--cfp-blue) !important; }
+.r-est { background: var(--cfp-ok) !important; }
+.r-sis { background: #64748B !important; }
+.aud-chip.r-adm:not(.sel), .aud-chip.r-pre:not(.sel), .aud-chip.r-doc:not(.sel), .aud-chip.r-est:not(.sel), .aud-chip.r-sis:not(.sel) { background: #fff !important; }
+.aud-frase { font-size: .9rem; color: var(--cfp-ink-2); line-height: 1.45; }
+.aud-frase b { color: var(--cfp-ink); }
+.aud-mas summary { cursor: pointer; font-size: .74rem; font-weight: 700; color: var(--cfp-blue); }
+.aud-det { width: 100%; border-collapse: collapse; font-size: .78rem; margin-top: .4rem; }
+.aud-det th { text-align: left; color: var(--cfp-muted); font-size: .7rem; text-transform: uppercase; padding: .25rem .4rem; border-bottom: 1px solid var(--cfp-line); }
+.aud-det td { padding: .3rem .4rem; border-bottom: 1px solid var(--cfp-line); vertical-align: top; word-break: break-word; }
+.aud-det td.ant { color: var(--cfp-bad); }
+.aud-det td.nue { color: var(--cfp-ok); }
+.aud-nulo { color: var(--cfp-muted); font-style: italic; }
+.aud-det-lista { margin: .4rem 0 0; padding-left: 1.2rem; font-size: .8rem; columns: 2; }
+.aud-det-nada { font-size: .78rem; color: var(--cfp-muted); margin: .3rem 0 0; }
+.aud-vacio { text-align: center; color: var(--cfp-muted); padding: 1.2rem; font-size: .85rem; }
+.aud-pie { text-align: center; margin-top: 1rem; }
+@media (max-width: 640px) { .aud-item { flex-direction: column; gap: .2rem; } .aud-det-lista { columns: 1; } }
