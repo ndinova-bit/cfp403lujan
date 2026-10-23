@@ -148,9 +148,22 @@ const Trayectos = {
 
       this.listaTrayectos = trayectos;
       this.renderizarTrayectos();
+      // Copia para abrir la lista sin señal (solo personal: docentes, preceptores, dirección)
+      if (perfil && ['docente', 'preceptor', 'admin', 'administrador'].includes(String(perfil.rol || '').toLowerCase())) {
+        try { localStorage.setItem('cfp_cache_trayectos', JSON.stringify({ dni: String(perfil.dni || ''), fecha: Date.now(), lista: trayectos.map(t => ({ ...t, modulos: t.modulos || [] })) })); } catch (e) { /* sin espacio */ }
+      }
 
     } catch (err) {
       console.error('Error al cargar trayectos:', err);
+      // Sin señal: la última lista guardada en este dispositivo
+      try {
+        const perfil = await this.obtenerPerfilActual();
+        const c = JSON.parse(localStorage.getItem('cfp_cache_trayectos') || 'null');
+        if (c && perfil && String(c.dni) === String(perfil.dni || '')) {
+          this.listaTrayectos = c.lista || [];
+          this.renderizarTrayectos();
+        }
+      } catch (e) { /* nada */ }
     }
   },
 

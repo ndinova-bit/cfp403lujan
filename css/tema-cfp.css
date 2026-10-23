@@ -1137,3 +1137,17 @@ textarea.act-in { resize: vertical; }
 .aud-vacio { text-align: center; color: var(--cfp-muted); padding: 1.2rem; font-size: .85rem; }
 .aud-pie { text-align: center; margin-top: 1rem; }
 @media (max-width: 640px) { .aud-item { flex-direction: column; gap: .2rem; } .aud-det-lista { columns: 1; } }
+
+/* ==========================================================================
+   17. APP INSTALABLE Y SIN CONEXIÓN
+   ========================================================================== */
+.app-barra { position: fixed; left: 50%; transform: translateX(-50%); bottom: 16px; z-index: 150000; width: min(560px, calc(100% - 24px)); display: flex; align-items: center; gap: .6rem; background: var(--cfp-navy); color: #fff; border-radius: 14px; padding: .7rem .9rem; box-shadow: 0 16px 40px -12px rgba(7, 27, 56, .55); font-size: .86rem; line-height: 1.4; }
+.app-barra.aviso { background: #7A5600; }
+.app-barra-txt { flex: 1; }
+.app-barra-txt b { color: var(--cfp-yellow); }
+.app-barra-btn { flex-shrink: 0; background: var(--cfp-yellow); color: var(--cfp-navy-deep); border: none; border-radius: 10px; padding: .45rem .85rem; font: inherit; font-weight: 800; cursor: pointer; }
+.app-barra-x { flex-shrink: 0; background: none; border: none; color: #fff; font-size: 1.4rem; line-height: 1; cursor: pointer; opacity: .8; }
+@media (display-mode: standalone) { .app-boton-instalar { display: none !important; } }
+.asis-offline { background: var(--cfp-yellow-soft); color: #7A5600; border-radius: 12px; padding: .6rem 1rem; font-size: .85rem; font-weight: 600; margin-bottom: 1rem; }
+.asis-pend { background: var(--cfp-celeste-soft); color: var(--cfp-blue); border-radius: 12px; padding: .6rem 1rem; font-size: .85rem; font-weight: 600; margin-bottom: 1rem; display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+.asis-pend button { background: var(--cfp-navy); color: #fff; border: none; border-radius: 8px; padding: .3rem .7rem; font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; }
