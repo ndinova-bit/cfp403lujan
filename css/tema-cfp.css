@@ -767,3 +767,26 @@ tr.fila-baja td { opacity: .65; }
 .ficha-curso-campos legend { font-size: .8rem; font-weight: 800; color: var(--cfp-blue); padding: 0 .4rem; text-transform: uppercase; letter-spacing: .03em; }
 .ficha-curso-campos .form-group { margin-bottom: .75rem; }
 @media print { body.ficha-imprimiendo .ficha-form-acciones, body.ficha-imprimiendo .obs-form, body.ficha-imprimiendo .obs-borrar { display: none !important; } }
+
+/* Uso de la base de datos */
+.uso-panel { background: #fff; border: 1px solid var(--cfp-line); border-radius: 16px; padding: 1.25rem; margin-bottom: 1.25rem; }
+.uso-panel h4 { margin: 0 0 .75rem; font-size: 1rem; font-weight: 800; color: var(--cfp-ink); }
+.uso-cab { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: .6rem; }
+.uso-num { font-size: 1.8rem; font-weight: 800; color: var(--cfp-ink); }
+.uso-de { font-size: .9rem; color: var(--cfp-muted); font-weight: 600; }
+.uso-estado { font-size: .75rem; font-weight: 800; padding: .3rem .7rem; border-radius: 999px; }
+.uso-estado.ok { background: var(--cfp-ok-soft); color: var(--cfp-ok); }
+.uso-estado.mid { background: var(--cfp-yellow-soft); color: #7A5600; }
+.uso-estado.bad { background: var(--cfp-bad-soft); color: var(--cfp-bad); }
+.uso-barra { position: relative; height: 14px; background: #E3EBF5; border-radius: 999px; }
+.uso-fill { height: 100%; border-radius: 999px; }
+.uso-fill.ok { background: linear-gradient(90deg, var(--cfp-blue), var(--cfp-celeste)); }
+.uso-fill.mid { background: var(--cfp-yellow); }
+.uso-fill.bad { background: var(--cfp-bad); }
+.uso-marca { position: absolute; top: -4px; width: 2px; height: 22px; background: var(--cfp-ink-2); opacity: .5; }
+.uso-msg { margin: .6rem 0 .4rem; font-size: .85rem; color: var(--cfp-ink-2); }
+.uso-detalle summary { cursor: pointer; font-size: .85rem; font-weight: 700; color: var(--cfp-blue); }
+.uso-tablas { display: flex; flex-direction: column; gap: .35rem; margin-top: .6rem; }
+.uso-fila { display: grid; grid-template-columns: minmax(150px, 1.2fr) 2fr auto; gap: .6rem; align-items: center; font-size: .82rem; color: var(--cfp-ink-2); }
+.uso-mini { height: 8px; background: #E3EBF5; border-radius: 999px; }
+.uso-mini > div { height: 100%; background: var(--cfp-celeste); border-radius: 999px; }
