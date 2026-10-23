@@ -332,7 +332,7 @@ const CertificadosAdmin = {
         <div><span>Módulos</span><strong>${modulos.length}</strong></div>
         <div><span>Fecha de egreso (acta)</span><strong>${fechaEgreso ? this.fechaAR(fechaEgreso) : '—'}</strong></div>
         <div class="form-group"><label for="cert-entrega">Fecha de entrega (frente)</label>
-          <input type="date" id="cert-entrega" class="form-control" value="${this.esc(fechaEntrega)}" ${fechaEgreso ? `min="${this.esc(fechaEgreso)}"` : ''} onchange="CertificadosAdmin.guardarEntrega(this.value)"></div>
+          <input type="date" id="cert-entrega" class="form-control" value="${this.esc(fechaEntrega)}" ${fechaEgreso ? `min="${this.esc(fechaEgreso)}"` : ''} max="2099-12-31" onblur="CertificadosAdmin.guardarEntrega(this.value)" onkeydown="if(event.key==='Enter'){this.blur();}"></div>
         <div><span>C.F.P. N.º / Distrito</span><strong>${CERT_CONFIG.cfp} · ${this.esc(CERT_CONFIG.distrito)}</strong></div>
         <div><button type="button" class="btn btn-outline" onclick="Trayectos.editarTrayecto(${Number(t.id)})">Editar datos del trayecto</button></div>
       </div>
@@ -404,6 +404,12 @@ const CertificadosAdmin = {
 
   async guardarEntrega(valor) {
     const { fechaEgreso } = this.datos;
+    if ((valor || '') === (this.datos.fechaEntrega || '')) return;          // no cambió
+    const anio = Number(String(valor || '').slice(0, 4));
+    if (valor && (anio < 2000 || anio > 2099)) {                          // fecha a medio escribir
+      alert('⚠️ Revisá la fecha de entrega: el año tiene que tener 4 cifras (por ejemplo 2026).');
+      return;
+    }
     if (valor && fechaEgreso && valor < fechaEgreso) {
       alert('⚠️ La fecha de entrega no puede ser anterior a la fecha de egreso (' + this.fechaAR(fechaEgreso) + ').');
       this.render();
