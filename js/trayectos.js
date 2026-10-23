@@ -336,6 +336,8 @@ const Trayectos = {
     if (elDesc) elDesc.value = trayecto.descripcion || '';
     if (elReq) elReq.value = trayecto.requisitos || '';
     if (elDocente) elDocente.value = trayecto.docente_user || '';
+    const elComputa = document.getElementById('trayecto-computa-asistencia');
+    if (elComputa) elComputa.checked = trayecto.computa_asistencia !== false;
   },
 
   async guardarTrayecto() {
@@ -375,21 +377,32 @@ const Trayectos = {
         requisitos: requisitos || null,
         docente_user: docenteUser || null
       };
+      const elComputa = document.getElementById('trayecto-computa-asistencia');
+      if (elComputa) datosTrayecto.computa_asistencia = elComputa.checked;
 
       if (idRaw && idRaw !== '') {
         const idQuery = !isNaN(idRaw) ? parseInt(idRaw, 10) : idRaw;
 
-        const { error } = await supabase
+        let { error } = await supabase
           .from('trayectos')
           .update(datosTrayecto)
           .eq('id', idQuery);
+        if (error && /computa_asistencia/.test(error.message || '')) {
+          // Todavía no se ejecutó sql/07: se guarda sin ese dato
+          delete datosTrayecto.computa_asistencia;
+          ({ error } = await supabase.from('trayectos').update(datosTrayecto).eq('id', idQuery));
+        }
 
         if (error) throw error;
         alert('Trayecto actualizado con éxito.');
       } else {
-        const { error } = await supabase
+        let { error } = await supabase
           .from('trayectos')
           .insert([datosTrayecto]);
+        if (error && /computa_asistencia/.test(error.message || '')) {
+          delete datosTrayecto.computa_asistencia;
+          ({ error } = await supabase.from('trayectos').insert([datosTrayecto]));
+        }
 
         if (error) throw error;
         alert('Trayecto guardado con éxito.');

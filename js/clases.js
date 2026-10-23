@@ -411,6 +411,21 @@ const ClasesModulo = {
         tieneExcepcion = exc && exc.length > 0;
       }
 
+      // Evaluación del estudiante con la regla única (para habilitar módulos)
+      let evalEstudiante = null;
+      if (esEstudiante && userEstudiante && modulos && modulos.length > 1) {
+        const [rAs, rAc, rTr] = await Promise.all([
+          supabase.from('asistencias').select('estudiante_user, modulo_id, estado').eq('trayecto_id', Number(this.trayectoActualId)).eq('estudiante_user', userEstudiante),
+          supabase.from('modulos_acreditados').select('*').eq('trayecto_id', Number(this.trayectoActualId)).eq('estudiante_user', userEstudiante),
+          supabase.from('trayectos').select('*').eq('id', Number(this.trayectoActualId)).maybeSingle()
+        ]);
+        evalEstudiante = ReglasFP.evaluar({
+          key: userEstudiante, modulos, clases, entregas: entregasGlobales,
+          asistencias: rAs.data || [], acreditados: (!rAc.error && rAc.data) || [],
+          computaAsistencia: ReglasFP.computaAsistencia(rTr.data)
+        });
+      }
+
       const hoy = new Date();
       hoy.setHours(0,0,0,0);
 
@@ -447,25 +462,12 @@ const ClasesModulo = {
 
         let bloqueEntregaEstudiante = '';
         if (esEstudiante && tieneActividad) {
+          // El módulo se habilita cuando el anterior está aprobado (actividades + asistencia ≥ 70)
+          // o acreditado por equivalencia, o si el docente dio una excepción
           let estaBloqueado = false;
-          if (!tieneExcepcion && c.modulo_id && modulos && modulos.length > 1) {
-            const idxModActual = modulos.findIndex(m => Number(m.id) === Number(c.modulo_id));
-            if (idxModActual > 0) {
-              const modAnterior = modulos[idxModActual - 1];
-              const clasesModAnt = clases.filter(cl => Number(cl.modulo_id) === Number(modAnterior.id)).map(cl => cl.id);
-              const entregasAnt = entregasGlobales.filter(e => clasesModAnt.includes(Number(e.clase_id)) && String(e.estudiante_user) === userEstudiante);
-
-              let suma = 0, cant = 0;
-              entregasAnt.forEach(e => {
-                const val = parseFloat(e.nota);
-                if (!isNaN(val)) { suma += val; cant++; }
-              });
-
-              const promAnt = cant > 0 ? (suma / cant) : 0;
-              if (promAnt < 70) {
-                estaBloqueado = true;
-              }
-            }
+          if (!tieneExcepcion && c.modulo_id && evalEstudiante) {
+            const idxModActual = (modulos || []).findIndex(m => Number(m.id) === Number(c.modulo_id));
+            estaBloqueado = idxModActual > 0 && !ReglasFP.moduloHabilitado(evalEstudiante, idxModActual, false);
           }
 
           const miEntrega = entregasGlobales.find(e => Number(e.clase_id) === Number(c.id) && String(e.estudiante_user) === userEstudiante);
@@ -509,7 +511,7 @@ const ClasesModulo = {
                       <span style="font-size:2rem; filter:drop-shadow(0 0 8px ${colorGlow}); flex-shrink:0;">${medalla}</span>
                       <div>
                         <strong style="color:#f8fafc; font-size:0.95rem; display:block;">${tituloMedalla}</strong>
-                        <span style="color:#4ade80; font-weight:700; font-size:1rem;">Calificación: ${numNota}% — ✅ MÓDULO ACREDITADO</span>
+                        <span style="color:#4ade80; font-weight:700; font-size:1rem;">Calificación: ${numNota} — ✅ ACTIVIDAD APROBADA</span>
                       </div>
                     </div>
                     <div style="border-top:1px solid rgba(255,255,255,0.08); padding-top:0.4rem; margin-top:0.4rem;">
@@ -521,7 +523,7 @@ const ClasesModulo = {
               } else {
                 estadoEntregaHTML = `
                   <div style="font-size:0.82rem; color:#f87171; margin-bottom:0.4rem; background:rgba(239,68,68,0.15); padding:0.6rem; border-radius:6px; border:1px solid rgba(239,68,68,0.4);">
-                    ⚠️ <strong>Calificación:</strong> ${this.esc(miEntrega.nota)}% — <strong style="color:#f87171;">MÓDULO NO ACREDITADO (&lt;70%)</strong>
+                    ⚠️ <strong>Calificación:</strong> ${this.esc(miEntrega.nota)} — <strong style="color:#f87171;">ACTIVIDAD NO APROBADA (menos de 70)</strong>
                     <br><em>Esta entrega ha sido evaluada y cerrada. Si el docente asigna un trabajo recuperatorio, te aparecerá como una tarea nueva.</em>
                     <br><a href="${this.esc(this.urlSegura(miEntrega.url_entrega))}" target="_blank" rel="noopener noreferrer" style="color:#38bdf8; text-decoration:underline; display:inline-block; margin-top:0.2rem;">Ver Entrega Evaluada</a>
                     ${miEntrega.comentario_docente ? `<br>💬 <strong>Devolución Docente:</strong> ${this.esc(miEntrega.comentario_docente)}` : ''}
@@ -541,7 +543,7 @@ const ClasesModulo = {
           if (estaBloqueado) {
             bloqueEntregaEstudiante = `
               <div style="margin-top:0.8rem; padding:0.8rem; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:6px; color:#f87171; font-size:0.82rem;">
-                🔒 <strong>Módulo Bloqueado:</strong> Requiere acreditar el módulo anterior con una nota mayor o igual a 70 o contar con habilitación excepcional del docente.
+                🔒 <strong>Módulo bloqueado:</strong> se habilita al aprobar el módulo anterior con 70 o más (actividades y asistencia), por equivalencia o con habilitación excepcional del docente.
               </div>
             `;
           } else {
@@ -894,6 +896,13 @@ const ClasesModulo = {
         .select('*')
         .eq('trayecto_id', Number(this.trayectoActualId));
 
+      const [rAcred, rTray] = await Promise.all([
+        supabase.from('modulos_acreditados').select('*').eq('trayecto_id', Number(this.trayectoActualId)),
+        supabase.from('trayectos').select('*').eq('id', Number(this.trayectoActualId)).maybeSingle()
+      ]);
+      const acreditados = (!rAcred.error && rAcred.data) || [];
+      const computa = ReglasFP.computaAsistencia(rTray.data);
+
       const tieneModulos = modulos && modulos.length > 0;
 
       let thModulosHTML = '';
@@ -911,93 +920,24 @@ const ClasesModulo = {
         
         const userKey = String(u.usuario || u.dni || u.id);
 
+        // Regla única de FP (js/reglas.js): actividades + asistencia, equivalencias, 70 para aprobar
+        const ev = ReglasFP.evaluar({
+          key: userKey, modulos: modulos || [], clases: clases || [], entregas, asistencias: asistencias || [],
+          acreditados, computaAsistencia: computa
+        });
         let celdasNotasHTML = '';
-
-        if (tieneModulos) {
-          modulos.forEach(mod => {
-            const clasesDelModulo = (clases || []).filter(c => Number(c.modulo_id) === Number(mod.id)).map(c => c.id);
-            const entregasAlumnoMod = entregas.filter(e => clasesDelModulo.includes(Number(e.clase_id)) && String(e.estudiante_user) === userKey);
-
-            let sumaAct = 0, cantAct = 0;
-            entregasAlumnoMod.forEach(e => {
-              const val = parseFloat(e.nota);
-              if (!isNaN(val)) { sumaAct += val; cantAct++; }
-            });
-            const promAct = cantAct > 0 ? (sumaAct / cantAct) : null;
-
-            const asisModUser = (asistencias || []).filter(a => (Number(a.modulo_id) === Number(mod.id) || a.modulo_id === null) && String(a.estudiante_user) === userKey);
-            const totalClasesMod = asisModUser.length;
-            const presentesMod = asisModUser.filter(a => a.estado === 'presente').length;
-            const pctAsisMod = totalClasesMod > 0 ? ((presentesMod / totalClasesMod) * 100) : null;
-
-            let notaFinalModulo = null;
-            let desgloseTexto = '';
-
-            if (promAct !== null && pctAsisMod !== null) {
-              notaFinalModulo = Math.round((promAct + pctAsisMod) / 2);
-              desgloseTexto = `TPs: ${Math.round(promAct)}% | Asis: ${Math.round(pctAsisMod)}%`;
-            } else if (promAct !== null) {
-              notaFinalModulo = Math.round(promAct);
-              desgloseTexto = `TPs: ${Math.round(promAct)}% (Sin Asis)`;
-            } else if (pctAsisMod !== null) {
-              notaFinalModulo = Math.round(pctAsisMod);
-              desgloseTexto = `Asis: ${Math.round(pctAsisMod)}% (Sin TPs)`;
-            }
-
-            if (notaFinalModulo !== null) {
-              const acreditado = notaFinalModulo >= 70;
-              celdasNotasHTML += `
-                <td style="padding:0.75rem; text-align:center;">
-                  <span style="display:inline-block; padding:0.2rem 0.5rem; border-radius:4px; font-weight:600; font-size:0.8rem; ${acreditado ? 'background:rgba(34,197,94,0.2); color:#4ade80; border:1px solid rgba(34,197,94,0.4);' : 'background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4);'}">
-                    ${notaFinalModulo}% ${acreditado ? '✅' : '⚠️'}
-                  </span>
-                  <span style="display:block; font-size:0.7rem; color:#94a3b8; margin-top:0.2rem;">${desgloseTexto}</span>
-                </td>
-              `;
-            } else {
-              celdasNotasHTML += `<td style="padding:0.75rem; text-align:center; color:#64748b; font-size:0.8rem;">S/D</td>`;
-            }
-          });
-        } else {
-          const entregasAlumno = entregas.filter(e => String(e.estudiante_user) === userKey);
-          let sumaAct = 0, cantAct = 0;
-          entregasAlumno.forEach(e => {
-            const val = parseFloat(e.nota);
-            if (!isNaN(val)) { sumaAct += val; cantAct++; }
-          });
-          const promAct = cantAct > 0 ? (sumaAct / cantAct) : null;
-
-          const asisUser = (asistencias || []).filter(a => String(a.estudiante_user) === userKey);
-          const totalClases = asisUser.length;
-          const presentes = asisUser.filter(a => a.estado === 'presente').length;
-          const pctAsis = totalClases > 0 ? ((presentes / totalClases) * 100) : null;
-
-          let notaFinalGeneral = null;
-          let desgloseTexto = '';
-
-          if (promAct !== null && pctAsis !== null) {
-            notaFinalGeneral = Math.round((promAct + pctAsis) / 2);
-            desgloseTexto = `TPs: ${Math.round(promAct)}% | Asis: ${Math.round(pctAsis)}%`;
-          } else if (promAct !== null) {
-            notaFinalGeneral = Math.round(promAct);
-          } else if (pctAsis !== null) {
-            notaFinalGeneral = Math.round(pctAsis);
+        ev.modulos.forEach(m => {
+          if (m.equivalencia) {
+            celdasNotasHTML += `<td style="padding:0.75rem; text-align:center;"><span class="sabana-nota eq" title="${this.esc(m.motivoEquivalencia)}">EQ</span><span class="sabana-det">Equivalencia</span></td>`;
+            return;
           }
-
-          if (notaFinalGeneral !== null) {
-            const acreditado = notaFinalGeneral >= 70;
-            celdasNotasHTML += `
-              <td style="padding:0.75rem; text-align:center;">
-                <span style="display:inline-block; padding:0.2rem 0.5rem; border-radius:4px; font-weight:600; font-size:0.8rem; ${acreditado ? 'background:rgba(34,197,94,0.2); color:#4ade80; border:1px solid rgba(34,197,94,0.4);' : 'background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4);'}">
-                  ${notaFinalGeneral}% ${acreditado ? '✅' : '⚠️'}
-                </span>
-                ${desgloseTexto ? `<span style="display:block; font-size:0.7rem; color:#94a3b8; margin-top:0.2rem;">${desgloseTexto}</span>` : ''}
-              </td>
-            `;
-          } else {
+          if (m.nota === null) {
             celdasNotasHTML += `<td style="padding:0.75rem; text-align:center; color:#64748b; font-size:0.8rem;">S/D</td>`;
+            return;
           }
-        }
+          const det = [m.promAct !== null ? `Act: ${m.promAct}` : 'Sin act.', computa ? (m.pctAsis !== null ? `Asis: ${m.pctAsis}%` : 'Sin asis.') : null].filter(Boolean).join(' | ');
+          celdasNotasHTML += `<td style="padding:0.75rem; text-align:center;"><span class="sabana-nota ${m.aprobado ? 'ok' : 'bad'}">${m.nota}</span><span class="sabana-det">${det}</span></td>`;
+        });
 
         const exEspecial = (excepciones || []).find(x => String(x.estudiante_user) === userKey && x.habilitado);
 
