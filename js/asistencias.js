@@ -74,14 +74,16 @@ const AsistenciasModulo = {
         return { dni: d, nombre: ap && no ? `${ap}, ${no}` : (ap || no || `DNI ${d}`) };
       }).sort((x, y) => x.nombre.localeCompare(y.nombre, 'es'));
 
-      // Los dados de baja (manual o automática) no aparecen en la toma de asistencia
+      // Los dados de baja (manual o automática) siguen en el historial y la planilla, pero no aparecen
+      // en la toma de asistencia de las fechas posteriores a su baja.
       this.bajas = [];
       try {
         const sit = await ReglasFP.cargarSituacion(this.trayectoActualId);
         this.bajas = this.alumnos.filter(a => sit.alumnos[a.dni] && sit.alumnos[a.dni].cursada.baja)
-          .map(a => ({ ...a, motivo: sit.alumnos[a.dni].cursada.motivo, tipo: sit.alumnos[a.dni].cursada.tipo }));
-        const idsBaja = new Set(this.bajas.map(b => b.dni));
-        this.alumnos = this.alumnos.filter(a => !idsBaja.has(a.dni));
+          .map(a => ({ ...a, motivo: sit.alumnos[a.dni].cursada.motivo, tipo: sit.alumnos[a.dni].cursada.tipo, fecha: sit.alumnos[a.dni].cursada.fecha }));
+        this.bajas.forEach(b => { b.desde = String(b.fecha || '').slice(0, 10) || '0000-00-00'; });
+        const desde = {}; this.bajas.forEach(b => { desde[b.dni] = b.desde; });
+        this.alumnos.forEach(a => { if (desde[a.dni]) a.bajaDesde = desde[a.dni]; });
       } catch (e) { /* si falla, se muestran todos */ }
 
       this.guardarCopia();
@@ -202,7 +204,7 @@ const AsistenciasModulo = {
       <div id="asis-pend-box"></div>
       ${computa ? '' : `<div class="asis-aviso">Este trayecto <strong>no computa asistencia</strong> (por ejemplo, virtual): podés registrarla, pero no se promedia en las notas.</div>`}
       ${this.trayecto && this.trayecto.sede === 'fuera' ? `<div class="asis-sede">Fuera de sede${this.trayecto.lugar_dictado ? ': ' + this.esc(this.trayecto.lugar_dictado) : ''} · la asistencia la carga el docente.</div>` : ''}
-      ${(this.bajas || []).length ? `<details class="asis-bajas"><summary>${this.bajas.length} estudiante(s) dado(s) de baja no aparecen en la lista</summary><ul>${this.bajas.map(b => `<li><b>${this.esc(b.nombre)}</b> · ${this.esc(b.tipo === 'automatica' ? 'Baja automática: ' + b.motivo : 'Baja: ' + b.motivo)}</li>`).join('')}</ul></details>` : ''}
+      ${(this.bajas || []).length ? `<details class="asis-bajas"><summary>${this.bajas.length} estudiante(s) dado(s) de baja: no aparecen en los días posteriores a su baja</summary><ul>${this.bajas.map(b => `<li><b>${this.esc(b.nombre)}</b> · ${this.esc(b.tipo === 'automatica' ? 'Baja automática' : 'Baja')}${b.fecha ? ' desde el ' + this.fechaAR(b.fecha) : ''}: ${this.esc(b.motivo)}</li>`).join('')}</ul></details>` : ''}
       <div class="asis-panel">
         <div class="asis-controles">
           <div class="form-group"><label for="asistencia-fecha">Fecha de la clase</label>
@@ -251,13 +253,19 @@ const AsistenciasModulo = {
     return out;
   },
 
+  // Estudiantes que figuran en la fecha elegida: los dados de baja salen de los días posteriores a su baja
+  listaDelDia(fecha) {
+    const f = fecha || document.getElementById('asistencia-fecha')?.value || '';
+    return this.alumnos.filter(a => !a.bajaDesde || (f && f <= a.bajaDesde));
+  },
+
   cargarFecha() {
     const fecha = document.getElementById('asistencia-fecha')?.value;
     const mod = document.getElementById('asistencia-modulo-id')?.value;
     const regs = this.historial.filter(h => String(h.fecha).slice(0, 10) === fecha && this.mismoModulo(h.modulo_id, mod));
     this.cargadoPrevio = regs.length > 0;
     this.estados = {};
-    this.alumnos.forEach(a => {
+    this.listaDelDia(fecha).forEach(a => {
       const r = regs.find(h => String(h.estudiante_user) === a.dni);
       this.estados[a.dni] = r ? String(r.estado).toLowerCase() : 'presente';
     });
@@ -278,7 +286,7 @@ const AsistenciasModulo = {
     const lista = document.getElementById('asis-lista');
     if (!lista) return;
     const pcts = this.porcentajes();
-    lista.innerHTML = this.alumnos.map((a, i) => {
+    lista.innerHTML = this.listaDelDia().map((a, i) => {
       const est = this.estados[a.dni] || 'presente';
       const p = pcts[a.dni];
       const cls = p === null ? '' : (p < 70 ? 'bajo' : 'ok');
@@ -300,7 +308,7 @@ const AsistenciasModulo = {
   },
 
   marcarTodos(estado) {
-    this.alumnos.forEach(a => { this.estados[a.dni] = estado; });
+    this.listaDelDia().forEach(a => { this.estados[a.dni] = estado; });
     this.dibujarLista();
   },
 
@@ -319,7 +327,7 @@ const AsistenciasModulo = {
     if (fecha > this.hoy()) {
       if (!confirm('La fecha elegida es posterior a hoy. ¿Guardar igual?')) return;
     }
-    const registros = this.alumnos.map(a => ({ estudiante_user: a.dni, estado: this.estados[a.dni] || 'presente' }));
+    const registros = this.listaDelDia(fecha).map(a => ({ estudiante_user: a.dni, estado: this.estados[a.dni] || 'presente' }));
     const btn = document.getElementById('asis-btn-guardar');
     if (btn) btn.disabled = true;
 
@@ -463,7 +471,7 @@ const AsistenciasModulo = {
       });
       const tomadas = celdas.filter(c => c).length;
       const asistio = celdas.filter(c => c === 'P' || c === 'T').length;
-      const row = ws.addRow([i + 1, a.nombre, a.dni, ...celdas, asistio, tomadas ? Math.round(asistio / tomadas * 100) / 100 : '']);
+      const row = ws.addRow([i + 1, a.nombre + (a.bajaDesde ? ' (BAJA)' : ''), a.dni, ...celdas, asistio, tomadas ? Math.round(asistio / tomadas * 100) / 100 : '']);
       row.getCell(cab.length).numFmt = '0%';
       row.alignment = { vertical: 'middle' };
       for (let c = 4; c <= cab.length; c++) row.getCell(c).alignment = { horizontal: 'center' };
