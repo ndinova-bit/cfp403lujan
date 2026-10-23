@@ -51,6 +51,7 @@ const Trayectos = {
 
       if (error) throw error;
 
+      this.docentesLista = docentes || [];
       selectDocente.innerHTML = '<option value="">Sin docente asignado</option>';
       (docentes || []).forEach(doc => {
         const idDocente = String(doc.dni || '').trim();
@@ -104,7 +105,11 @@ const Trayectos = {
       if (isAdmin || esPreceptor) {
         if (hayFiltroCiclo) query = query.eq('ciclo_lectivo', Number(cicloSeleccionado));
       } else if (esDocente) {
-        query = query.eq('docente_user', String(perfil.dni || ''));
+        const sup = await this.misSuplencias(perfil.dni);
+        this.suplencias = sup;
+        const ids = Object.keys(sup).map(Number).filter(Boolean);
+        const dniD = String(perfil.dni || '').replace(/[^0-9A-Za-z_-]/g, '');
+        query = ids.length ? query.or(`docente_user.eq.${dniD},id.in.(${ids.join(',')})`) : query.eq('docente_user', dniD);
         if (hayFiltroCiclo) query = query.eq('ciclo_lectivo', Number(cicloSeleccionado));
       } else if (esEstudiante) {
         const { data: insc, error: errInsc } = await supabase
@@ -215,6 +220,9 @@ const Trayectos = {
           </span>
         `;
 
+        const sup = !esVistaPublica && esDocente && this.suplencias ? this.suplencias[trayecto.id] : null;
+        const supBadge = sup ? `<span class="sup-badge">Suplencia${sup.hasta ? ' hasta el ' + String(sup.hasta).slice(0, 10).split('-').reverse().join('/') : ''}</span>` : '';
+
         let accionGestionHTML = '';
         if (!esVistaPublica && (isAdmin || esDocente || esPreceptor)) {
           accionGestionHTML = `
@@ -251,7 +259,7 @@ const Trayectos = {
             <div>
               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
                 <h3 style="color: #f8fafc; margin: 0; font-size: 1.2rem; font-weight: 600;">${Trayectos.esc(trayecto.nombre)}</h3>
-                ${cicloBadge}
+                ${cicloBadge}${supBadge}
               </div>
               <p style="color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.75rem; line-height: 1.4;">
                 ${Trayectos.esc(trayecto.descripcion || 'Sin descripción disponible.')}
@@ -280,7 +288,7 @@ const Trayectos = {
                 <div>
                   <h3 style="color: #f8fafc; margin: 0; font-size: 1.2rem; font-weight: 600;">${Trayectos.esc(trayecto.nombre)}</h3>
                 </div>
-                ${cicloBadge}
+                ${cicloBadge}${supBadge}
               </div>
 
               <div class="trayecto-ficha">
@@ -357,6 +365,7 @@ const Trayectos = {
     const grupoLugar = document.getElementById('grupo-lugar-dictado');
     if (grupoLugar) grupoLugar.style.display = trayecto.sede === 'fuera' ? '' : 'none';
     this.cargarFilasModulos(modsEditar || []);
+    this.cargarSuplentes(trayecto.id);
   },
 
   async guardarTrayecto() {
@@ -479,9 +488,84 @@ const Trayectos = {
     const t = document.getElementById('titulo-form-trayecto');
     if (t) t.innerText = 'Nuevo Trayecto Formativo';
     this.cargarFilasModulos([]);
+    this.cargarSuplentes(null);
     const grupoLugar = document.getElementById('grupo-lugar-dictado');
     if (grupoLugar) grupoLugar.style.display = 'none';
     if (typeof UI !== 'undefined') UI.showTab('nuevo-trayecto');
+    this.poblarComboDocentes();
+  },
+
+  /* ---------- Suplentes del trayecto ----------
+     Además del instructor titular, la dirección puede cargar suplentes con fecha de inicio
+     y de fin (opcionales). Mientras dura la suplencia tienen el mismo acceso que el titular. */
+  async misSuplencias(dni) {
+    try {
+      const { data, error } = await supabase.from('trayecto_docentes').select('*').eq('docente_user', String(dni || ''));
+      if (error) return {};
+      const hoy = window.ReglasFP ? ReglasFP.hoyISO() : new Date().toISOString().slice(0, 10);
+      const out = {};
+      (data || []).filter(s => (!s.desde || String(s.desde).slice(0, 10) <= hoy) && (!s.hasta || String(s.hasta).slice(0, 10) >= hoy))
+        .forEach(s => { out[s.trayecto_id] = s; });
+      return out;
+    } catch (e) { return {}; }
+  },
+
+  async cargarSuplentes(tid) {
+    const cont = document.getElementById('suplentes-lista');
+    if (!cont) return;
+    const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    if (!tid) {
+      cont.innerHTML = '<p class="sup-ayuda">Guardá el trayecto y después, al editarlo, vas a poder agregar suplentes.</p>';
+      return;
+    }
+    cont.innerHTML = '<p class="sup-ayuda">Cargando…</p>';
+    if (!this.docentesLista) await this.poblarComboDocentes();
+    const { data, error } = await supabase.from('trayecto_docentes').select('*').eq('trayecto_id', Number(tid)).order('id', { ascending: true });
+    if (error) {
+      cont.innerHTML = '<p class="sup-ayuda">Para cargar suplentes, ejecutá <b>sql/12_suplentes_y_auditoria.sql</b> en Supabase.</p>';
+      return;
+    }
+    const docs = this.docentesLista || [];
+    const nombre = (dni) => { const d = docs.find(x => String(x.dni) === String(dni)); return d ? `${String(d.apellido || '').toUpperCase()}, ${d.nombre || ''}` : `DNI ${dni}`; };
+    const f = (v) => v ? String(v).slice(0, 10).split('-').reverse().join('/') : '';
+    const hoy = window.ReglasFP ? ReglasFP.hoyISO() : new Date().toISOString().slice(0, 10);
+    const estado = (s) => (s.hasta && String(s.hasta).slice(0, 10) < hoy) ? ['terminada', 'Terminó'] : (s.desde && String(s.desde).slice(0, 10) > hoy) ? ['futura', 'Empieza el ' + f(s.desde)] : ['vigente', 'Vigente'];
+    cont.innerHTML = `
+      ${(data || []).length ? `<ul class="sup-lista">${data.map(s => { const [cls, txt] = estado(s); return `<li>
+          <div><strong>${esc(nombre(s.docente_user))}</strong>
+            <span class="sup-periodo">${s.desde || s.hasta ? `${s.desde ? 'desde el ' + f(s.desde) : ''} ${s.hasta ? 'hasta el ' + f(s.hasta) : '(sin fecha de fin)'}` : 'Sin fechas: tiene acceso hasta que lo quites'}</span>
+            ${s.motivo ? `<span class="sup-periodo">· ${esc(s.motivo)}</span>` : ''}</div>
+          <span class="sup-estado ${cls}">${txt}</span>
+          <button type="button" class="sup-quitar" onclick="Trayectos.quitarSuplente(${Number(s.id)}, ${Number(tid)})">Quitar</button></li>`; }).join('')}</ul>` : '<p class="sup-ayuda">No hay suplentes cargados.</p>'}
+      <div class="sup-form">
+        <select id="sup-docente" class="form-control"><option value="">Elegí un instructor/a…</option>${docs.map(d => `<option value="${esc(d.dni)}">${esc(String(d.apellido || '').toUpperCase())}, ${esc(d.nombre || '')}</option>`).join('')}</select>
+        <label>Desde <input type="date" id="sup-desde" class="form-control"></label>
+        <label>Hasta <input type="date" id="sup-hasta" class="form-control"></label>
+        <input id="sup-motivo" class="form-control" maxlength="200" placeholder="Motivo (opcional): licencia, carpeta médica…">
+        <button type="button" class="act-btn-sec" onclick="Trayectos.agregarSuplente(${Number(tid)})">➕ Agregar suplente</button>
+      </div>
+      <p class="sup-ayuda">El suplente tiene que tener cuenta con rol Docente. Mientras dura la suplencia ve el trayecto, carga clases, toma asistencia y corrige, igual que el titular (que no pierde el acceso).</p>`;
+  },
+
+  async agregarSuplente(tid) {
+    const v = (id) => (document.getElementById(id)?.value || '').trim();
+    const dni = v('sup-docente');
+    if (!dni) return alert('Elegí el instructor/a suplente.');
+    const elTit = document.getElementById('trayecto-docente');
+    if (elTit && elTit.value === dni) return alert('Esa persona ya es la instructora titular del trayecto.');
+    const desde = v('sup-desde') || null, hasta = v('sup-hasta') || null;
+    if (desde && hasta && hasta < desde) return alert('La fecha "hasta" es anterior a "desde".');
+    const { error } = await supabase.from('trayecto_docentes').insert([{ trayecto_id: Number(tid), docente_user: dni, desde, hasta, motivo: v('sup-motivo') || null }]);
+    if (error) return alert(/duplicate|unique/i.test(error.message || '') ? 'Esa persona ya está cargada como suplente en este trayecto (quitala y volvé a cargarla para cambiar las fechas).' : 'No se pudo agregar: ' + error.message);
+    if (typeof Swal !== 'undefined') Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Suplente agregado', showConfirmButton: false, timer: 2000 });
+    this.cargarSuplentes(tid);
+  },
+
+  async quitarSuplente(id, tid) {
+    if (!confirm('¿Quitar este suplente? Deja de tener acceso al trayecto (lo que cargó queda guardado).')) return;
+    const { error } = await supabase.from('trayecto_docentes').delete().eq('id', Number(id));
+    if (error) return alert('No se pudo quitar: ' + error.message);
+    this.cargarSuplentes(tid);
   },
 
   CAMPOS_FICHA: [['trayecto-sede', 'sede'], ['trayecto-lugar', 'lugar_dictado'], ['trayecto-localidad', 'localidad'], ['trayecto-horario', 'horario'], ['trayecto-fecha-inicio', 'fecha_inicio'], ['trayecto-fecha-cierre', 'fecha_cierre'], ['trayecto-tipo', 'tipo_certificacion'], ['trayecto-codigo', 'codigo_catalogo'], ['trayecto-acto', 'acto_administrativo']],

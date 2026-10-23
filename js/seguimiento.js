@@ -32,7 +32,11 @@ const SeguimientoModulo = {
       const anio = String(new Date().getFullYear());
 
       let q = supabase.from('trayectos').select('*');
-      if (!esAdmin) q = q.eq('docente_user', String(perfil.dni || ''));
+      if (!esAdmin) {
+        const sup = window.Trayectos ? Object.keys(await Trayectos.misSuplencias(perfil.dni)).map(Number) : [];
+        const dniD = String(perfil.dni || '').replace(/[^0-9A-Za-z_-]/g, '');
+        q = sup.length ? q.or(`docente_user.eq.${dniD},id.in.(${sup.join(',')})`) : q.eq('docente_user', dniD);
+      }
       const { data: tr } = await q;
       const trayectos = (tr || []).filter(t => String(t.ciclo_lectivo || anio) === anio);
 
@@ -250,7 +254,11 @@ const SeguimientoModulo = {
       const rol = String(perfil.rol || '').toLowerCase();
       if (rol !== 'docente' && !Auth.esAdmin(perfil.rol)) return;
       let q = supabase.from('trayectos').select('id, ciclo_lectivo');
-      if (rol === 'docente') q = q.eq('docente_user', String(perfil.dni || ''));
+      if (rol === 'docente') {
+        const sup = window.Trayectos ? Object.keys(await Trayectos.misSuplencias(perfil.dni)).map(Number) : [];
+        const dniD = String(perfil.dni || '').replace(/[^0-9A-Za-z_-]/g, '');
+        q = sup.length ? q.or(`docente_user.eq.${dniD},id.in.(${sup.join(',')})`) : q.eq('docente_user', dniD);
+      }
       const { data: tr } = await q;
       const anio = String(new Date().getFullYear());
       const ids = (tr || []).filter(t => String(t.ciclo_lectivo || anio) === anio).map(t => Number(t.id));

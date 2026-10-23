@@ -34,7 +34,7 @@
   <!-- 4. CSS Panel de Administración -->
   <link rel="stylesheet" href="css/admin-dashboard.css?v=60005">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/tema-cfp.css?v=70020">
+  <link rel="stylesheet" href="css/tema-cfp.css?v=70023">
   <style>
     /* Los avisos de SweetAlert (progreso, resúmenes, errores) tienen que verse por encima de los paneles de la plataforma */
     .swal2-container { z-index: 20000 !important; }
@@ -524,6 +524,10 @@
                   <option value="">Seleccionar Docente...</option>
                 </select>
               </div>
+              <div class="form-group sup-box">
+                <label>Instructores suplentes</label>
+                <div id="suplentes-lista"><p class="sup-ayuda">Guardá el trayecto y después, al editarlo, vas a poder agregar suplentes.</p></div>
+              </div>
              <!-- CAMPOS PARA CERTIFICACIÓN Y RESOLUCIÓN -->
 <div class="form-grid-2" style="margin-top: 1rem;">
   <div class="form-group">
@@ -759,24 +763,11 @@
               <div>
                 <h2 style="color: #f8fafc; margin: 0;">🕵️ Auditoría de cambios</h2>
                 <p style="color: #94a3b8; font-size: 0.875rem; margin-top: 0.25rem;">
-                  Quién modificó notas, roles, inscripciones y otros datos, y cuándo. Los datos anteriores quedan guardados.
+                  Quién hizo cada cambio y cuándo. Filtrá por rol o por persona; tocá “Ver detalle” para ver el antes y el después.
                 </p>
               </div>
             </div>
-            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem;">
-              <select id="auditoria-filtro-tabla" class="form-control" style="width: auto;" onchange="AuditoriaModulo.cargar()">
-                <option value="">Todo</option>
-                <option value="entregas_actividades">Entregas y notas</option>
-                <option value="profiles">Usuarios / roles</option>
-                <option value="inscripciones">Inscripciones</option>
-                <option value="asistencias">Asistencias</option>
-                <option value="clases">Clases</option>
-                <option value="trayectos">Trayectos</option>
-                <option value="modulos">Módulos</option>
-              </select>
-              <input id="auditoria-filtro-texto" class="form-control" style="width: 220px;" placeholder="DNI o N° de registro" onkeydown="if(event.key==='Enter') AuditoriaModulo.cargar()">
-              <button type="button" class="btn btn-outline" onclick="AuditoriaModulo.cargar()">🔍 Buscar</button>
-            </div>
+            <div id="auditoria-filtros" class="aud-filtros"></div>
             <div id="auditoria-contenido"></div>
           </div>
         </section>
@@ -883,11 +874,11 @@
   <script src="js/reglas.js?v=70022" defer></script>
   <script src="js/ui.js?v=70018" defer></script>
   <script src="js/auth.js?v=70017" defer></script>
-  <script src="js/trayectos.js?v=70017" defer></script>
+  <script src="js/trayectos.js?v=70023" defer></script>
   <script src="js/usuarios.js?v=70017" defer></script>
-  <script src="js/auditoria.js?v=70007" defer></script>
+  <script src="js/auditoria.js?v=70023" defer></script>
   <script src="js/progreso.js?v=70022" defer></script>
-  <script src="js/seguimiento.js?v=70020" defer></script>
+  <script src="js/seguimiento.js?v=70023" defer></script>
   <script src="js/ficha.js?v=70017" defer></script>
   <script src="js/novedades.js?v=70010" defer></script>
   <script src="js/importador.js?v=70017" defer></script>
