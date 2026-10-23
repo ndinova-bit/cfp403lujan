@@ -13,6 +13,9 @@
      – Si no hay actividades calificadas pero sí asistencia, la nota es la asistencia.
    • Un módulo se aprueba con 70 o más, o si está acreditado por equivalencia.
    • El trayecto se aprueba cuando TODOS sus módulos están aprobados o acreditados.
+   • Correlatividad: un módulo solo se califica si el anterior está aprobado o
+     acreditado (o si el docente dio una habilitación excepcional). Si no, queda
+     "bloqueado": no lleva nota aunque tenga asistencia o entregas cargadas.
    ========================================================================== */
 const ReglasFP = {
   MINIMO: 70,
@@ -49,7 +52,7 @@ const ReglasFP = {
   },
 
   /* Evalúa a un estudiante en un trayecto.
-     datos = { key, modulos, clases, entregas, asistencias, acreditados, computaAsistencia }
+     datos = { key, modulos, clases, entregas, asistencias, acreditados, computaAsistencia, excepcion }
      – entregas/asistencias/acreditados pueden venir con datos de otros alumnos: se filtran por key. */
   evaluar(datos) {
     const key = String(datos.key);
@@ -83,16 +86,20 @@ const ReglasFP = {
       };
     });
 
+    // Correlatividad: si un módulo no está aprobado, los siguientes quedan bloqueados
+    this.aplicarCorrelatividad(res, !!datos.excepcion);
+
     const notas = res.filter(r => r.nota !== null).map(r => r.nota);
     const promedio = notas.length ? Math.round(notas.reduce((a, b) => a + b, 0) / notas.length) : null;
     const todosAprobados = res.length > 0 && res.every(r => r.aprobado);
-    const sinNingunDato = res.every(r => r.sinDatos);
+    const habilitados = res.filter(r => !r.bloqueado);
+    const sinNingunDato = habilitados.every(r => r.sinDatos);
     const pctTotal = computa ? this.porcentajeAsistencia(asis) : null;
 
     let resultado = 'EN CURSO';
     if (todosAprobados) resultado = 'APROBADO';
     else if (sinNingunDato) resultado = 'AUSENTE';
-    else if (res.every(r => !r.sinDatos)) resultado = 'DESAPROBADO';
+    else if (habilitados.every(r => !r.sinDatos)) resultado = 'DESAPROBADO';
 
     return {
       modulos: res,
@@ -102,6 +109,24 @@ const ReglasFP = {
       asistencia: pctTotal === null ? null : Math.round(pctTotal),
       computaAsistencia: computa
     };
+  },
+
+  // Marca como bloqueados los módulos cuyo anterior no está aprobado (salvo equivalencia o excepción).
+  // Guarda la nota que tendría en "notaSinCorrelativa" por si se corrige el módulo anterior.
+  aplicarCorrelatividad(mods, excepcion = false) {
+    let anteriorOk = true;
+    mods.forEach((r, i) => {
+      r.bloqueado = false;
+      if (i > 0 && !anteriorOk && !excepcion && !r.equivalencia) {
+        r.bloqueado = true;
+        r.notaSinCorrelativa = r.nota;
+        r.nota = null;
+        r.aprobado = false;
+        r.sinDatos = false;
+      }
+      anteriorOk = r.aprobado;
+    });
+    return mods;
   },
 
   // ¿El módulo en la posición idx está habilitado? (el anterior aprobado/acreditado, o excepción del docente)

@@ -75,15 +75,17 @@ const ActasModulo = {
   },
 
   async cargarDatos(tid) {
-    const [rT, rI, rM, rC, rA, rX, rActa] = await Promise.all([
+    const [rT, rI, rM, rC, rA, rX, rActa, rExc] = await Promise.all([
       supabase.from('trayectos').select('*').eq('id', tid).single(),
       supabase.from('inscripciones').select('*').eq('trayecto_id', tid),
       supabase.from('modulos').select('id, nombre, codigo').eq('trayecto_id', tid).order('id', { ascending: true }),
       supabase.from('clases').select('id, modulo_id').eq('trayecto_id', tid),
       supabase.from('asistencias').select('estudiante_user, modulo_id, estado').eq('trayecto_id', tid),
       supabase.from('modulos_acreditados').select('*').eq('trayecto_id', tid),
-      supabase.from('actas_examen').select('*').eq('trayecto_id', tid).maybeSingle()
+      supabase.from('actas_examen').select('*').eq('trayecto_id', tid).maybeSingle(),
+      supabase.from('excepciones_estudiantes').select('estudiante_user, habilitado').eq('trayecto_id', tid)
     ]);
+    const conExcepcion = new Set(((rExc && rExc.data) || []).filter(x => x.habilitado).map(x => String(x.estudiante_user)));
     if (rT.error) throw rT.error;
     const trayecto = rT.data;
     this.trayectoSeleccionado = trayecto;
@@ -113,8 +115,9 @@ const ActasModulo = {
       const u = usuarios.find(x => String(x.usuario || x.dni) === key) || {};
       const ap = (u.apellido || '').toUpperCase().trim();
       const no = (u.nombre || '').toUpperCase().trim();
-      const ev = ReglasFP.evaluar({ key, modulos, clases, entregas, asistencias: rA.data || [], acreditados, computaAsistencia: computa });
-      return { dni: key, nombre: ap && no ? `${ap}, ${no}` : (ap || no || `DNI ${key}`), numEgresado: ins.num_egresado || '', ev };
+      const excepcion = conExcepcion.has(key);
+      const ev = ReglasFP.evaluar({ key, modulos, clases, entregas, asistencias: rA.data || [], acreditados, computaAsistencia: computa, excepcion });
+      return { dni: key, nombre: ap && no ? `${ap}, ${no}` : (ap || no || `DNI ${key}`), numEgresado: ins.num_egresado || '', ev, excepcion };
     }).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
 
     this.datos = { trayecto, modulos, alumnos, acreditados, acta, ajustes: JSON.parse(JSON.stringify(ajustes)), computa };
@@ -126,20 +129,35 @@ const ActasModulo = {
     const { alumnos, ajustes } = this.datos;
     alumnos.forEach(a => {
       const aj = ajustes[a.dni] || {};
-      a.final = a.ev.modulos.map(m => {
-        const k = String(m.id);
-        const manual = aj[k];
+      // 1. Valor de cada módulo: equivalencia, ajuste manual o nota calculada (sin correlatividad todavía)
+      const vals = a.ev.modulos.map(m => {
+        const manual = aj[String(m.id)];
         if (m.equivalencia) return { ...m, valor: 'EQ', manual: false };
         if (manual !== undefined && manual !== null && manual !== '') {
-          const n = Math.round(Number(manual));
-          return { ...m, valor: n, manual: true, aprobado: n >= ReglasFP.MINIMO };
+          return { ...m, valor: Math.round(Number(manual)), manual: true };
         }
-        return { ...m, valor: m.nota, manual: false };
+        const base = m.bloqueado ? (m.notaSinCorrelativa ?? null) : m.nota;
+        return { ...m, valor: base, manual: false };
       });
-      const sinDatos = a.final.every(m => m.valor === null);
-      const todos = a.final.length > 0 && a.final.every(m => m.valor === 'EQ' || (m.valor !== null && m.valor >= ReglasFP.MINIMO));
+      // 2. Correlatividad (con los ajustes aplicados): si un módulo no está aprobado, los siguientes no se califican
+      let anteriorOk = true;
+      vals.forEach((m, i) => {
+        const aprobado = m.valor === 'EQ' || (typeof m.valor === 'number' && m.valor >= ReglasFP.MINIMO);
+        if (i > 0 && !anteriorOk && !a.excepcion && m.valor !== 'EQ') {
+          m.valor = 'BLOQ';
+          m.manual = false;
+          m.aprobado = false;
+        } else {
+          m.aprobado = aprobado;
+        }
+        anteriorOk = m.aprobado;
+      });
+      a.final = vals;
+      const habilitados = vals.filter(m => m.valor !== 'BLOQ');
+      const sinDatos = habilitados.every(m => m.valor === null);
+      const todos = vals.length > 0 && vals.every(m => m.aprobado);
       a.resultado = todos ? 'APROBADO' : (sinDatos ? 'AUSENTE' : 'DESAPROBADO');
-      const nums = a.final.filter(m => typeof m.valor === 'number').map(m => m.valor);
+      const nums = vals.filter(m => typeof m.valor === 'number').map(m => m.valor);
       a.promedio = nums.length ? Math.round(nums.reduce((x, y) => x + y, 0) / nums.length) : null;
     });
   },
@@ -182,7 +200,7 @@ const ActasModulo = {
       </div>
 
       ${modulos.length > 10 ? `<div class="asis-aviso">Este trayecto tiene ${modulos.length} módulos y el acta tiene lugar para 10: en el Excel salen los 10 primeros.</div>` : ''}
-      <p class="acta-ayuda">La nota de cada módulo sale de las actividades${computa ? ' y la asistencia' : ''}. Para el acta podés escribir otra nota en la casilla (queda marcada en amarillo); borrala para volver a la calculada. <b>EQ</b> = acreditado por equivalencia.</p>
+      <p class="acta-ayuda">La nota de cada módulo sale de las actividades${computa ? ' y la asistencia' : ''}. Para el acta podés escribir otra nota en la casilla (queda marcada en amarillo); borrala para volver a la calculada. <b>EQ</b> = acreditado por equivalencia. <b>No habilitado</b> = el módulo anterior no está aprobado (correlatividad); se habilita solo si el anterior llega a 70.</p>
 
       <div class="acta-tabla-wrap">
         <table class="acta-tabla">
@@ -211,6 +229,9 @@ const ActasModulo = {
   },
 
   celdaModulo(al, m) {
+    if (m.valor === 'BLOQ') {
+      return `<td class="acta-celda bloq" title="No se califica: el módulo anterior no está aprobado (correlatividad)"><span>No habilitado</span></td>`;
+    }
     if (m.valor === 'EQ') {
       return `<td class="acta-celda eq" title="${this.esc(m.motivoEquivalencia || 'Acreditado por equivalencia')}"><span>EQ</span></td>`;
     }
@@ -345,44 +366,41 @@ const ActasModulo = {
       const lista = alumnos.slice(p * POR_HOJA, (p + 1) * POR_HOJA);
       const inicio = r;
 
-      // Encabezado
+      // Encabezado: institución a la izquierda, título al centro, hoja a la derecha
+      ws.mergeCells(r, 1, r, 3);
       ws.getCell(r, 1).value = 'CFP N° 403 "OSCAR SMITH"';
       ws.getCell(r, 1).font = { bold: true, size: 12 };
-      ws.mergeCells(r, COL_MOD, r, ULT - 1);
+      ws.getCell(r, 1).alignment = { vertical: 'middle' };
+      ws.mergeCells(r, COL_MOD, r, COL_DOC - 1);
       ws.getCell(r, COL_MOD).value = 'ACTA DE EXAMEN';
-      ws.getCell(r, COL_MOD).font = { bold: true, size: 14 };
-      ws.getCell(r, COL_MOD).alignment = { horizontal: 'center' };
-      ws.getCell(r, ULT).value = paginas > 1 ? `Hoja ${p + 1}/${paginas}` : '';
-      ws.getCell(r, ULT).alignment = { horizontal: 'right' };
-      ws.getRow(r).height = 22;
+      ws.getCell(r, COL_MOD).font = { bold: true, size: 16 };
+      ws.getCell(r, COL_MOD).alignment = { horizontal: 'center', vertical: 'middle' };
+      ws.mergeCells(r, COL_DOC, r, ULT);
+      ws.getCell(r, COL_DOC).value = paginas > 1 ? `Hoja ${p + 1} de ${paginas}` : '';
+      ws.getCell(r, COL_DOC).font = { size: 9 };
+      ws.getCell(r, COL_DOC).alignment = { horizontal: 'right', vertical: 'middle' };
+      ws.getRow(r).height = 26;
       r += 2;
 
-      // Texto del acta + especialidad y curso
-      ws.mergeCells(r, 1, r, ULT);
-      ws.getCell(r, 1).value = 'En dependencias del Centro de Formación Profesional N° 403 de la localidad de Luján domicilio en Lavalle 740';
-      r++;
+      // Especialidad (centrada en todo el ancho) y número de curso a la derecha
       ws.mergeCells(r, 1, r, COL_DOC - 1);
       ws.getCell(r, 1).value = `ESPECIALIDAD: ${especialidad}`;
+      ws.getCell(r, 1).font = { bold: true, size: 12 };
+      ws.getCell(r, 1).alignment = { horizontal: 'center', vertical: 'middle' };
       ws.mergeCells(r, COL_DOC, r, ULT);
       ws.getCell(r, COL_DOC).value = `CURSO N.º ${curso}`;
-      const filaEsp = r;
+      ws.getCell(r, COL_DOC).font = { bold: true, size: 12 };
+      ws.getCell(r, COL_DOC).alignment = { horizontal: 'center', vertical: 'middle' };
+      ws.getRow(r).height = 22;
       r++;
+
+      // Texto del acta en un solo párrafo, justificado en todo el ancho de la hoja
       ws.mergeCells(r, 1, r, ULT);
-      ws.getCell(r, 1).value = `a los ${dia} días del mes de ${mes} del año ${anio} se reúne la Comisión Examinadora, con el objetivo de llevar a cabo la evaluación final a los`;
-      r++;
-      ws.mergeCells(r, 1, r, ULT);
-      ws.getCell(r, 1).value = 'alumnos del curso cuya Especialidad y N° están detallados en la presente, llegando al resultado que se consigna a continuación:';
-      for (let k = inicio + 2; k <= r; k++) {
-        ws.getCell(k, 1).font = { size: 9 };
-        ws.getCell(k, 1).alignment = { wrapText: true, vertical: 'middle' };
-        ws.getRow(k).height = 13;
-      }
-      ws.getRow(filaEsp).height = 18;
-      ws.getCell(filaEsp, 1).font = { bold: true, size: 11 };
-      ws.getCell(filaEsp, 1).alignment = { vertical: 'middle' };
-      ws.getCell(filaEsp, COL_DOC).font = { bold: true, size: 11 };
-      ws.getCell(filaEsp, COL_DOC).alignment = { vertical: 'middle', horizontal: 'center' };
-      r++;
+      ws.getCell(r, 1).value = `En dependencias del Centro de Formación Profesional N° 403 de la localidad de Luján, domicilio en Lavalle 740, a los ${dia} días del mes de ${mes} del año ${anio} se reúne la Comisión Examinadora, con el objetivo de llevar a cabo la evaluación final a los alumnos del curso cuya Especialidad y N° están detallados en la presente, llegando al resultado que se consigna a continuación:`;
+      ws.getCell(r, 1).font = { size: 10 };
+      ws.getCell(r, 1).alignment = { horizontal: 'justify', vertical: 'middle', wrapText: true };
+      ws.getRow(r).height = 30;
+      r += 2;
 
       // Encabezado de la tabla (2 filas)
       const h1 = r, h2 = r + 1;
@@ -442,6 +460,7 @@ const ActasModulo = {
           al.final.slice(0, MAX_MOD).forEach((m, i) => {
             const c = COL_MOD + i * 2;
             if (m.valor === 'EQ') { row.getCell(c).value = 'EQ'; row.getCell(c + 1).value = 'EQUIVALENCIA'; }
+            else if (m.valor === 'BLOQ') { row.getCell(c).value = '-'; row.getCell(c + 1).value = 'NO HABILITADO'; }
             else if (m.valor === null) { row.getCell(c).value = '-'; row.getCell(c + 1).value = 'AUSENTE'; }
             else { row.getCell(c).value = m.valor; row.getCell(c + 1).value = ReglasFP.enLetras(m.valor); }
           });
@@ -507,7 +526,7 @@ const ActasModulo = {
       }
 
       r = finFirmas + 1;
-      ws.getCell(r, 1).value = 'Se considerará aprobado con un mínimo de 70 puntos. EQ: módulo acreditado por equivalencia.';
+      ws.getCell(r, 1).value = 'Se considerará aprobado con un mínimo de 70 puntos. EQ: módulo acreditado por equivalencia. NO HABILITADO: no aprobó el módulo anterior (correlatividad).';
       ws.getCell(r, 1).font = { size: 9 };
       r++;
       ws.getCell(r, 1).value = 'Dirección General de Cultura y Educación - Dirección de Formación Profesional';

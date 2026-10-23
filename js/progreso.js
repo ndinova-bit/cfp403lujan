@@ -77,15 +77,14 @@ const ProgresoModulo = {
       entregas,
       asistencias: asis.filter(a => Number(a.trayecto_id) === tid),
       acreditados: (opciones.acreditados || []).filter(a => Number(a.trayecto_id) === tid),
-      computaAsistencia: ReglasFP.computaAsistencia(t)
+      computaAsistencia: ReglasFP.computaAsistencia(t),
+      excepcion: habExc
     });
 
     let filas = '';
-    let bloquearDesde = -1;
     ev.modulos.forEach((m, i) => {
       const titulo = `Módulo ${i + 1} · ${this.esc(m.nombre || 'Contenidos generales')}`;
-      if (bloquearDesde === -1 && !ReglasFP.moduloHabilitado(ev, i, habExc)) bloquearDesde = i;
-      if (bloquearDesde !== -1 && i >= bloquearDesde) {
+      if (m.bloqueado) {
         filas += `<div class="prog-mod bloq"><span class="prog-mod-ico bloq">${this.ICO.bloq}</span><div class="prog-mod-info"><strong style="color:#5B6B82">${titulo}</strong><span>Se habilita al aprobar el módulo anterior (mínimo ${this.MINIMO})</span></div></div>`;
         return;
       }
