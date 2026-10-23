@@ -697,3 +697,25 @@ button.seg-ver { border: none; cursor: pointer; font-family: inherit; }
 .sabana-nota.eq { background: var(--cfp-celeste-soft); color: var(--cfp-blue); }
 .sabana-det { display: block; font-size: .7rem; color: var(--cfp-muted); margin-top: .2rem; }
 .acta-celda.bloq span, .sabana-nota.bloq { display: inline-block; font-size: .72rem; font-weight: 700; padding: .25rem .5rem; border-radius: 8px; background: #EEF3F9; color: var(--cfp-muted); }
+
+/* ==========================================================================
+   13. CERTIFICADOS
+   ========================================================================== */
+.cert-filtro { display: flex; align-items: center; gap: .6rem; margin-bottom: .75rem; }
+.cert-filtro label { font-weight: 700; font-size: .85rem; color: var(--cfp-ink-2); }
+.cert-filtro .form-control { width: auto !important; }
+.cert-ficha { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: .75rem 1rem; background: #F8FAFD; border: 1px solid var(--cfp-line); border-radius: 14px; padding: 1rem; margin-bottom: 1rem; align-items: end; }
+.cert-ficha span { display: block; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--cfp-muted); }
+.cert-ficha strong { font-size: .9rem; color: var(--cfp-ink); word-break: break-word; }
+.cert-ficha .form-group { margin: 0; }
+.cert-problemas { margin: .25rem 0 0 1.1rem; padding: 0; }
+.cert-problemas li { margin: .2rem 0; }
+.cert-egresado { width: 110px !important; padding: .35rem .5rem !important; font-weight: 700; }
+.cert-egresado.repetido { border-color: var(--cfp-bad) !important; background: var(--cfp-bad-soft) !important; }
+.cert-rep { display: block; color: var(--cfp-bad); font-weight: 700; font-size: .72rem; }
+.cert-otros { margin-top: 1rem; background: #fff; border: 1px solid var(--cfp-line); border-radius: 12px; padding: .75rem 1rem; }
+.cert-otros summary { cursor: pointer; font-weight: 700; color: var(--cfp-ink-2); font-size: .88rem; }
+.cert-otros ul { margin: .6rem 0 0 1.1rem; padding: 0; font-size: .85rem; color: var(--cfp-ink-2); }
+.cert-otros li { margin: .3rem 0; }
+.cert-resumen { margin-right: auto; align-self: center; font-size: .85rem; color: var(--cfp-muted); }
+.btn:disabled, .btn[disabled] { opacity: .45; cursor: not-allowed; filter: grayscale(.3); }

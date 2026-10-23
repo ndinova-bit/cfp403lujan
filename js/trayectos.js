@@ -338,6 +338,8 @@ const Trayectos = {
     if (elDocente) elDocente.value = trayecto.docente_user || '';
     const elComputa = document.getElementById('trayecto-computa-asistencia');
     if (elComputa) elComputa.checked = trayecto.computa_asistencia !== false;
+    const elHoras = document.getElementById('trayecto-horas');
+    if (elHoras) elHoras.value = trayecto.horas || '';
   },
 
   async guardarTrayecto() {
@@ -379,6 +381,8 @@ const Trayectos = {
       };
       const elComputa = document.getElementById('trayecto-computa-asistencia');
       if (elComputa) datosTrayecto.computa_asistencia = elComputa.checked;
+      const elHoras = document.getElementById('trayecto-horas');
+      if (elHoras) datosTrayecto.horas = elHoras.value ? Number(elHoras.value) : null;
 
       if (idRaw && idRaw !== '') {
         const idQuery = !isNaN(idRaw) ? parseInt(idRaw, 10) : idRaw;
@@ -387,9 +391,10 @@ const Trayectos = {
           .from('trayectos')
           .update(datosTrayecto)
           .eq('id', idQuery);
-        if (error && /computa_asistencia/.test(error.message || '')) {
-          // Todavía no se ejecutó sql/07: se guarda sin ese dato
+        if (error && /computa_asistencia|horas/.test(error.message || '')) {
+          // Todavía no se ejecutó sql/07 u 08: se guarda sin esos datos
           delete datosTrayecto.computa_asistencia;
+          delete datosTrayecto.horas;
           ({ error } = await supabase.from('trayectos').update(datosTrayecto).eq('id', idQuery));
         }
 
@@ -399,8 +404,9 @@ const Trayectos = {
         let { error } = await supabase
           .from('trayectos')
           .insert([datosTrayecto]);
-        if (error && /computa_asistencia/.test(error.message || '')) {
+        if (error && /computa_asistencia|horas/.test(error.message || '')) {
           delete datosTrayecto.computa_asistencia;
+          delete datosTrayecto.horas;
           ({ error } = await supabase.from('trayectos').insert([datosTrayecto]));
         }
 

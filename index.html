@@ -34,7 +34,7 @@
   <!-- 4. CSS Panel de Administración -->
   <link rel="stylesheet" href="css/admin-dashboard.css?v=60005">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/tema-cfp.css?v=70013">
+  <link rel="stylesheet" href="css/tema-cfp.css?v=70014">
   <style>
     /* Los avisos de SweetAlert (progreso, resúmenes, errores) tienen que verse por encima de los paneles de la plataforma */
     .swal2-container { z-index: 20000 !important; }
@@ -509,7 +509,7 @@
 
               <div class="form-grid-2">
                 <div class="form-group">
-                  <label for="trayecto-nombre">Nombre del Trayecto *</label>
+                  <label for="trayecto-nombre">Nombre del Trayecto (tal cual el Catálogo) *</label>
                   <input type="text" id="trayecto-nombre" class="form-control" placeholder="Ej: Programación Web" required>
                 </div>
                 <div class="form-group">
@@ -531,9 +531,15 @@
     <input type="text" id="trayecto-certificacion" class="form-control" placeholder="Ej: 1025">
   </div>
   <div class="form-group">
-    <label for="trayecto-resolucion">Resolución N° / Disposición</label>
-    <input type="text" id="trayecto-resolucion" class="form-control" placeholder="Ej: Res. N° 1234/20">
+    <label for="trayecto-horas">Horas (Catálogo)</label>
+    <input type="number" id="trayecto-horas" class="form-control" min="1" max="5000" placeholder="Ej: 360">
+    <small style="color:var(--cfp-muted)">Horas reloj del Catálogo. Gasista, Montador Electricista y Electricista Instalador: horas cátedra.</small>
   </div>
+</div>
+<div class="form-group" style="margin-top: 1rem;">
+  <label for="trayecto-resolucion">Certificación (tal cual el Catálogo, con la resolución)</label>
+  <textarea id="trayecto-resolucion" class="form-control" rows="2" placeholder="Ej: Montador Electricista Domiciliario según Resolución Nro. RESFC - 2019 - 6865-GDEBA - DGCYE / RESOL-2022-2147-APN-ME / DI-2025-5-APN-DVNTYE#ME"></textarea>
+  <small style="color:var(--cfp-muted)">Va en el certificado después de «CERTIFICADO DE». Respetá mayúsculas, minúsculas y puntos del Catálogo. El nombre del trayecto (arriba) es la columna «Nombre del Trayecto».</small>
 </div>
 
               <div class="form-group" style="margin-top: 1rem;">
@@ -590,8 +596,8 @@
             <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
               <div>
                 <h3 style="margin: 0;">Emisión de Certificados de Egresados</h3>
-                <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.25rem;">
-                  Nómina de estudiantes con todos los módulos acreditados, agrupados por Trayecto Formativo.
+                <p style="font-size: 0.85rem; color: var(--cfp-muted); margin-top: 0.25rem;">
+                  Solo aprobados en el acta de examen. Formato según Circular DFP 4/2020 · hoja A5.
                 </p>
               </div>
               <button class="btn btn-secondary" onclick="CertificadosAdmin.cargarNominaCertificados()">
@@ -601,7 +607,7 @@
 
            <!-- Contenedor donde se renderizan las tarjetas/tablas por Trayecto -->
             <div id="contenedor-certificados-trayectos">
-              <!-- Carga dinámica desde js/pdf-lab.js -->
+              <!-- Carga dinámica desde js/certificados.js -->
             </div>
           </div>
         </section>
@@ -827,7 +833,7 @@
  <!-- Librerías Externas -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
@@ -837,10 +843,9 @@
   <script src="js/supabase-config.js?v=70007" defer></script>
   <script src="js/avisos.js?v=70008" defer></script>
   <script src="js/reglas.js?v=70013" defer></script>
-  <script src="js/pdf-lab.js?v=70007" defer></script>
-  <script src="js/ui.js?v=70010" defer></script>
+  <script src="js/ui.js?v=70014" defer></script>
   <script src="js/auth.js?v=70007" defer></script>
-  <script src="js/trayectos.js?v=70011" defer></script>
+  <script src="js/trayectos.js?v=70014" defer></script>
   <script src="js/usuarios.js?v=70010" defer></script>
   <script src="js/auditoria.js?v=70007" defer></script>
   <script src="js/progreso.js?v=70013" defer></script>
@@ -853,5 +858,6 @@
   <script src="js/reportes.js?v=70007" defer></script>
   <script src="js/notificaciones.js?v=70007" defer></script>
   <script src="js/actas.js?v=70013" defer></script>
+  <script src="js/certificados.js?v=70014" defer></script>
 </body>
 </html>
