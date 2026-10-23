@@ -14,6 +14,9 @@ El archivo `.github/workflows/backup-semanal.yml` copia la base de datos y la gu
    - `BACKUP_PASSPHRASE` → una frase larga inventada por vos. **Guardala en un lugar seguro: sin ella no se puede abrir ningún backup.**
 3. Pestaña **Actions → Backup semanal de la base de datos → Run workflow** para probar. Tiene que quedar en verde.
 4. Para bajar un backup: Actions → la ejecución → *Artifacts* → `respaldo-cifrado`. Para abrirlo (en una PC con GnuPG): `gpg -o respaldo.tar.gz -d respaldo-AAAA-MM-DD.tar.gz.gpg`.
+5. **Restaurar** (solo ante un problema grave, idealmente con ayuda técnica y en un proyecto nuevo de Supabase): descomprimir (`tar xzf respaldo.tar.gz`) y ejecutar con `psql "URI_DEL_PROYECTO"` primero `respaldo_auth.sql` (cuentas) y después `respaldo_public.sql` (plataforma). Luego volver a desplegar las funciones de `funciones_supabase/` y, si el proyecto es nuevo, actualizar `js/supabase-config.js`.
+
+Además existe el **respaldo manual**: Base de Datos → *Descargar Backup* baja todas las tablas de la plataforma en un archivo JSON (sin contraseñas). Tiene datos personales: guardalo en un lugar seguro.
 
 Importante: el repositorio es público, por eso el backup va cifrado. Nunca subas un backup sin cifrar.
 
@@ -34,10 +37,12 @@ Regla de oro: cualquier cambio nuevo se prueba primero ahí.
 2. En la plataforma, como administrador: menú **🕵️ Auditoría**. Muestra quién cambió notas, roles, inscripciones, asistencias, clases, trayectos y módulos, con el valor anterior y el nuevo.
 
 ## 5. Contraseñas iniciales, bajas y eliminación
-- Las cuentas nuevas (importación CSV o alta manual) ya **no** usan `CFP403_DNI`: tienen una contraseña aleatoria. Al terminar la importación aparece el botón **Descargar contraseñas (CSV)**; la planilla no se puede volver a generar (si alguien la pierde: 🔑 en Usuarios y Roles).
+- Las cuentas nuevas (importación CSV o alta manual) se crean con la contraseña inicial **`CFP403_` + DNI** (por ejemplo `CFP403_30123456`). Conviene pedir a cada persona que la cambie con **Cambiar mi contraseña** la primera vez que entra.
 - **Inhabilitar** (recomendado): la persona no puede ingresar y conserva su historial; se puede **Reactivar**.
-- **Eliminar definitivamente**: requiere desplegar la función `eliminar-usuario` (Supabase → Edge Functions → Deploy a new function → pegar `funciones_supabase/eliminar-usuario/index.ts`). Si la persona tiene historial pide confirmación extra, y lo borrado queda copiado en la Auditoría.
-- Las cuentas ya creadas con `CFP403_DNI` conviene cambiarlas: pedile a cada estudiante que use **Cambiar mi contraseña**, o restablecelas con 🔑.
+- **Eliminar definitivamente**: requiere la función `eliminar-usuario` desplegada en Supabase. Si la persona tiene historial pide confirmación extra, y lo borrado queda copiado en la Auditoría.
 
 ## 6. Seguridad del texto
 Los títulos, comentarios y nombres que se escriben en la plataforma ahora se muestran como texto (no pueden ejecutar código), y los links de entrega solo se aceptan si empiezan con `http://` o `https://`.
+
+## 7. Tablas viejas (archivo)
+`sql/13_revision_y_limpieza.sql` mueve las tablas que la plataforma ya no usa (`usuarios_legacy`, `profiles_respaldo_20261021`, `notas_modulares`, `contenidos`, `entregas`, `actividades`, `excepciones_modulos`) a un esquema aparte llamado **archivo**: no se borran, pero dejan de estar al alcance de internet. Al final muestra una lista de controles de seguridad que tienen que decir **OK**. Para volver a traer una tabla: `alter table archivo.NOMBRE set schema public;`.

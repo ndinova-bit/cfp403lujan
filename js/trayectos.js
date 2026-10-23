@@ -222,7 +222,7 @@ const Trayectos = {
           card.style.cursor = 'pointer';
           card.onclick = () => {
             if (window.ClasesModulo && typeof ClasesModulo.abrirGestor === 'function') {
-              ClasesModulo.abrirGestor(trayecto.id, trayecto.nombre.replace(/'/g, "\\'"));
+              ClasesModulo.abrirGestor(trayecto.id, trayecto.nombre);
             }
           };
         }
@@ -239,7 +239,7 @@ const Trayectos = {
         let accionGestionHTML = '';
         if (!esVistaPublica && (isAdmin || esDocente || esPreceptor)) {
           accionGestionHTML = `
-            <button class="btn btn-gold" style="padding: 0.35rem 0.7rem; font-size: 0.8rem; background: #0284c7; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;" onclick="event.stopPropagation(); ClasesModulo.abrirGestor(${trayecto.id}, '${trayecto.nombre.replace(/'/g, "\\'")}')">
+            <button class="btn btn-gold" style="padding: 0.35rem 0.7rem; font-size: 0.8rem; background: #0284c7; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;" onclick="event.stopPropagation(); ClasesModulo.abrirGestor(${Number(trayecto.id)}, Trayectos.nombreDe(${Number(trayecto.id)}))">
               ⚙️ Gestor / CSV
             </button>
           `;
@@ -261,7 +261,7 @@ const Trayectos = {
 
         const accionEstudiante = (!esVistaPublica && esEstudiante) ? `
           <div style="margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08);">
-            <button class="btn btn-gold" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; background: #0284c7; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;" onclick="event.stopPropagation(); ClasesModulo.abrirGestor(${trayecto.id}, '${trayecto.nombre.replace(/'/g, "\\'")}')">
+            <button class="btn btn-gold" style="width: 100%; padding: 0.5rem; font-size: 0.85rem; background: #0284c7; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;" onclick="event.stopPropagation(); ClasesModulo.abrirGestor(${Number(trayecto.id)}, Trayectos.nombreDe(${Number(trayecto.id)}))">
               📖 Ver Clases y Actividades
             </button>
           </div>
@@ -511,6 +511,9 @@ const Trayectos = {
   /* ---------- Suplentes del trayecto ----------
      Además del instructor titular, la dirección puede cargar suplentes con fecha de inicio
      y de fin (opcionales). Mientras dura la suplencia tienen el mismo acceso que el titular. */
+  // Nombre del trayecto por id (evita meter texto libre dentro de los onclick)
+  nombreDe(id) { const t = (this.listaTrayectos || []).find(x => Number(x.id) === Number(id)); return t ? t.nombre : ''; },
+
   async misSuplencias(dni) {
     try {
       const { data, error } = await supabase.from('trayecto_docentes').select('*').eq('docente_user', String(dni || ''));
