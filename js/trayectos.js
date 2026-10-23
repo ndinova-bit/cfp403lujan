@@ -134,7 +134,7 @@ const Trayectos = {
           .from('modulos')
           .select('*')
           .in('trayecto_id', trayectos.map(t => t.id))
-          .order('fecha_inicio', { ascending: true });
+          .order('id', { ascending: true });   // mismo orden que el acta y el certificado
         trayectos.forEach(t => {
           t.modulos = (mods || []).filter(m => String(m.trayecto_id) === String(t.id));
         });
@@ -305,8 +305,14 @@ const Trayectos = {
   },
 
   async editarTrayecto(id) {
-    const trayecto = this.listaTrayectos.find(t => String(t.id) === String(id));
-    if (!trayecto) return;
+    let trayecto = (this.listaTrayectos || []).find(t => String(t.id) === String(id));
+    if (!trayecto) {
+      // Puede venir desde otra pantalla (por ejemplo, Certificados) sin la lista cargada
+      const { data } = await supabase.from('trayectos').select('*').eq('id', Number(id)).maybeSingle();
+      if (!data) return;
+      trayecto = data;
+    }
+    const { data: modsEditar } = await supabase.from('modulos').select('*').eq('trayecto_id', Number(trayecto.id)).order('id', { ascending: true });
 
     if (typeof UI !== 'undefined' && UI.showTab) {
       UI.showTab('nuevo-trayecto');
@@ -340,6 +346,7 @@ const Trayectos = {
     if (elComputa) elComputa.checked = trayecto.computa_asistencia !== false;
     const elHoras = document.getElementById('trayecto-horas');
     if (elHoras) elHoras.value = trayecto.horas || '';
+    this.cargarFilasModulos(modsEditar || []);
   },
 
   async guardarTrayecto() {
@@ -399,24 +406,27 @@ const Trayectos = {
         }
 
         if (error) throw error;
-        alert('Trayecto actualizado con éxito.');
+        const avisoMods = await this.guardarModulos(idQuery);
+        alert('Trayecto actualizado con éxito.' + avisoMods);
       } else {
-        let { error } = await supabase
+        let { data: nuevo, error } = await supabase
           .from('trayectos')
-          .insert([datosTrayecto]);
+          .insert([datosTrayecto]).select('id').single();
         if (error && /computa_asistencia|horas/.test(error.message || '')) {
           delete datosTrayecto.computa_asistencia;
           delete datosTrayecto.horas;
-          ({ error } = await supabase.from('trayectos').insert([datosTrayecto]));
+          ({ data: nuevo, error } = await supabase.from('trayectos').insert([datosTrayecto]).select('id').single());
         }
 
         if (error) throw error;
-        alert('Trayecto guardado con éxito.');
+        const avisoMods = nuevo && nuevo.id ? await this.guardarModulos(nuevo.id) : '';
+        alert('Trayecto guardado con éxito.' + avisoMods);
       }
 
       const form = document.getElementById('form-trayecto');
       if (form) form.reset();
       if (elId) elId.value = '';
+      this.cargarFilasModulos([]);
 
       const tituloForm = document.getElementById('titulo-form-trayecto');
       if (tituloForm) tituloForm.innerText = 'Nuevo Trayecto Formativo';
@@ -431,6 +441,95 @@ const Trayectos = {
       console.error('Error al guardar trayecto:', err);
       alert('Error al guardar: ' + (err.message || 'Error de conexión'));
     }
+  },
+
+  // "Cargar Trayecto" desde el menú: formulario limpio (para no editar sin querer el último trayecto abierto)
+  nuevo() {
+    const form = document.getElementById('form-trayecto');
+    if (form) form.reset();
+    const elId = document.getElementById('trayecto-id');
+    if (elId) elId.value = '';
+    const t = document.getElementById('titulo-form-trayecto');
+    if (t) t.innerText = 'Nuevo Trayecto Formativo';
+    this.cargarFilasModulos([]);
+    if (typeof UI !== 'undefined') UI.showTab('nuevo-trayecto');
+  },
+
+  /* ---------- Módulos del formulario ---------- */
+  filaModuloHTML(m = {}) {
+    const e = v => (window.escHtml ? window.escHtml(v) : String(v ?? ''));
+    return `
+      <div class="form-grid-2">
+        <input type="text" class="mod-nombre form-control" placeholder="Denominación del módulo (tal cual el Catálogo)" value="${e(m.nombre || '')}">
+        <input type="text" class="mod-codigo form-control" placeholder="Código (Ej: EE0016.1)" value="${e(m.codigo || '')}">
+      </div>
+      <div class="form-grid-2" style="margin-top: 0.75rem;">
+        <div><label style="font-size: 0.75rem;">Fecha inicio</label><input type="date" class="mod-inicio form-control" value="${e(String(m.fecha_inicio || '').slice(0, 10))}"></div>
+        <div><label style="font-size: 0.75rem;">Fecha fin</label><input type="date" class="mod-fin form-control" value="${e(String(m.fecha_fin || '').slice(0, 10))}"></div>
+      </div>
+      <button type="button" class="mod-quitar" onclick="this.closest('.modulo-item-card').remove(); Trayectos.numerarModulos();">Quitar módulo</button>`;
+  },
+
+  agregarFilaModulo(m = {}) {
+    const cont = document.getElementById('contenedor-modulos');
+    if (!cont) return;
+    const div = document.createElement('div');
+    div.className = 'modulo-item-card';
+    if (m.id) div.dataset.id = m.id;
+    div.innerHTML = this.filaModuloHTML(m);
+    cont.appendChild(div);
+    this.numerarModulos();
+  },
+
+  cargarFilasModulos(mods) {
+    const cont = document.getElementById('contenedor-modulos');
+    if (!cont) return;
+    cont.innerHTML = '';
+    (mods.length ? mods : [{}]).forEach(m => this.agregarFilaModulo(m));
+  },
+
+  numerarModulos() {
+    document.querySelectorAll('#contenedor-modulos .modulo-item-card').forEach((c, i) => c.setAttribute('data-numero', `Módulo ${i + 1}`));
+  },
+
+  // Guarda los módulos del formulario: actualiza los existentes, agrega los nuevos (en orden)
+  // y quita los que se sacaron. Devuelve un texto con avisos para mostrar al usuario.
+  async guardarModulos(trayectoId) {
+    const tid = Number(trayectoId);
+    const filas = [...document.querySelectorAll('#contenedor-modulos .modulo-item-card')].map(c => ({
+      id: c.dataset.id ? Number(c.dataset.id) : null,
+      nombre: (c.querySelector('.mod-nombre')?.value || '').trim(),
+      codigo: (c.querySelector('.mod-codigo')?.value || '').trim(),
+      fecha_inicio: c.querySelector('.mod-inicio')?.value || null,
+      fecha_fin: c.querySelector('.mod-fin')?.value || null
+    })).filter(f => f.nombre);
+    const avisos = [];
+    if (filas.length > 10) avisos.push(`El trayecto tiene ${filas.length} módulos: el acta y el certificado tienen lugar para 10.`);
+
+    const { data: existentes } = await supabase.from('modulos').select('id, nombre').eq('trayecto_id', tid);
+    const idsForm = filas.filter(f => f.id).map(f => f.id);
+
+    const guardar = async (fila) => {
+      const datos = { trayecto_id: tid, nombre: fila.nombre, codigo: fila.codigo || null, fecha_inicio: fila.fecha_inicio, fecha_fin: fila.fecha_fin };
+      const ejecutar = d => fila.id
+        ? supabase.from('modulos').update(d).eq('id', fila.id)
+        : supabase.from('modulos').insert([d]);
+      let { error } = await ejecutar(datos);
+      if (error && /fecha_fin|fecha_inicio/.test(error.message || '')) {
+        delete datos.fecha_fin;
+        if (/fecha_inicio/.test(error.message || '')) delete datos.fecha_inicio;
+        ({ error } = await ejecutar(datos));
+      }
+      if (error) avisos.push(`No se pudo guardar el módulo "${fila.nombre}": ${error.message}`);
+    };
+    // De a uno y en orden: así el orden de los módulos queda igual al del formulario
+    for (const f of filas) await guardar(f);
+
+    for (const ex of (existentes || []).filter(x => !idsForm.includes(Number(x.id)))) {
+      const { error } = await supabase.from('modulos').delete().eq('id', ex.id);
+      if (error) avisos.push(`No se quitó el módulo "${ex.nombre}" porque ya tiene clases o notas cargadas.`);
+    }
+    return avisos.length ? '\n\n' + avisos.join('\n') : (filas.length ? `\n${filas.length} módulo(s) guardado(s).` : '');
   },
 
   async eliminarTrayecto(id) {

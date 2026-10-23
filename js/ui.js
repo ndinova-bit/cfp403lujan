@@ -234,6 +234,7 @@ const UI = {
 
   // Agrega una fila de módulo en el formulario
   agregarFilaModulo() {
+    if (window.Trayectos && Trayectos.agregarFilaModulo) { Trayectos.agregarFilaModulo(); return; }
     const contenedor = document.getElementById('contenedor-modulos');
     if (!contenedor) return;
 

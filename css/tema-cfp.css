@@ -719,3 +719,9 @@ button.seg-ver { border: none; cursor: pointer; font-family: inherit; }
 .cert-otros li { margin: .3rem 0; }
 .cert-resumen { margin-right: auto; align-self: center; font-size: .85rem; color: var(--cfp-muted); }
 .btn:disabled, .btn[disabled] { opacity: .45; cursor: not-allowed; filter: grayscale(.3); }
+
+/* Módulos en Cargar Trayecto */
+#contenedor-modulos .modulo-item-card { position: relative; padding-top: 2rem !important; }
+#contenedor-modulos .modulo-item-card::before { content: attr(data-numero); position: absolute; top: .6rem; left: 1rem; font-size: .75rem; font-weight: 800; color: var(--cfp-blue); text-transform: uppercase; letter-spacing: .03em; }
+.mod-quitar { position: absolute; top: .45rem; right: .75rem; background: none; border: none; color: var(--cfp-bad); font-size: .78rem; font-weight: 700; cursor: pointer; font-family: inherit; }
+.mod-quitar:hover { text-decoration: underline; }
