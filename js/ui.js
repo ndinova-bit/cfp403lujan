@@ -146,8 +146,19 @@ const UI = {
     }
   },
 
-// Cambia entre secciones dentro del Panel validando permisos reales en 'usuarios'
+// Menú lateral en celulares: se abre con el botón ☰ y se cierra al elegir una opción
+  toggleMenu(abrir) {
+    const sb = document.querySelector('#app-screen .sidebar');
+    const ov = document.getElementById('menu-overlay');
+    if (!sb) return;
+    const abierto = typeof abrir === 'boolean' ? abrir : !sb.classList.contains('open');
+    sb.classList.toggle('open', abierto);
+    if (ov) ov.classList.toggle('open', abierto);
+  },
+
+  // Cambia entre secciones dentro del Panel validando permisos reales en 'usuarios'
   async showTab(tabId) {
+    this.toggleMenu(false);
     // El rol sale del perfil de la sesión (tabla `profiles`)
     const perfil = await Auth.obtenerPerfilSesion();
     if (!perfil) {
