@@ -29,6 +29,7 @@ const SeguimientoModulo = {
       const perfil = await Auth.obtenerPerfilSesion();
       const esAdmin = Auth.esPersonal ? Auth.esPersonal(perfil.rol) : Auth.esAdmin(perfil.rol);   // admin o preceptor: todos
       this.esPreceptor = Auth.esPreceptor ? Auth.esPreceptor(perfil.rol) : false;
+      this.puedeRegistrar = !!esAdmin;     // administración, regencia y preceptoría
       const anio = String(new Date().getFullYear());
 
       let q = supabase.from('trayectos').select('*');
@@ -98,7 +99,7 @@ const SeguimientoModulo = {
           computaAsistencia: ReglasFP.computaAsistencia(t), excepcion
         });
         const c = ReglasFP.estadoCursada(ev, modsT, i, { excepcion });
-        if (c.baja) { bajas.push({ t, key, ...c }); claveBaja.add(tid + '|' + key); }
+        if (c.baja) { bajas.push({ t, key, nombre: this.nombreDe(alumnos, key), ...c }); claveBaja.add(tid + '|' + key); }
       });
     });
     const califIds = new Set(clases.filter(c => c.calificable !== false && c.tipo !== 'encuesta').map(c => Number(c.id)));
@@ -180,6 +181,11 @@ const SeguimientoModulo = {
           <div class="seg-chips"><span class="seg-chip">${b.tipo === 'automatica' ? 'Baja automática' : 'Baja'}</span><span class="seg-motivo">${this.esc(b.motivo)}</span></div>
         </div>`).join('')}</details>`).join('');
     }
+    // Bajas automáticas todavía sin guardar (la planilla de matrícula solo cuenta las guardadas)
+    this.bajasAuto = bajas.filter(b => b.tipo === 'automatica' && !b.guardada);
+    const btnRegistrar = (this.puedeRegistrar && this.bajasAuto.length)
+      ? `<div class="seg-registrar"><span><b>${this.bajasAuto.length}</b> baja(s) automática(s) sin registrar: la planilla de matrícula todavía las cuenta como matriculados.</span>
+         <button type="button" class="btn btn-gold" onclick="SeguimientoModulo.registrarBajasAuto()">Registrar bajas automáticas</button></div>` : '';
     // Con un solo trayecto con novedades, se muestra desplegado
     const abrirUnico = (h) => (h.match(/<details/g) || []).length === 1 ? h.replace('<details', '<details open') : h;
     htmlPend = abrirUnico(htmlPend); htmlRiesgo = abrirUnico(htmlRiesgo); htmlBajas = abrirUnico(htmlBajas);
@@ -206,6 +212,7 @@ const SeguimientoModulo = {
       <section class="card-panel seg-panel">
         <div class="card-panel-header"><h3 style="margin:0">Bajas</h3></div>
         <p class="seg-ayuda">Baja manual: cargada en la pestaña Estudiantes del trayecto. Baja automática: cerró un módulo (pasó su fecha de fin) y la nota quedó debajo de ${this.MINIMO}; no corre si el docente dio habilitación excepcional.</p>
+        ${btnRegistrar}
         ${barraPlegar}
         ${htmlBajas}
       </section>`;
@@ -215,6 +222,38 @@ const SeguimientoModulo = {
   plegar(btn, abrir) {
     const sec = btn.closest('.seg-panel');
     if (sec) sec.querySelectorAll('details.seg-grupo').forEach(d => { d.open = abrir; });
+  },
+
+  /* Pasa las bajas automáticas a bajas guardadas, con la fecha en que cerró el módulo no aprobado */
+  async registrarBajasAuto() {
+    const lista = this.bajasAuto || [];
+    if (!lista.length || typeof Swal === 'undefined') return;
+    const fecha = (f) => String(f || '').split('-').reverse().join('/');
+    const r = await Swal.fire({
+      title: 'Registrar bajas automáticas', width: 720, showCancelButton: true, confirmButtonText: 'Registrar las marcadas', cancelButtonText: 'Cancelar',
+      html: `<p style="font-size:.85rem;text-align:left">Desmarcá a quienes no deban darse de baja. Cada baja queda con la fecha en que cerró el módulo no aprobado, y se puede deshacer con «Reincorporar».</p>
+        <div style="max-height:300px;overflow:auto;text-align:left;font-size:.85rem">${lista.map((b, i) => `<label style="display:flex;gap:.5rem;padding:.35rem 0;border-bottom:1px solid #e5e7eb"><input type="checkbox" class="bj-chk" data-i="${i}" checked>
+          <span><b>${this.esc(b.nombre)}</b> · ${this.esc(b.t.nombre)}<br><small>Baja desde ${this.esc(fecha(b.fecha))} · ${this.esc(b.motivo)}</small></span></label>`).join('')}</div>`,
+      preConfirm: () => [...document.querySelectorAll('.bj-chk')].filter(c => c.checked).map(c => lista[Number(c.dataset.i)])
+    });
+    if (!r.isConfirmed || !r.value.length) return;
+    const perfil = window.Auth && Auth.usuarioActual;
+    Swal.fire({ title: 'Registrando…', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    let ok = 0; const fallas = [];
+    for (const b of r.value) {
+      const { error } = await supabase.from('inscripciones').update({
+        estado: 'BAJA', fecha_baja: b.fecha, motivo_baja: String(b.motivo).slice(0, 200), baja_tipo: 'automatica', baja_por: perfil ? perfil.id : null
+      }).eq('trayecto_id', Number(b.t.id)).eq('estudiante_user', String(b.key));
+      if (error) fallas.push(error.message); else ok++;
+    }
+    Swal.close();
+    if (fallas.length) {
+      const falta = /baja_tipo|reincorporado/.test(fallas[0]) ? ' Falta ejecutar sql/19_bajas_guardadas.sql en Supabase.' : '';
+      Swal.fire({ icon: 'warning', title: `Se registraron ${ok} de ${r.value.length}`, text: fallas[0] + falta });
+    } else {
+      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `${ok} baja(s) registrada(s)`, showConfirmButton: false, timer: 2500 });
+    }
+    this.cargar();
   },
 
   actualizarContador(n) {
