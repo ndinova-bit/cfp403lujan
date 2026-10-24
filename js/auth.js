@@ -22,13 +22,28 @@ const Auth = {
     return r === 'admin' || r === 'administrador';
   },
 
+  // Regencia: casi todo lo de la administración, salvo usuarios/roles/claves, eliminar cuentas, cierre de ciclo y respaldos
+  esRegente(rol) {
+    return String(rol || '').toLowerCase().trim() === 'regente';
+  },
+
+  esSecretaria(rol) {
+    const r = String(rol || '').toLowerCase().trim();
+    return r === 'secretaria' || r === 'secretario';
+  },
+
+  // Dirección en sentido amplio: administración o regencia (lo que se ve y se gestiona a diario)
+  esDireccion(rol) {
+    return this.esAdmin(rol) || this.esRegente(rol);
+  },
+
   esPreceptor(rol) {
     return String(rol || '').toLowerCase().trim() === 'preceptor';
   },
 
   // Personal del CFP con acceso a todos los trayectos: administración y preceptoría
   esPersonal(rol) {
-    return this.esAdmin(rol) || this.esPreceptor(rol);
+    return this.esDireccion(rol) || this.esPreceptor(rol);
   },
 
   avisar(mensaje) {
@@ -219,7 +234,7 @@ const Auth = {
       if (typeof Trayectos !== 'undefined' && typeof Trayectos.cargarTrayectos === 'function') {
         await Trayectos.cargarTrayectos();
       }
-      if (this.esAdmin(perfil.rol) && typeof DashboardAdmin !== 'undefined') {
+      if (this.esDireccion(perfil.rol) && typeof DashboardAdmin !== 'undefined') {
         DashboardAdmin.cargarEstadisticas();
       }
     } catch (err) {

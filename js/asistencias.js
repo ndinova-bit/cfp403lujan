@@ -202,6 +202,7 @@ const AsistenciasModulo = {
     cont.innerHTML = `
       ${this.sinConexion ? `<div class="asis-offline">📵 Sin conexión. Estás usando la lista guardada en este dispositivo${this.copiaFecha ? ' (del ' + new Date(this.copiaFecha).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }) + ')' : ''}. Lo que guardes se envía solo cuando vuelva la señal.</div>` : ''}
       <div id="asis-pend-box"></div>
+      <div id="asis-alertas"></div>
       ${computa ? '' : `<div class="asis-aviso">Este trayecto <strong>no computa asistencia</strong> (por ejemplo, virtual): podés registrarla, pero no se promedia en las notas.</div>`}
       ${this.trayecto && this.trayecto.sede === 'fuera' ? `<div class="asis-sede">Fuera de sede${this.trayecto.lugar_dictado ? ': ' + this.esc(this.trayecto.lugar_dictado) : ''} · la asistencia la carga el docente.</div>` : ''}
       ${(this.bajas || []).length ? `<details class="asis-bajas"><summary>${this.bajas.length} estudiante(s) dado(s) de baja: no aparecen en los días posteriores a su baja</summary><ul>${this.bajas.map(b => `<li><b>${this.esc(b.nombre)}</b> · ${this.esc(b.tipo === 'automatica' ? 'Baja automática' : 'Baja')}${b.fecha ? ' desde el ' + this.fechaAR(b.fecha) : ''}: ${this.esc(b.motivo)}</li>`).join('')}</ul></details>` : ''}
@@ -241,6 +242,29 @@ const AsistenciasModulo = {
       </div>`;
     this.dibujarHistorial();
     this.mostrarPendientes();
+    this.cargarAlertas();
+  },
+
+  // Alerta temprana: estudiantes con faltas seguidas o asistencia baja (para decidir una baja a tiempo)
+  ALERTA_SEGUIDAS: 3,
+  ALERTA_PCT: 70,
+  async cargarAlertas() {
+    const box = document.getElementById('asis-alertas');
+    if (!box || this.sinConexion) return;
+    try {
+      const { data, error } = await supabase.rpc('alertas_inasistencias', { p_trayecto: Number(this.trayectoActualId), p_seguidas: this.ALERTA_SEGUIDAS, p_pct: this.ALERTA_PCT });
+      if (error || !data || !data.length) { box.innerHTML = ''; return; }
+      box.innerHTML = `<details class="asis-alertas" open><summary>⚠️ ${data.length} estudiante(s) para mirar de cerca</summary>
+        <ul>${data.map(a => {
+          const dni = String(a.dni).replace(/[^0-9A-Za-z_-]/g, '');
+          const partes = [];
+          if (a.seguidas >= this.ALERTA_SEGUIDAS) partes.push(`<b>${a.seguidas} faltas seguidas</b>`);
+          if (a.registros >= 3 && a.pct < this.ALERTA_PCT) partes.push(`asistencia ${a.pct} %`);
+          if (a.ultima_presencia) partes.push(`última vez presente: ${this.fechaAR(a.ultima_presencia)}`);
+          return `<li><button type="button" class="seg-nombre" onclick="FichaAlumno.abrir('${dni}')">${this.esc(a.nombre)}</button> · ${partes.join(' · ')}</li>`;
+        }).join('')}</ul>
+        <p>Faltas seguidas desde la última clase (${this.ALERTA_SEGUIDAS} o más) o asistencia menor al ${this.ALERTA_PCT} %. Si dejó de asistir, se lo puede dar de baja desde la sábana del trayecto y reincorporar más adelante.</p></details>`;
+    } catch (e) { box.innerHTML = ''; }
   },
 
   // % de asistencia acumulado de cada alumno (todas las fechas y módulos)

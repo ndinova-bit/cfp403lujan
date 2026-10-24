@@ -9,7 +9,7 @@
 //      Si ya tenía cuenta pendiente de aprobación, la aprueba.
 //   3. Lo inscribe en el trayecto elegido (si todavía no estaba).
 //
-// Seguridad: solo funciona si quien la llama es un administrador o preceptor activo.
+// Seguridad: solo funciona si quien la llama es administración, regencia o preceptoría activa.
 // La clave de servicio (service_role) la pone Supabase sola y nunca sale del servidor.
 // =============================================================================
 
@@ -61,7 +61,7 @@ Deno.serve(async (req: Request) => {
 
     const rolLlama = String(perfilLlama?.rol || '').toLowerCase();
     const estadoLlama = String(perfilLlama?.estado || '').toUpperCase();
-    if (!perfilLlama || !['admin', 'administrador', 'preceptor'].includes(rolLlama) || estadoLlama !== 'ACTIVO') {
+    if (!perfilLlama || !['admin', 'administrador', 'regente', 'preceptor'].includes(rolLlama) || estadoLlama !== 'ACTIVO') {
       return json({ error: 'No autorizado' }, 403);
     }
 

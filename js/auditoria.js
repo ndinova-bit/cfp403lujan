@@ -11,12 +11,14 @@ const AuditoriaModulo = {
   ROLES: {
     admin: { txt: 'Administración', cls: 'adm' },
     administrador: { txt: 'Administración', cls: 'adm' },
+    regente: { txt: 'Regencia', cls: 'adm' },
+    secretaria: { txt: 'Secretaría', cls: 'pre' },
     preceptor: { txt: 'Preceptoría', cls: 'pre' },
     docente: { txt: 'Instructor/a', cls: 'doc' },
     estudiante: { txt: 'Estudiante', cls: 'est' },
     sistema: { txt: 'Sistema', cls: 'sis' }
   },
-  FILTROS_ROL: [['', 'Todos'], ['admin', 'Administración'], ['preceptor', 'Preceptoría'], ['docente', 'Instructores'], ['estudiante', 'Estudiantes'], ['sistema', 'Automático']],
+  FILTROS_ROL: [['', 'Todos'], ['admin', 'Administración'], ['regente', 'Regencia'], ['preceptor', 'Preceptoría'], ['secretaria', 'Secretaría'], ['docente', 'Instructores'], ['estudiante', 'Estudiantes'], ['sistema', 'Automático']],
   TABLAS: {
     entregas_actividades: 'Entregas y notas', asistencias: 'Asistencia', inscripciones: 'Inscripciones y bajas',
     profiles: 'Cuentas y roles', clases: 'Clases y actividades', trayectos: 'Trayectos', modulos: 'Módulos',
@@ -54,7 +56,7 @@ const AuditoriaModulo = {
     const cont = document.getElementById('auditoria-filtros');
     if (!cont) return;
     if (!this.personas) {
-      const { data } = await supabase.from('profiles').select('dni, nombre, apellido, rol').in('rol', ['admin', 'administrador', 'preceptor', 'docente']).order('apellido', { ascending: true });
+      const { data } = await supabase.from('profiles').select('dni, nombre, apellido, rol').in('rol', ['admin', 'administrador', 'regente', 'secretaria', 'preceptor', 'docente']).order('apellido', { ascending: true });
       this.personas = data || [];
     }
     const f = this.filtros;

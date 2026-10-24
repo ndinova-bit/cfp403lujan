@@ -118,7 +118,8 @@ var ImportadorModulo = {
           localidad: idxCol(c => c.includes('localidad')),
           codigo_postal: idxCol(c => c.includes('postal') || c.trim() === 'cp'),
           telefono: idxCol(c => c.includes('tel') || c.includes('celular')),
-          estudios: idxCol(c => c.includes('estudio'))
+          estudios: idxCol(c => c.includes('estudio')),
+          genero: idxCol(c => c.includes('genero') || c.includes('género') || c.includes('sexo'))
         };
         const hayExtra = Object.values(extra).some(i => i !== -1);
         const fechaISO = (v) => {
@@ -176,6 +177,12 @@ var ImportadorModulo = {
               if (idx === -1) return;
               const v = String(valores[idx] || '').trim();
               if (!v) return;
+              if (k === 'genero') {
+                const g = v.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+                const norm = /^(f|fem|femenino|mujer|female)$/.test(g) ? 'F' : /^(m|masc|masculino|varon|hombre|male)$/.test(g) ? 'M' : /^(x|otro|otra|no binario|nb|no binarie)$/.test(g) ? 'X' : null;
+                if (norm) d[k] = norm;
+                return;
+              }
               d[k] = k === 'fecha_nacimiento' ? fechaISO(v) : v.slice(0, 160);
             });
             if (Object.keys(d).length > 1) datosPersonales.push(d);

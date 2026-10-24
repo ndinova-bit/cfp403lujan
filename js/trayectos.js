@@ -91,7 +91,7 @@ const Trayectos = {
     try {
       const perfil = await this.obtenerPerfilActual();
       const rolNorm = String(perfil?.rol || '').toLowerCase().trim();
-      const isAdmin = rolNorm === 'admin' || rolNorm === 'administrador';
+      const isAdmin = Auth.esDireccion(rolNorm);
       const esDocente = rolNorm === 'docente';
       const esEstudiante = rolNorm === 'estudiante';
       const esPreceptor = rolNorm === 'preceptor';
@@ -149,7 +149,7 @@ const Trayectos = {
       this.listaTrayectos = trayectos;
       this.renderizarTrayectos();
       // Copia para abrir la lista sin señal (solo personal: docentes, preceptores, dirección)
-      if (perfil && ['docente', 'preceptor', 'admin', 'administrador'].includes(String(perfil.rol || '').toLowerCase())) {
+      if (perfil && ['docente', 'preceptor', 'regente', 'admin', 'administrador'].includes(String(perfil.rol || '').toLowerCase())) {
         try { localStorage.setItem('cfp_cache_trayectos', JSON.stringify({ dni: String(perfil.dni || ''), fecha: Date.now(), lista: trayectos.map(t => ({ ...t, modulos: t.modulos || [] })) })); } catch (e) { /* sin espacio */ }
       }
 
@@ -179,7 +179,7 @@ const Trayectos = {
 
     const perfil = await this.obtenerPerfilActual();
     const rolNorm = String(perfil?.rol || '').toLowerCase().trim();
-    const isAdmin = rolNorm === 'admin' || rolNorm === 'administrador';
+    const isAdmin = Auth.esDireccion(rolNorm);
     const esDocente = rolNorm === 'docente';
     const esEstudiante = rolNorm === 'estudiante';
     const esPreceptor = rolNorm === 'preceptor';

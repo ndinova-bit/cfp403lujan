@@ -80,6 +80,7 @@ const FichaAlumno = {
   /* ---------- Datos personales (los de la Ficha de Curso) ---------- */
   CAMPOS: [
     ['tipo_documento', 'Tipo de documento', 'text', 10],
+    ['genero', 'Género', 'genero'],
     ['fecha_nacimiento', 'Fecha de nacimiento', 'date'],
     ['lugar_nacimiento', 'Lugar de nacimiento', 'text', 120],
     ['domicilio', 'Domicilio', 'text', 160],
@@ -99,7 +100,14 @@ const FichaAlumno = {
     cont.innerHTML = `
       <h3>Datos personales</h3>
       <form class="ficha-form" onsubmit="event.preventDefault(); FichaAlumno.guardarDatosPersonales();">
-        ${this.CAMPOS.map(([k, l, t, max]) => `
+        ${this.CAMPOS.map(([k, l, t, max]) => t === 'genero' ? `
+          <div class="form-group"><label for="fd-${k}">${l}</label>
+            <select id="fd-${k}" class="form-control" ${editable ? '' : 'disabled'}>
+              <option value="">Sin dato</option>
+              <option value="F" ${d.genero === 'F' ? 'selected' : ''}>Mujer</option>
+              <option value="M" ${d.genero === 'M' ? 'selected' : ''}>Varón</option>
+              <option value="X" ${d.genero === 'X' ? 'selected' : ''}>Otro / no binario</option>
+            </select></div>` : `
           <div class="form-group"><label for="fd-${k}">${l}</label>
             <input id="fd-${k}" type="${t}" class="form-control" ${max ? `maxlength="${max}"` : ''} value="${this.esc(t === 'date' ? String(d[k] || '').slice(0, 10) : (d[k] || ''))}" ${editable ? '' : 'readonly'}></div>`).join('')}
         ${editable ? '<div class="ficha-form-acciones"><button type="submit" class="btn btn-primary">Guardar datos</button></div>' : ''}
@@ -124,7 +132,7 @@ const FichaAlumno = {
     if (error) { cont.innerHTML = '<h3>Observaciones</h3><p class="ficha-vacio">Disponible cuando se ejecute sql/09 en Supabase.</p>'; return; }
     const lista = data || [];
     const yo = (window.Auth && Auth.usuarioActual) || {};
-    const esAdmin = window.Auth && Auth.esAdmin(yo.rol);
+    const esAdmin = window.Auth && Auth.esDireccion(yo.rol);
     cont.innerHTML = `
       <h3>Observaciones</h3>
       ${lista.length ? `<ul class="obs-lista">${lista.map(o => `

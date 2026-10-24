@@ -1152,3 +1152,27 @@ textarea.act-in { resize: vertical; }
 .asis-offline { background: var(--cfp-yellow-soft); color: #7A5600; border-radius: 12px; padding: .6rem 1rem; font-size: .85rem; font-weight: 600; margin-bottom: 1rem; }
 .asis-pend { background: var(--cfp-celeste-soft); color: var(--cfp-blue); border-radius: 12px; padding: .6rem 1rem; font-size: .85rem; font-weight: 600; margin-bottom: 1rem; display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
 .asis-pend button { background: var(--cfp-navy); color: #fff; border: none; border-radius: 8px; padding: .3rem .7rem; font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; }
+
+/* ==========================================================================
+   18. REGENCIA, SECRETARÍA Y ALERTAS
+   ========================================================================== */
+.asis-alertas { background: var(--cfp-yellow-soft); border: 1px solid #F0D58A; border-radius: 12px; padding: .6rem 1rem; margin-bottom: 1rem; font-size: .85rem; }
+.asis-alertas summary { cursor: pointer; font-weight: 800; color: #7A5600; }
+.asis-alertas ul { margin: .5rem 0 .3rem 1.1rem; padding: 0; color: var(--cfp-ink-2); }
+.asis-alertas li { margin-bottom: .25rem; }
+.asis-alertas p { margin: .3rem 0 0; font-size: .78rem; color: var(--cfp-muted); }
+.sec-barra { display: flex; flex-wrap: wrap; gap: .8rem 1rem; align-items: flex-end; margin-bottom: 1rem; }
+.sec-barra label { display: flex; flex-direction: column; gap: .25rem; font-size: .78rem; font-weight: 700; color: var(--cfp-muted); }
+.sec-acciones { margin-left: auto; display: flex; gap: .5rem; flex-wrap: wrap; }
+.sec-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: .7rem; margin-bottom: 1rem; }
+.sec-card { background: #fff; border: 1px solid var(--cfp-line); border-radius: 14px; padding: .8rem 1rem; display: flex; flex-direction: column; gap: .15rem; }
+.sec-card strong { font-size: 1.6rem; line-height: 1.1; color: var(--cfp-navy); }
+.sec-card span { font-size: .78rem; color: var(--cfp-muted); font-weight: 600; }
+.sec-tabla-wrap { overflow-x: auto; background: #fff; border: 1px solid var(--cfp-line); border-radius: 14px; }
+.sec-tabla { width: 100%; border-collapse: collapse; font-size: .86rem; }
+.sec-tabla th { background: var(--cfp-navy); color: #fff; padding: .6rem .7rem; text-align: center; font-size: .75rem; }
+.sec-tabla th:first-child, .sec-tabla td.sec-nombre { text-align: left; }
+.sec-tabla td { padding: .55rem .7rem; border-bottom: 1px solid var(--cfp-line); text-align: center; }
+.sec-tabla td.sec-nombre { font-weight: 700; color: var(--cfp-navy); min-width: 220px; }
+.sec-tabla td.sec-aviso { color: var(--cfp-bad); font-weight: 700; }
+.sec-tabla tfoot td { background: var(--cfp-celeste-soft); font-weight: 800; color: var(--cfp-navy); }
