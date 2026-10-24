@@ -179,7 +179,7 @@ const PlanillaMatricula = {
       const nro = parseInt(String(f.nro || '').replace(/\D/g, ''), 10);
       celda(r, 1, isNaN(nro) ? (f.nro || null) : nro, { fondo: BLANCO });
       celda(r, 2, f.nombre || '', { fondo: BLANCO, h: 'left' });
-      celda(r, 3, f.sede === 'fuera' ? (f.lugar || '') : this.SEDE_DIRECCION, { fondo: BLANCO, h: 'left' });
+      celda(r, 3, f.lugar || (f.sede === 'fuera' ? '' : this.SEDE_DIRECCION), { fondo: BLANCO, h: 'left' });
       celda(r, 4, f.docente || '', { fondo: BLANCO, h: 'left' });
       this.DIAS.forEach((d, i) => celda(r, 5 + i, (f.horario_dias && f.horario_dias[d]) || null, { fondo: BLANCO, h: 'left', size: 7 }));
       const reloj = f.horas || null;
