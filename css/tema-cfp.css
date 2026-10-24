@@ -1176,3 +1176,7 @@ textarea.act-in { resize: vertical; }
 .sec-tabla td.sec-nombre { font-weight: 700; color: var(--cfp-navy); min-width: 220px; }
 .sec-tabla td.sec-aviso { color: var(--cfp-bad); font-weight: 700; }
 .sec-tabla tfoot td { background: var(--cfp-celeste-soft); font-weight: 800; color: var(--cfp-navy); }
+
+/* Horario por día del trayecto (planilla de matrícula) */
+.trayecto-dias { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: .5rem; }
+.trayecto-dias label { display: flex; flex-direction: column; gap: .2rem; font-size: .75rem; font-weight: 700; color: var(--cfp-muted); }
