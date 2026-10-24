@@ -167,6 +167,8 @@ const Trayectos = {
     }
   },
 
+  LIMITE_PUBLICO: 6,
+
   async renderizarTrayectos() {
     const contenedores = [
       document.getElementById('lista-trayectos-cards'),
@@ -268,13 +270,15 @@ const Trayectos = {
         ` : '';
 
         if (esVistaPublica) {
+          card.classList.add('pub-card');
+          card.dataset.busca = `${trayecto.nombre || ''} ${trayecto.descripcion || ''}`.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
           card.innerHTML = `
             <div>
               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
                 <h3 style="color: #f8fafc; margin: 0; font-size: 1.2rem; font-weight: 600;">${Trayectos.esc(trayecto.nombre)}</h3>
                 ${cicloBadge}${supBadge}
               </div>
-              <p style="color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.75rem; line-height: 1.4;">
+              <p class="pub-desc" style="color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.75rem; line-height: 1.4;">
                 ${Trayectos.esc(trayecto.descripcion || 'Sin descripción disponible.')}
               </p>
             </div>
@@ -324,6 +328,34 @@ const Trayectos = {
       });
 
       contenedor.appendChild(grid);
+
+      // Vista pública: con muchos trayectos, buscador y "Ver todos" para que la página no se haga eterna
+      if (esVistaPublica && this.listaTrayectos.length > this.LIMITE_PUBLICO) {
+        const barra = document.createElement('div');
+        barra.className = 'pub-barra';
+        barra.innerHTML = `<input type="search" class="pub-buscar" placeholder="🔎 Buscar un curso (ej.: electricista, gas, soldadura)" aria-label="Buscar un curso">
+          <span class="pub-cuenta"></span>`;
+        const mas = document.createElement('button');
+        mas.type = 'button'; mas.className = 'btn btn-outline pub-mas';
+        contenedor.insertBefore(barra, grid);
+        grid.after(mas);
+        let abierto = false;
+        const norm = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+        const aplicar = () => {
+          const q = norm(barra.querySelector('.pub-buscar').value);
+          const cards = [...grid.querySelectorAll('.pub-card')];
+          const coinciden = cards.filter(c => !q || c.dataset.busca.includes(q));
+          const limite = (q || abierto) ? Infinity : this.LIMITE_PUBLICO;
+          cards.forEach(c => { c.style.display = 'none'; });
+          coinciden.forEach((c, i) => { c.style.display = i < limite ? 'flex' : 'none'; });
+          barra.querySelector('.pub-cuenta').textContent = q ? `${coinciden.length} resultado(s)` : `${cards.length} cursos`;
+          mas.style.display = (!q && coinciden.length > this.LIMITE_PUBLICO) ? 'block' : 'none';
+          mas.textContent = abierto ? 'Ver menos' : `Ver los ${cards.length} cursos`;
+        };
+        barra.querySelector('.pub-buscar').addEventListener('input', aplicar);
+        mas.addEventListener('click', () => { abierto = !abierto; aplicar(); if (!abierto) barra.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+        aplicar();
+      }
     });
   },
 

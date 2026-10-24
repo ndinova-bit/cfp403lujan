@@ -1180,3 +1180,18 @@ textarea.act-in { resize: vertical; }
 /* Horario por día del trayecto (planilla de matrícula) */
 .trayecto-dias { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: .5rem; }
 .trayecto-dias label { display: flex; flex-direction: column; gap: .2rem; font-size: .75rem; font-weight: 700; color: var(--cfp-muted); }
+
+/* ==========================================================================
+   20. OFERTA PÚBLICA: buscador y tarjetas compactas
+   ========================================================================== */
+.pub-barra { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.pub-buscar { flex: 1; min-width: 220px; padding: .7rem 1rem; border: 1px solid #C9D6E8; border-radius: 12px; font: inherit; font-size: .95rem; background: #fff; color: var(--cfp-ink); }
+.pub-cuenta { font-size: .85rem; font-weight: 600; color: var(--cfp-muted); }
+.pub-mas { display: block; margin: 1.2rem auto 0; padding: .7rem 1.6rem; font-weight: 700; }
+.pub-desc { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+@media (max-width: 640px) {
+  #lista-trayectos-cards .trayectos-grid { grid-template-columns: 1fr !important; gap: .8rem !important; }
+  #lista-trayectos-cards .pub-card { padding: 1rem !important; }
+  #lista-trayectos-cards .pub-card h3 { font-size: 1.05rem !important; }
+  .pub-desc { -webkit-line-clamp: 2; }
+}
