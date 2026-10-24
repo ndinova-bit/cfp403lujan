@@ -111,7 +111,7 @@ const SeguimientoModulo = {
       const idsC = cT.map(c => Number(c.id));
       const pT = pendientes.filter(e => idsC.includes(Number(e.clase_id)));
       if (!pT.length) return;
-      htmlPend += `<div class="seg-grupo"><h4>${this.esc(t.nombre)} <span class="seg-cuenta">${pT.length}</span></h4>`;
+      htmlPend += `<details class="seg-grupo"><summary><span class="seg-g-nom">${this.esc(t.nombre)}</span><span class="seg-cuenta">${pT.length}</span></summary>`;
       pT.forEach(e => {
         const c = cT.find(x => Number(x.id) === Number(e.clase_id));
         const url = this.urlSegura(e.url_entrega);
@@ -128,7 +128,7 @@ const SeguimientoModulo = {
             <button type="button" class="btn btn-primary seg-guardar" onclick="SeguimientoModulo.calificar(${Number(e.id)}, ${Number(t.id)})">Guardar</button>
           </div>`;
       });
-      htmlPend += '</div>';
+      htmlPend += '</details>';
     });
     if (!htmlPend) htmlPend = '<div class="seg-ok">No hay entregas pendientes de corrección. ¡Todo al día!</div>';
 
@@ -156,7 +156,7 @@ const SeguimientoModulo = {
       if (!filas.length) return;
       totalRiesgo += filas.length;
       filas.sort((x, y) => y.motivos.length - x.motivos.length || x.nombre.localeCompare(y.nombre));
-      htmlRiesgo += `<div class="seg-grupo"><h4>${this.esc(t.nombre)} <span class="seg-cuenta riesgo">${filas.length}</span></h4>`;
+      htmlRiesgo += `<details class="seg-grupo"><summary><span class="seg-g-nom">${this.esc(t.nombre)}</span><span class="seg-cuenta riesgo">${filas.length}</span></summary>`;
       filas.forEach(f => {
         htmlRiesgo += `<div class="seg-item riesgo">
             <div class="seg-item-info"><strong>${this.esc(f.nombre)}</strong><span>DNI ${this.esc(f.key)}</span></div>
@@ -164,17 +164,26 @@ const SeguimientoModulo = {
             <div class="seg-chips">${f.motivos.map(m => `<span class="seg-chip">${this.esc(m)}</span>`).join('')}</div>
           </div>`;
       });
-      htmlRiesgo += '</div>';
+      htmlRiesgo += '</details>';
     });
     if (!htmlRiesgo) htmlRiesgo = '<div class="seg-ok">Ningún alumno en riesgo por ahora.</div>';
 
-    const htmlBajas = bajas.length
-      ? bajas.sort((x, y) => String(x.t.nombre).localeCompare(String(y.t.nombre))).map(b => `<div class="seg-item riesgo">
-          <div class="seg-item-info"><strong>${this.esc(this.nombreDe(alumnos, b.key))}</strong><span>${this.esc(b.t.nombre)} · DNI ${this.esc(b.key)}</span></div>
+    let htmlBajas = '<div class="seg-ok">No hay bajas registradas.</div>';
+    if (bajas.length) {
+      const porT = new Map();
+      bajas.sort((x, y) => String(x.t.nombre).localeCompare(String(y.t.nombre)) || String(x.key).localeCompare(String(y.key)))
+        .forEach(b => { const k = Number(b.t.id); if (!porT.has(k)) porT.set(k, { t: b.t, lista: [] }); porT.get(k).lista.push(b); });
+      htmlBajas = [...porT.values()].map(g => `<details class="seg-grupo"><summary><span class="seg-g-nom">${this.esc(g.t.nombre)}</span><span class="seg-cuenta riesgo">${g.lista.length}</span></summary>
+        ${g.lista.map(b => `<div class="seg-item riesgo">
+          <div class="seg-item-info"><strong>${this.esc(this.nombreDe(alumnos, b.key))}</strong><span>DNI ${this.esc(b.key)}</span></div>
           <button type="button" class="seg-ver" onclick="FichaAlumno.abrir('${this.esc(String(b.key).replace(/\D/g, ''))}')">Ver ficha</button>
           <div class="seg-chips"><span class="seg-chip">${b.tipo === 'automatica' ? 'Baja automática' : 'Baja'}</span><span class="seg-motivo">${this.esc(b.motivo)}</span></div>
-        </div>`).join('')
-      : '<div class="seg-ok">No hay bajas registradas.</div>';
+        </div>`).join('')}</details>`).join('');
+    }
+    // Con un solo trayecto con novedades, se muestra desplegado
+    const abrirUnico = (h) => (h.match(/<details/g) || []).length === 1 ? h.replace('<details', '<details open') : h;
+    htmlPend = abrirUnico(htmlPend); htmlRiesgo = abrirUnico(htmlRiesgo); htmlBajas = abrirUnico(htmlBajas);
+    const barraPlegar = '<div class="seg-plegar"><button type="button" onclick="SeguimientoModulo.plegar(this, true)">Abrir todos</button><button type="button" onclick="SeguimientoModulo.plegar(this, false)">Cerrar todos</button></div>';
 
     cont.innerHTML = `
       <div class="seg-resumen">
@@ -185,19 +194,27 @@ const SeguimientoModulo = {
       </div>
       ${this.esPreceptor ? '' : `<section class="card-panel seg-panel">
         <div class="card-panel-header"><h3 style="margin:0">Entregas por corregir</h3></div>
+        ${barraPlegar}
         ${htmlPend}
       </section>`}
       <section class="card-panel seg-panel">
         <div class="card-panel-header"><h3 style="margin:0">Alumnos en riesgo</h3></div>
         <p class="seg-ayuda">Se marcan quienes tienen asistencia menor a ${this.MINIMO}% (con 3 o más clases registradas), promedio de actividades menor a ${this.MINIMO}, o ninguna entrega cuando ya hay 2 o más clases publicadas.</p>
+        ${barraPlegar}
         ${htmlRiesgo}
       </section>
       <section class="card-panel seg-panel">
         <div class="card-panel-header"><h3 style="margin:0">Bajas</h3></div>
         <p class="seg-ayuda">Baja manual: cargada en la pestaña Estudiantes del trayecto. Baja automática: cerró un módulo (pasó su fecha de fin) y la nota quedó debajo de ${this.MINIMO}; no corre si el docente dio habilitación excepcional.</p>
+        ${barraPlegar}
         ${htmlBajas}
       </section>`;
     this.actualizarContador(this.esPreceptor ? 0 : pendientes.length);
+  },
+
+  plegar(btn, abrir) {
+    const sec = btn.closest('.seg-panel');
+    if (sec) sec.querySelectorAll('details.seg-grupo').forEach(d => { d.open = abrir; });
   },
 
   actualizarContador(n) {
