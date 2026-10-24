@@ -105,12 +105,13 @@ var ImportadorModulo = {
             for (let c = 1; c <= ws.columnCount; c++) vals.push(celda(row.getCell(c).value));
             if (vals.some(x => x)) filas.push(vals);
           });
-          // Si hay columna "Estado", solo entran las inscripciones confirmadas
+          // Si hay columna "Estado", se descartan las canceladas o dadas de baja en el IPFL
           const cab = (filas[0] || []).map(x => x.toLowerCase());
           const iEst = cab.findIndex(x => x.includes('estado'));
           const utiles = iEst === -1 ? filas : filas.filter((f, i) => {
             if (i === 0) return true;
-            const ok = !f[iEst] || /confirmad/i.test(f[iEst]);
+            // Solo se descartan las inscripciones canceladas (Aprobado, Ausente, Confirmada, etc. se importan)
+            const ok = !/cancel|anulad|rechaz|desinscri|baja/i.test(f[iEst] || '');
             if (!ok) noConfirmados++;
             return ok;
           });
@@ -128,7 +129,7 @@ var ImportadorModulo = {
 
         if (lineas.length <= 1) {
           this.cerrarEspera(prevenirSalida);
-          alert('El archivo CSV está vacío.');
+          alert('El archivo está vacío o no tiene filas para importar.');
           return;
         }
 
@@ -335,7 +336,7 @@ var ImportadorModulo = {
           <div style="text-align:left; font-size: 14px; line-height: 1.6;">
             ${detalle}
             ${filasInvalidas ? `⚠️ <b>${filasInvalidas}</b> filas ignoradas por DNI inválido<br>` : ''}
-            ${noConfirmados ? `⏸️ <b>${noConfirmados}</b> inscripciones no confirmadas en el IPFL (no se cargaron)<br>` : ''}
+            ${noConfirmados ? `⏸️ <b>${noConfirmados}</b> inscripciones canceladas en el IPFL (no se cargaron)<br>` : ''}
             ${datosGuardados ? `🗂️ <b>${datosGuardados}</b> con datos personales para la Ficha de Curso<br>` : ''}
             ${errores.length ? `<br><span style="color:#f87171">❌ Hubo errores:<br>${errores.map(x => esc(x)).join('<br>')}</span><br>` : ''}
             <br><small style="color:#94a3b8">${pie}</small>
