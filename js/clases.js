@@ -943,10 +943,12 @@ const ClasesModulo = {
         const esAdminG = Auth.esDireccion(rolG);
         // Baja manual: la dirección en cualquier trayecto; docente y preceptor en trayectos sin módulos
         const puedeBaja = esAdminG || (!tieneModulos && (rolG === 'docente' || rolG === 'preceptor'));
+        // Reincorporar: administración, regencia y preceptoría (en cualquier trayecto)
+        const puedeReinc = esAdminG || rolG === 'preceptor';
         let situacionHTML = '<span class="sit sit-ok">Cursando</span>';
-        if (cursada.baja && cursada.tipo === 'manual') {
-          situacionHTML = `<span class="sit sit-baja">Baja${cursada.fecha ? ' · ' + this.esc(String(cursada.fecha).split('-').reverse().join('/')) : ''}</span><span class="sabana-det">${this.esc(cursada.motivo)}</span>
-            ${puedeBaja ? `<button type="button" class="sit-btn" onclick="ClasesModulo.reincorporar('${dniSeguro}')">Reincorporar</button>` : ''}`;
+        if (cursada.baja && cursada.guardada) {
+          situacionHTML = `<span class="sit sit-baja">${cursada.tipo === 'automatica' ? 'Baja automática' : 'Baja'}${cursada.fecha ? ' · ' + this.esc(String(cursada.fecha).split('-').reverse().join('/')) : ''}</span><span class="sabana-det">${this.esc(cursada.motivo)}</span>
+            ${puedeReinc ? `<button type="button" class="sit-btn" onclick="ClasesModulo.reincorporar('${dniSeguro}')">Reincorporar</button>` : ''}`;
         } else if (cursada.baja) {
           situacionHTML = `<span class="sit sit-baja">Baja automática</span><span class="sabana-det">${this.esc(cursada.motivo)}</span>`;
         } else if (puedeBaja) {
@@ -1020,12 +1022,12 @@ const ClasesModulo = {
       })
     });
     if (!r.isConfirmed) return;
-    await this.actualizarInscripcion(dni, { estado: 'BAJA', motivo_baja: r.value.motivo, fecha_baja: r.value.fecha });
+    await this.actualizarInscripcion(dni, { estado: 'BAJA', motivo_baja: r.value.motivo, fecha_baja: r.value.fecha, baja_tipo: 'manual', reincorporado: false });
   },
 
   async reincorporar(dni) {
     if (!confirm('¿Reincorporar al estudiante en este trayecto?')) return;
-    await this.actualizarInscripcion(dni, { estado: 'ACTIVA', motivo_baja: null, fecha_baja: null });
+    await this.actualizarInscripcion(dni, { estado: 'ACTIVA', motivo_baja: null, fecha_baja: null, baja_tipo: null, reincorporado: true });
   },
 
   async actualizarInscripcion(dni, cambios) {
@@ -1038,7 +1040,7 @@ const ClasesModulo = {
       if (typeof Swal !== 'undefined') Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: cambios.estado === 'BAJA' ? 'Baja registrada' : 'Estudiante reincorporado', showConfirmButton: false, timer: 2000 });
       await this.cargarSabanaEstudiantes();
     } catch (err) {
-      alert('No se pudo actualizar la inscripción: ' + (err.message || '') + (/estado|motivo_baja|fecha_baja/.test(err.message || '') ? '\n\nFalta ejecutar sql/09_preceptores_ficha_observaciones.sql en Supabase.' : ''));
+      alert('No se pudo actualizar la inscripción: ' + (err.message || '') + (/estado|motivo_baja|fecha_baja/.test(err.message || '') ? '\n\nFalta ejecutar sql/09_preceptores_ficha_observaciones.sql en Supabase.' : /baja_tipo|reincorporado/.test(err.message || '') ? '\n\nFalta ejecutar sql/19_bajas_guardadas.sql en Supabase.' : ''));
     }
   },
 

@@ -191,8 +191,10 @@ const ReglasFP = {
   estadoCursada(ev, modulos, inscripcion, opciones = {}) {
     const ins = inscripcion || {};
     if (String(ins.estado || '').toUpperCase() === 'BAJA') {
-      return { baja: true, tipo: 'manual', motivo: ins.motivo_baja || 'Baja', fecha: ins.fecha_baja || null };
+      // Baja guardada (manual, o automática ya registrada)
+      return { baja: true, guardada: true, tipo: ins.baja_tipo === 'automatica' ? 'automatica' : 'manual', motivo: ins.motivo_baja || 'Baja', fecha: ins.fecha_baja || null };
     }
+    if (ins.reincorporado) return { baja: false };     // se reincorporó: no se vuelve a dar de baja solo
     if (opciones.excepcion) return { baja: false };
     const hoy = opciones.hoy || this.hoyISO();
     const lista = modulos || [];
