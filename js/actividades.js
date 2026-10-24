@@ -1591,7 +1591,7 @@ Object.assign(Actividades, {
     const modActual = (window.ClasesModulo && ClasesModulo.nombreModuloElegido) ? ClasesModulo.nombreModuloElegido() : '';
     const modulos = [...new Set(lista.map(x => x.modulo_nombre).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
     const yo = this.miDni();
-    const esAdmin = ['admin', 'administrador'].includes(String(this.perfil().rol || '').toLowerCase());
+    const esAdmin = ['admin', 'administrador', 'regente'].includes(String(this.perfil().rol || '').toLowerCase());
     const cuerpo = `<div class="act-fila"><label>Módulo <select class="act-in" id="banco-mod"><option value="">Todos</option>${modulos.map(m => `<option ${m === modActual ? 'selected' : ''}>${this.esc(m)}</option>`).join('')}</select></label>
         <label class="act-crece">Buscar <input class="act-in" id="banco-buscar" placeholder="Palabra del enunciado"></label></div>
       <div id="banco-lista" class="act-banco"></div>`;

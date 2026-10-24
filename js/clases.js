@@ -102,8 +102,8 @@ const ClasesModulo = {
     const rolNorm = String(perfil.rol || '').toLowerCase().trim();
     const esEstudiante = rolNorm === 'estudiante';
     const esPreceptor = rolNorm === 'preceptor';
-    const esAdminG = rolNorm === 'admin' || rolNorm === 'administrador';
-    const puedeImportar = esAdminG || esPreceptor;     // la función del servidor acepta admin y preceptor
+    const esAdminG = Auth.esDireccion(rolNorm);
+    const puedeImportar = esAdminG || esPreceptor;     // la función del servidor acepta administración, regencia y preceptoría
     this.rolGestor = rolNorm;
 
     let modal = document.getElementById('modal-gestor-clases');
@@ -120,7 +120,7 @@ const ClasesModulo = {
         <div style="padding:1.2rem 1.5rem; background:#0f172a; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
           <h3 style="margin:0; font-size:1.15rem;">📚 Trayecto: <span style="color:#38bdf8;">${this.esc(nombreTrayecto)}</span></h3>
           <div style="display:flex; gap:0.5rem; align-items:center;">
-            ${esAdminG ? `
+            ${Auth.esAdmin(rolNorm) ? `
               <button type="button" onclick="ReportesModulo.descargarBackupCompletoJSON()" style="padding:0.35rem 0.7rem; background:rgba(34,197,94,0.2); border:1px solid rgba(34,197,94,0.4); color:#4ade80; border-radius:6px; font-size:0.78rem; font-weight:600; cursor:pointer;">
                 💾 Backup DB
               </button>
@@ -940,7 +940,7 @@ const ClasesModulo = {
         const cursada = ReglasFP.estadoCursada(ev, modulos || [], insRow, { excepcion: !!exEspecial });
         const dniSeguro = String(userKey).replace(/[^0-9A-Za-z_-]/g, '');
         const rolG = this.rolGestor || '';
-        const esAdminG = rolG === 'admin' || rolG === 'administrador';
+        const esAdminG = Auth.esDireccion(rolG);
         // Baja manual: la dirección en cualquier trayecto; docente y preceptor en trayectos sin módulos
         const puedeBaja = esAdminG || (!tieneModulos && (rolG === 'docente' || rolG === 'preceptor'));
         let situacionHTML = '<span class="sit sit-ok">Cursando</span>';

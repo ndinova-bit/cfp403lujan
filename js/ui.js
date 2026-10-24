@@ -90,7 +90,9 @@ const UI = {
     if (displayRole) displayRole.innerText = (perfil.rol || '').toUpperCase();
 
     const rolNorm = (perfil.rol || '').toLowerCase().trim();
-    const isAdmin = rolNorm === 'admin' || rolNorm === 'administrador';
+    const isAdmin = Auth.esDireccion(rolNorm);          // administración o regencia
+    const esAdminTotal = Auth.esAdmin(rolNorm);          // solo administración: usuarios, roles y respaldos
+    const esSecretaria = Auth.esSecretaria(rolNorm);
 
     if (app) app.setAttribute('data-rol', rolNorm);
 
@@ -111,6 +113,19 @@ const UI = {
       el.style.setProperty('display', isAdmin ? (el.tagName === 'BUTTON' ? 'inline-flex' : 'block') : 'none', 'important');
     });
 
+    // Regencia no gestiona usuarios/roles/claves ni respaldos y cierre de ciclo
+    ['btn-usuarios', 'btn-backups'].forEach(id => {
+      const b = document.getElementById(id);
+      if (b && !esAdminTotal) b.style.setProperty('display', 'none', 'important');
+    });
+    // Panel de cifras: Secretaría, dirección, regencia y preceptoría
+    const btnSec = document.getElementById('btn-secretaria');
+    if (btnSec) btnSec.style.setProperty('display', (esSecretaria || isAdmin || rolNorm === 'preceptor') ? 'flex' : 'none', 'important');
+    if (esSecretaria) {
+      const bt = document.getElementById('btn-trayectos');
+      if (bt) bt.style.setProperty('display', 'none', 'important');
+    }
+
     const btnProg = document.getElementById('btn-progreso');
     if (btnProg) btnProg.style.setProperty('display', rolNorm === 'estudiante' ? 'flex' : 'none', 'important');
     const btnSeg = document.getElementById('btn-seguimiento');
@@ -118,7 +133,9 @@ const UI = {
     if (btnSeg) btnSeg.style.setProperty('display', puedeSeguir ? 'flex' : 'none', 'important');
     if (puedeSeguir && window.SeguimientoModulo) setTimeout(() => SeguimientoModulo.contarPendientes(), 800);
 
-    if (!isAdmin) {
+    if (esSecretaria) {
+      this.showTab('secretaria');
+    } else if (!isAdmin) {
       this.showTab('trayectos');
     } else {
       this.showTab('dashboard');
@@ -133,7 +150,12 @@ const UI = {
       this.showLoginScreen();
       return;
     }
-    const isAdmin = Auth.esAdmin(perfil.rol);
+    const isAdmin = Auth.esDireccion(perfil.rol);
+    const rolPerfil = String(perfil.rol || '').toLowerCase().trim();
+    if (Auth.esSecretaria(rolPerfil) && tabId !== 'secretaria') tabId = 'secretaria';
+    if (tabId === 'secretaria' && !(Auth.esSecretaria(rolPerfil) || isAdmin || rolPerfil === 'preceptor')) tabId = 'trayectos';
+    // Regencia: no entra a usuarios/roles ni a respaldos
+    if ((tabId === 'usuarios' || tabId === 'backups') && !Auth.esAdmin(perfil.rol)) tabId = isAdmin ? 'dashboard' : 'trayectos';
 
     if (!isAdmin && (tabId === 'dashboard' || tabId === 'nuevo-trayecto' || tabId === 'certificados' || tabId === 'usuarios' || tabId === 'actas' || tabId === 'backups' || tabId === 'auditoria' || tabId === 'novedades')) {
       tabId = 'trayectos';
@@ -166,6 +188,7 @@ const UI = {
         'dashboard': 'Dashboard',
         'progreso': 'Mi progreso',
         'seguimiento': 'Seguimiento',
+        'secretaria': 'Panel de cifras por trayecto',
         'novedades': 'Novedades y calendario',
         'trayectos': (isAdmin || rolActual === 'preceptor') ? 'Trayectos Formativos' : 'Mis Trayectos Formativos',
         'actas': 'Fichas de Curso / Actas de Examen',
@@ -204,6 +227,10 @@ const UI = {
 
     if (tabId === 'progreso' && window.ProgresoModulo) {
       window.ProgresoModulo.cargar();
+    }
+
+    if (tabId === 'secretaria' && window.SecretariaModulo) {
+      window.SecretariaModulo.cargar();
     }
 
     if (tabId === 'auditoria' && window.AuditoriaModulo) {
@@ -297,7 +324,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const rolNorm = perfilValido.rol;
   UI.mostrarDashboard(perfilValido);
 
-  if (rolNorm === 'admin' || rolNorm === 'administrador') {
+  if (Auth.esDireccion(rolNorm)) {
     setTimeout(() => DashboardAdmin.cargarEstadisticas(), 500);
   }
 });

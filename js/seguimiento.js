@@ -252,7 +252,7 @@ const SeguimientoModulo = {
       const perfil = await Auth.obtenerPerfilSesion();
       if (!perfil) return;
       const rol = String(perfil.rol || '').toLowerCase();
-      if (rol !== 'docente' && !Auth.esAdmin(perfil.rol)) return;
+      if (rol !== 'docente' && !Auth.esDireccion(perfil.rol)) return;
       let q = supabase.from('trayectos').select('id, ciclo_lectivo');
       if (rol === 'docente') {
         const sup = window.Trayectos ? Object.keys(await Trayectos.misSuplencias(perfil.dni)).map(Number) : [];

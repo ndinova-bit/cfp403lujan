@@ -154,6 +154,8 @@ const UsuariosAdmin = {
               <option value="estudiante" ${u.rol === 'estudiante' ? 'selected' : ''}>Estudiante</option>
               <option value="docente" ${u.rol === 'docente' ? 'selected' : ''}>Docente</option>
               <option value="preceptor" ${u.rol === 'preceptor' ? 'selected' : ''}>Preceptor/a</option>
+              <option value="regente" ${u.rol === 'regente' ? 'selected' : ''}>Regente</option>
+              <option value="secretaria" ${u.rol === 'secretaria' ? 'selected' : ''}>Secretaría</option>
               <option value="admin" ${u.rol === 'admin' ? 'selected' : ''}>Administrador</option>
             </select>
           </td>
