@@ -1194,6 +1194,9 @@ textarea.act-in { resize: vertical; }
   #lista-trayectos-cards .pub-card { padding: 1rem !important; }
   #lista-trayectos-cards .pub-card h3 { font-size: 1.05rem !important; }
   .pub-desc { -webkit-line-clamp: 2; }
+}
+
+/* ==========================================================================
    19. MENÚ EN CELULAR (botón ☰ + panel que se desliza)
    ========================================================================== */
 .menu-movil-btn { display: none; background: var(--cfp-navy); color: #fff; border: none; border-radius: 10px; width: 42px; height: 42px; font-size: 1.3rem; line-height: 1; cursor: pointer; flex-shrink: 0; }
