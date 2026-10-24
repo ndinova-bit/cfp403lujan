@@ -70,7 +70,7 @@ const AppCFP = {
     const texto = this.esIOS()
       ? '📲 Instalá la plataforma: tocá <b>Compartir</b> <span aria-hidden="true">⬆️</span> y después <b>Agregar a inicio</b>.'
       : '📲 Instalá la plataforma en este dispositivo para abrirla como una app.';
-    this.barra('app-invitacion', texto, this.esIOS() ? null : 'Instalar', () => this.instalar(), () => this.escribir(this.CLAVE_OCULTO, '1'));
+    this.barra('app-invitacion', texto, this.esIOS() ? 'Cómo' : 'Instalar', () => this.instalar(), () => this.escribir(this.CLAVE_OCULTO, '1'));
   },
 
   async instalar() {
@@ -87,8 +87,15 @@ const AppCFP = {
       }
       return;
     }
-    this.eventoInstalar.prompt();
-    try { await this.eventoInstalar.userChoice; } catch (e) { /* nada */ }
+    try {
+      await this.eventoInstalar.prompt();
+      await this.eventoInstalar.userChoice;
+    } catch (e) {
+      // El navegador ya no deja usar el aviso automático: se explica el camino manual
+      this.eventoInstalar = null;
+      if (typeof Swal !== 'undefined') Swal.fire({ title: 'Instalar la plataforma', html: 'Abrí el menú del navegador (⋮) y elegí <b>Instalar app</b> o <b>Agregar a la pantalla principal</b>.', icon: 'info' });
+      return;
+    }
     this.eventoInstalar = null;
     this.quitar('app-invitacion');
   },
@@ -121,7 +128,7 @@ const AppCFP = {
     d.innerHTML = `<span class="app-barra-txt">${html}</span>${accion ? `<button type="button" class="app-barra-btn">${accion}</button>` : ''}${alCerrar !== undefined ? '<button type="button" class="app-barra-x" aria-label="Cerrar">×</button>' : ''}`;
     document.body.appendChild(d);
     const b = d.querySelector('.app-barra-btn');
-    if (b && alAccionar) b.onclick = alAccionar;
+    if (b && alAccionar) { b.onclick = alAccionar; const t = d.querySelector('.app-barra-txt'); if (t) { t.style.cursor = 'pointer'; t.onclick = alAccionar; } }
     const x = d.querySelector('.app-barra-x');
     if (x) x.onclick = () => { if (alCerrar) alCerrar(); this.quitar(id); };
     this.apilar();
