@@ -61,26 +61,6 @@ var ImportadorModulo = {
       return;
     }
 
-    // Fecha de inscripción: si el trayecto ya empezó, se pregunta desde cuándo cuentan como inscriptos
-    // (la planilla de matrícula cuenta como inscriptos a quienes se inscribieron hasta el primer día de clases).
-    this.fechaInscripcion = null;
-    try {
-      const { data: tr } = await supabase.from('trayectos').select('fecha_inicio').eq('id', Number(this.trayectoIdActual)).maybeSingle();
-      const ini = tr && tr.fecha_inicio ? String(tr.fecha_inicio).slice(0, 10) : '';
-      const hoyISO = new Date().toISOString().slice(0, 10);
-      if (ini && ini < hoyISO && typeof Swal !== 'undefined') {
-        const r = await Swal.fire({
-          icon: 'question', title: '¿Desde cuándo están inscriptos?',
-          html: `<p style="font-size:.9rem">El trayecto empezó el <b>${ini.split('-').reverse().join('/')}</b>.</p>
-                 <p style="font-size:.85rem;color:#555">Si estos estudiantes ya cursaban desde el comienzo, elegí la primera opción: así figuran como inscriptos al primer día en la planilla de matrícula.</p>`,
-          showDenyButton: true, showCancelButton: true,
-          confirmButtonText: 'Desde el inicio del curso', denyButtonText: 'Desde hoy', cancelButtonText: 'Cancelar'
-        });
-        if (r.isDismissed) return;
-        if (r.isConfirmed) this.fechaInscripcion = ini;
-      }
-    } catch (e) { /* si no se puede consultar, se usa la fecha de hoy */ }
-
     if (typeof Swal !== 'undefined') {
       Swal.fire({
         title: '⏳ Carga Masiva en Proceso',
@@ -328,16 +308,6 @@ var ImportadorModulo = {
             const { error } = await supabase.from('datos_estudiante').upsert(datosPersonales.slice(i, i + 200), { onConflict: 'dni' });
             if (error) { errores.push('Datos personales: ' + error.message); break; }
             datosGuardados += Math.min(200, datosPersonales.length - i);
-          }
-        }
-
-        // ---- 3c. Fecha de inscripción elegida (solo si es anterior a la que guardó el servidor) ----
-        if (this.fechaInscripcion) {
-          const dnis = estudiantes.map(x => x.dni);
-          for (let i = 0; i < dnis.length; i += 100) {
-            const { error } = await supabase.from('inscripciones').update({ fecha_inscripcion: this.fechaInscripcion })
-              .eq('trayecto_id', trayectoId).in('estudiante_user', dnis.slice(i, i + 100)).gt('fecha_inscripcion', this.fechaInscripcion);
-            if (error) { errores.push('Fecha de inscripción: ' + error.message); break; }
           }
         }
 
