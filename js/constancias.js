@@ -56,19 +56,31 @@ const ConstanciasModulo = {
     const f = this.filas[i];
     if (!f) return;
     if (typeof PDFLib === 'undefined') { alert('No se pudo cargar el generador de PDF. Recargá la página.'); return; }
-    let fechaExamen = null;
+    let fechaExamen = null, instancia = null, asignatura = null;
     if (tipo === 'examen') {
+      // Módulos del trayecto (si se pueden leer) para sugerir la asignatura
+      let mods = [];
+      try { const r = await supabase.from('modulos').select('nombre').eq('trayecto_id', f.trayecto_id).order('id'); mods = (r.data || []).map(m => m.nombre); } catch (e) { /* opcional */ }
       const r = await Swal.fire({
-        title: 'Fecha del examen', input: 'date', inputLabel: `${f.apellido}, ${f.nombre}`,
+        title: 'Datos del examen',
+        html: `<div style="text-align:left;display:grid;gap:.5rem">
+          <small>${this.esc(f.apellido)}, ${this.esc(f.nombre)} · ${this.esc(f.trayecto)}</small>
+          <label>Fecha del examen<input id="ce-fecha" type="date" class="swal2-input" style="margin:.2rem 0 0;width:100%"></label>
+          <label>Instancia<select id="ce-inst" class="swal2-select" style="margin:.2rem 0 0;width:100%"><option value="final">Final</option><option value="parcial">Parcial</option></select></label>
+          <label>Asignatura / módulo<input id="ce-asig" class="swal2-input" list="ce-mods" style="margin:.2rem 0 0;width:100%" placeholder="Opcional" maxlength="160"><datalist id="ce-mods">${mods.map(m => `<option value="${this.esc(m)}">`).join('')}</datalist></label></div>`,
         showCancelButton: true, confirmButtonText: 'Generar PDF', cancelButtonText: 'Volver',
-        inputValidator: v => (v ? null : 'Elegí la fecha del examen')
+        preConfirm: () => {
+          const fe = document.getElementById('ce-fecha').value;
+          if (!fe) { Swal.showValidationMessage('Elegí la fecha del examen'); return false; }
+          return { fe, inst: document.getElementById('ce-inst').value, asig: document.getElementById('ce-asig').value.trim() };
+        }
       });
       if (!r.isConfirmed) { this.abrir(); setTimeout(() => { const q = document.getElementById('cons-q'); if (q) { q.value = f.dni; this.buscar(); } }, 50); return; }
-      fechaExamen = r.value;
+      fechaExamen = r.value.fe; instancia = r.value.inst; asignatura = r.value.asig || null;
     }
     try {
-      const bytes = await this.armarPDF(tipo, f, fechaExamen);
-      const { error } = await supabase.rpc('registrar_constancia', { p_tipo: tipo, p_dni: f.dni, p_trayecto: f.trayecto_id, p_fecha: fechaExamen });
+      const bytes = await this.armarPDF(tipo, f, { fechaExamen, instancia, asignatura });
+      const { error } = await supabase.rpc('registrar_constancia', { p_tipo: tipo, p_dni: f.dni, p_trayecto: f.trayecto_id, p_fecha: fechaExamen, p_instancia: instancia, p_asignatura: asignatura });
       if (error) console.warn('No se pudo registrar la constancia:', error.message);
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
@@ -100,50 +112,106 @@ const ConstanciasModulo = {
     return out;
   },
 
-  async armarPDF(tipo, f, fechaExamen) {
+  CFG: {
+    direccion: 'DIRECCIÓN PROVINCIAL DE ETP Y FP',
+    nombre: 'CENTRO DE FORMACIÓN PROFESIONAL N.º 403',
+    apodo: '«Oscar Smith»',
+    domicilio: 'Lavalle 740 · Luján · Buenos Aires',
+    contacto: 'Tel. 02323 - 438133  ·  WhatsApp 2323 643809',
+    ciudad: 'Luján'
+  },
+  DIAS: [['L', 'Lunes'], ['M', 'Martes'], ['X', 'Miércoles'], ['J', 'Jueves'], ['V', 'Viernes'], ['S', 'Sábado']],
+
+  async armarPDF(tipo, f, op = {}) {
     const doc = await PDFLib.PDFDocument.create();
     const pag = doc.addPage([595.28, 841.89]);               // A4
-    const reg = await doc.embedFont(PDFLib.StandardFonts.TimesRoman);
-    const neg = await doc.embedFont(PDFLib.StandardFonts.TimesRomanBold);
-    const hel = await doc.embedFont(PDFLib.StandardFonts.Helvetica);
-    const negro = PDFLib.rgb(0, 0, 0);
-    const W = 595.28, M = 70;
+    const reg = await doc.embedFont(PDFLib.StandardFonts.Helvetica);
+    const neg = await doc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+    const cur = await doc.embedFont(PDFLib.StandardFonts.HelveticaOblique);
+    const rgb = PDFLib.rgb;
+    const AZUL = rgb(7 / 255, 27 / 255, 56 / 255), ORO = rgb(0.96, 0.72, 0.10), GRIS = rgb(0.38, 0.42, 0.5), FONDO = rgb(0.95, 0.96, 0.98), NEGRO = rgb(0.1, 0.12, 0.16);
+    const W = 595.28, M = 56, ANCHO = W - 2 * M;
+    const txt = (t, x, y, size = 11, font = reg, color = NEGRO) => pag.drawText(t, { x, y, size, font, color });
+    const cen = (t, y, size, font, color = NEGRO) => txt(t, (W - font.widthOfTextAtSize(t, size)) / 2, y, size, font, color);
+    const der = (t, y, size, font, color = NEGRO) => txt(t, W - M - font.widthOfTextAtSize(t, size), y, size, font, color);
 
-    // Membrete
+    // Franja superior y pie
+    pag.drawRectangle({ x: 0, y: 826, width: W, height: 16, color: AZUL });
+    pag.drawRectangle({ x: 0, y: 822, width: W, height: 4, color: ORO });
+    pag.drawRectangle({ x: 0, y: 0, width: W, height: 44, color: AZUL });
+    pag.drawRectangle({ x: 0, y: 44, width: W, height: 3, color: ORO });
+    cen(this.CFG.domicilio, 26, 9.5, reg, rgb(1, 1, 1));
+    cen(this.CFG.contacto, 13, 9.5, reg, rgb(1, 1, 1));
+
+    // Encabezado
     const [logoCfp, logoDg] = await Promise.all([this.imagen(doc, 'img/logo-cfp-ficha.png'), this.imagen(doc, 'img/logo-dgcye.png')]);
-    if (logoCfp) { const d = logoCfp.scaleToFit(70, 70); pag.drawImage(logoCfp, { x: M, y: 740, width: d.width, height: d.height }); }
-    if (logoDg) { const d = logoDg.scaleToFit(85, 50); pag.drawImage(logoDg, { x: W - M - d.width, y: 745, width: d.width, height: d.height }); }
-    const centrado = (t, y, fuente, size) => pag.drawText(t, { x: (W - fuente.widthOfTextAtSize(t, size)) / 2, y, size, font: fuente, color: negro });
-    centrado('Dirección General de Cultura y Educación', 775, hel, 10);
-    centrado('Centro de Formación Profesional N.º 403 «Oscar Smith»', 760, neg, 11);
-    centrado('Luján · Provincia de Buenos Aires', 746, hel, 10);
-    pag.drawLine({ start: { x: M, y: 722 }, end: { x: W - M, y: 722 }, thickness: 0.8, color: negro });
+    if (logoCfp) { const d = logoCfp.scaleToFit(84, 84); pag.drawImage(logoCfp, { x: M, y: 730, width: d.width, height: d.height }); }
+    txt(this.CFG.direccion, 156, 790, 8.5, neg, GRIS);
+    txt(this.CFG.nombre, 156, 770, 14, neg, AZUL);
+    txt(this.CFG.apodo, 156, 750, 14, neg, AZUL);
+    if (logoDg) { const d = logoDg.scaleToFit(80, 40); pag.drawImage(logoDg, { x: W - M - d.width, y: 782, width: d.width, height: d.height }); }
+    pag.drawLine({ start: { x: M, y: 718 }, end: { x: W - M, y: 718 }, thickness: 0.6, color: rgb(0.8, 0.83, 0.88) });
 
     // Título
-    const titulo = tipo === 'regular' ? 'CONSTANCIA DE ALUMNO REGULAR' : 'CONSTANCIA DE EXAMEN';
-    centrado(titulo, 660, neg, 16);
+    const titulo = tipo === 'regular' ? 'CONSTANCIA DE ALUMNO REGULAR' : 'CONSTANCIA DE ASISTENCIA A EXÁMENES';
+    cen(titulo, 676, 17, neg, AZUL);
+    pag.drawRectangle({ x: (W - 60) / 2, y: 664, width: 60, height: 3, color: ORO });
+    der(`${this.CFG.ciudad}, ${this.fechaLarga(new Date())}`, 638, 10.5, cur, GRIS);
 
     // Cuerpo
-    const nombre = `${f.nombre} ${f.apellido}`.trim().toUpperCase();
-    const dni = this.dniPuntos(f.dni);
-    const res = f.resolucion ? ` (${f.resolucion})` : '';
-    const cuerpo = tipo === 'regular'
-      ? `Se deja constancia de que ${nombre}, D.N.I. N.º ${dni}, es alumno/a regular del trayecto formativo «${f.trayecto}»${res}, correspondiente al ciclo lectivo ${f.ciclo || new Date().getFullYear()}, que se dicta en este Centro de Formación Profesional.`
-      : `Se deja constancia de que ${nombre}, D.N.I. N.º ${dni}, alumno/a del trayecto formativo «${f.trayecto}»${res}, ciclo lectivo ${f.ciclo || new Date().getFullYear()}, debe rendir examen en este Centro de Formación Profesional el día ${this.fechaDesdeISO(fechaExamen)}.`;
-    const cierre = 'Se extiende la presente a pedido del/de la interesado/a, para ser presentada ante quien corresponda.';
-    let y = 600;
-    [cuerpo, cierre].forEach(p => {
-      this.renglones(p, reg, 13, W - 2 * M).forEach(l => { pag.drawText(l, { x: M, y, size: 13, font: reg, color: negro }); y -= 22; });
-      y -= 12;
-    });
+    let y = 606;
+    const parrafo = (t, size = 11.5) => { this.renglones(t, reg, size, ANCHO).forEach(l => { txt(l, M, y, size, reg); y -= 18; }); y -= 6; };
+    parrafo(`Por la presente, el Centro de Formación Profesional N.º 403 «Oscar Smith» de ${this.CFG.ciudad} deja constancia de que:`);
 
-    // Fecha de emisión y firma
-    const hoy = new Date();
-    pag.drawText(`Luján, ${this.fechaLarga(hoy)}.`, { x: M, y: y - 10, size: 13, font: reg, color: negro });
-    const yf = 250;
-    pag.drawLine({ start: { x: W - M - 190, y: yf }, end: { x: W - M, y: yf }, thickness: 0.7, color: negro });
-    const firma = 'Firma y sello';
-    pag.drawText(firma, { x: W - M - 95 - reg.widthOfTextAtSize(firma, 11) / 2, y: yf - 14, size: 11, font: reg, color: negro });
+    const nombre = `${f.apellido}, ${f.nombre}`.trim();
+    const filas = [['Estudiante', nombre], ['D.N.I.', this.dniPuntos(f.dni)], ['Trayecto formativo', f.trayecto], ['Ciclo lectivo', String(f.ciclo || new Date().getFullYear())]];
+    const altoCard = filas.length * 22 + 14;
+    pag.drawRectangle({ x: M, y: y - altoCard + 8, width: ANCHO, height: altoCard, color: FONDO });
+    pag.drawRectangle({ x: M, y: y - altoCard + 8, width: 4, height: altoCard, color: ORO });
+    let yy = y - 14;
+    filas.forEach(([k, v]) => {
+      txt(k, M + 18, yy, 9.5, neg, GRIS);
+      const lineas = this.renglones(String(v), neg, 11.5, ANCHO - 150);
+      txt(lineas[0] || '', M + 140, yy, 11.5, neg, NEGRO);
+      yy -= 22;
+    });
+    y = y - altoCard - 10;
+
+    if (tipo === 'regular') {
+      parrafo('es alumno/a regular de este establecimiento y cursa en los siguientes días y horarios:');
+      const hd = f.horario_dias || {};
+      const dias = this.DIAS.filter(([k]) => hd[k]);
+      if (dias.length) {
+        dias.forEach(([k, n]) => {
+          txt(n, M + 18, y, 11, neg, AZUL);
+          txt(String(hd[k]).toLowerCase().replace(' a ', ' a ') + ' hs', M + 110, y, 11, reg);
+          y -= 17;
+        });
+        y -= 8;
+      }
+    } else {
+      const inst = op.instancia === 'parcial' ? 'parcial' : 'final';
+      const asig = op.asignatura ? `, correspondiente a la asignatura «${op.asignatura}»` : '';
+      parrafo(`asistió y rindió examen ${inst} el día ${this.fechaDesdeISO(op.fechaExamen)}${asig}.`);
+    }
+    parrafo('A pedido del/de la interesado/a y para ser presentada ante quien corresponda, se extiende la presente constancia en la ciudad de ' + this.CFG.ciudad + ', Provincia de Buenos Aires.');
+
+    // Sello y firmas
+    const yf = 170;
+    const firma = (cx, etiqueta, ancho = 150) => {
+      pag.drawLine({ start: { x: cx - ancho / 2, y: yf }, end: { x: cx + ancho / 2, y: yf }, thickness: 0.7, color: NEGRO });
+      txt(etiqueta, cx - reg.widthOfTextAtSize(etiqueta, 9) / 2, yf - 13, 9, reg, GRIS);
+    };
+    if (tipo === 'regular') {
+      pag.drawRectangle({ x: M, y: yf - 6, width: 120, height: 78, borderColor: rgb(0.75, 0.78, 0.84), borderWidth: 0.8, borderDashArray: [3, 3] });
+      txt('Sello del establecimiento', M + 10, yf - 22, 9, reg, GRIS);
+      firma(W - M - 85, 'Firma y sello · Director/a o Secretario/a', 170);
+    } else {
+      firma(M + 70, 'Firma y aclaración del Profesor/a', 140);
+      pag.drawRectangle({ x: W / 2 - 50, y: yf - 6, width: 100, height: 78, borderColor: rgb(0.75, 0.78, 0.84), borderWidth: 0.8, borderDashArray: [3, 3] });
+      txt('Sello', W / 2 - reg.widthOfTextAtSize('Sello', 9) / 2, yf - 22, 9, reg, GRIS);
+      firma(W - M - 70, 'Firma y sello · Director/a o Secretario/a', 140);
+    }
     return await doc.save();
   }
 };
