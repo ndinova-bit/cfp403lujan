@@ -201,9 +201,9 @@ const ClasesModulo = {
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem; flex-wrap:wrap; gap:0.5rem;">
             <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
               ${puedeImportar ? `<label for="input-importar-csv" style="padding:0.4rem 0.8rem; background:#0284c7; color:#fff; border-radius:6px; font-weight:600; font-size:0.8rem; cursor:pointer; display:inline-block;">
-                📥 Importar Nómina de Alumnos (CSV)
+                📥 Importar Nómina de Alumnos (Excel o CSV)
               </label>
-              <input type="file" id="input-importar-csv" accept=".csv" style="display:none;" onchange="ClasesModulo.importarEstudiantesCSV(this.files[0])">
+              <input type="file" id="input-importar-csv" accept=".csv,.xlsx" style="display:none;" onchange="ClasesModulo.importarEstudiantesCSV(this.files[0])">
               <button type="button" class="btn btn-secondary" style="padding:0.4rem 0.8rem; font-size:0.8rem;" onclick="FichaCurso.descargar(ClasesModulo.trayectoActualId)">📄 Ficha de Curso (Excel)</button>` : ''}
             </div>
             <button type="button" onclick="ReportesModulo.exportarExcelTabla('tabla-sabana-notas', 'Sabana_Notas.csv')" style="padding:0.4rem 0.8rem; background:#10b981; color:#fff; border:none; border-radius:6px; font-weight:600; font-size:0.8rem; cursor:pointer;">

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   CARGA MASIVA DE ESTUDIANTES (CSV) A UN TRAYECTO
+   CARGA MASIVA DE ESTUDIANTES (CSV o Excel) A UN TRAYECTO
    Archivo: js/importador.js
 
    Qué hace el importador con cada fila del CSV, usando la función segura
@@ -87,14 +87,44 @@ var ImportadorModulo = {
         // Excel suele guardar los CSV en Windows-1252 (ANSI): si no es UTF-8 válido, se decodifica así
         // para que las tildes y las ñ no se rompan.
         const bytes = e.target.result;
-        let texto;
-        try {
-          texto = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-        } catch (_) {
-          texto = new TextDecoder('windows-1252').decode(bytes);
+        let lineas;
+        let noConfirmados = 0;
+        if (/\.xlsx$/i.test(file.name)) {
+          // Excel (por ejemplo, el listado de inscriptos del IPFL): se convierte a líneas con ";"
+          if (typeof ExcelJS === 'undefined') throw new Error('No se pudo cargar el lector de Excel. Recargá la página.');
+          const wb = new ExcelJS.Workbook();
+          await wb.xlsx.load(bytes);
+          const ws = wb.worksheets[0];
+          const celda = (v) => {
+            if (v && typeof v === 'object') v = v.text !== undefined ? v.text : (v.result !== undefined ? v.result : (v.richText ? v.richText.map(r => r.text).join('') : ''));
+            return String(v ?? '').replace(/[;\r\n]/g, ' ').trim();
+          };
+          const filas = [];
+          ws.eachRow({ includeEmpty: false }, (row) => {
+            const vals = [];
+            for (let c = 1; c <= ws.columnCount; c++) vals.push(celda(row.getCell(c).value));
+            if (vals.some(x => x)) filas.push(vals);
+          });
+          // Si hay columna "Estado", solo entran las inscripciones confirmadas
+          const cab = (filas[0] || []).map(x => x.toLowerCase());
+          const iEst = cab.findIndex(x => x.includes('estado'));
+          const utiles = iEst === -1 ? filas : filas.filter((f, i) => {
+            if (i === 0) return true;
+            const ok = !f[iEst] || /confirmad/i.test(f[iEst]);
+            if (!ok) noConfirmados++;
+            return ok;
+          });
+          lineas = utiles.map(f => f.join(';'));
+        } else {
+          let texto;
+          try {
+            texto = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+          } catch (_) {
+            texto = new TextDecoder('windows-1252').decode(bytes);
+          }
+          const contenido = texto.replace(/^\uFEFF/, '');
+          lineas = contenido.split(/\r\n|\n/).filter(l => l.trim().length > 0);
         }
-        const contenido = texto.replace(/^\uFEFF/, '');
-        const lineas = contenido.split(/\r\n|\n/).filter(l => l.trim().length > 0);
 
         if (lineas.length <= 1) {
           this.cerrarEspera(prevenirSalida);
@@ -305,6 +335,7 @@ var ImportadorModulo = {
           <div style="text-align:left; font-size: 14px; line-height: 1.6;">
             ${detalle}
             ${filasInvalidas ? `⚠️ <b>${filasInvalidas}</b> filas ignoradas por DNI inválido<br>` : ''}
+            ${noConfirmados ? `⏸️ <b>${noConfirmados}</b> inscripciones no confirmadas en el IPFL (no se cargaron)<br>` : ''}
             ${datosGuardados ? `🗂️ <b>${datosGuardados}</b> con datos personales para la Ficha de Curso<br>` : ''}
             ${errores.length ? `<br><span style="color:#f87171">❌ Hubo errores:<br>${errores.map(x => esc(x)).join('<br>')}</span><br>` : ''}
             <br><small style="color:#94a3b8">${pie}</small>
