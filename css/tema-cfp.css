@@ -1180,3 +1180,26 @@ textarea.act-in { resize: vertical; }
 /* Horario por día del trayecto (planilla de matrícula) */
 .trayecto-dias { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: .5rem; }
 .trayecto-dias label { display: flex; flex-direction: column; gap: .2rem; font-size: .75rem; font-weight: 700; color: var(--cfp-muted); }
+
+/* ==========================================================================
+   19. MENÚ EN CELULAR (botón ☰ + panel que se desliza)
+   ========================================================================== */
+.menu-movil-btn { display: none; background: var(--cfp-navy); color: #fff; border: none; border-radius: 10px; width: 42px; height: 42px; font-size: 1.3rem; line-height: 1; cursor: pointer; flex-shrink: 0; }
+#menu-overlay { display: none; position: fixed; inset: 0; background: rgba(7, 27, 56, .55); z-index: 99999; }
+@media (max-width: 900px) {
+  .menu-movil-btn { display: inline-flex; align-items: center; justify-content: center; }
+  .admin-header-title { display: flex; align-items: center; gap: .7rem; }
+  #app-screen.dashboard-layout { flex-direction: row !important; }
+  #app-screen .sidebar {
+    position: fixed !important; top: 0; left: 0; bottom: 0;
+    width: 285px !important; min-width: 0 !important; max-width: 86vw !important;
+    height: 100vh; height: 100dvh; min-height: 0 !important; overflow-y: auto;
+    z-index: 100000; transform: translateX(-100%); transition: transform .25s ease;
+    border-bottom: none !important;
+  }
+  #app-screen .sidebar.open { transform: none; box-shadow: 8px 0 30px rgba(0, 0, 0, .35); }
+  #menu-overlay.open { display: block; }
+  .sidebar-nav { flex-direction: column !important; flex-wrap: nowrap !important; }
+  .sidebar-nav .nav-item-btn { width: 100% !important; }
+  .main-wrapper { width: 100%; min-width: 0; }
+}
