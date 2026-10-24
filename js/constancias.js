@@ -66,17 +66,16 @@ const ConstanciasModulo = {
         html: `<div style="text-align:left;display:grid;gap:.5rem">
           <small>${this.esc(f.apellido)}, ${this.esc(f.nombre)} · ${this.esc(f.trayecto)}</small>
           <label>Fecha del examen<input id="ce-fecha" type="date" class="swal2-input" style="margin:.2rem 0 0;width:100%"></label>
-          <label>Instancia<select id="ce-inst" class="swal2-select" style="margin:.2rem 0 0;width:100%"><option value="final">Final</option><option value="parcial">Parcial</option></select></label>
           <label>Asignatura / módulo<input id="ce-asig" class="swal2-input" list="ce-mods" style="margin:.2rem 0 0;width:100%" placeholder="Opcional" maxlength="160"><datalist id="ce-mods">${mods.map(m => `<option value="${this.esc(m)}">`).join('')}</datalist></label></div>`,
         showCancelButton: true, confirmButtonText: 'Generar PDF', cancelButtonText: 'Volver',
         preConfirm: () => {
           const fe = document.getElementById('ce-fecha').value;
           if (!fe) { Swal.showValidationMessage('Elegí la fecha del examen'); return false; }
-          return { fe, inst: document.getElementById('ce-inst').value, asig: document.getElementById('ce-asig').value.trim() };
+          return { fe, asig: document.getElementById('ce-asig').value.trim() };
         }
       });
       if (!r.isConfirmed) { this.abrir(); setTimeout(() => { const q = document.getElementById('cons-q'); if (q) { q.value = f.dni; this.buscar(); } }, 50); return; }
-      fechaExamen = r.value.fe; instancia = r.value.inst; asignatura = r.value.asig || null;
+      fechaExamen = r.value.fe; asignatura = r.value.asig || null;
     }
     try {
       const bytes = await this.armarPDF(tipo, f, { fechaExamen, instancia, asignatura });
@@ -190,9 +189,8 @@ const ConstanciasModulo = {
         y -= 8;
       }
     } else {
-      const inst = op.instancia === 'parcial' ? 'parcial' : 'final';
       const asig = op.asignatura ? `, correspondiente a la asignatura «${op.asignatura}»` : '';
-      parrafo(`asistió y rindió examen ${inst} el día ${this.fechaDesdeISO(op.fechaExamen)}${asig}.`);
+      parrafo(`asistió y rindió examen el día ${this.fechaDesdeISO(op.fechaExamen)}${asig}.`);
     }
     parrafo('A pedido del/de la interesado/a y para ser presentada ante quien corresponda, se extiende la presente constancia en la ciudad de ' + this.CFG.ciudad + ', Provincia de Buenos Aires.');
 
