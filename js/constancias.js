@@ -112,10 +112,10 @@ const ConstanciasModulo = {
     // Membrete
     const [logoCfp, logoDg] = await Promise.all([this.imagen(doc, 'img/logo-cfp-ficha.png'), this.imagen(doc, 'img/logo-dgcye.png')]);
     if (logoCfp) { const d = logoCfp.scaleToFit(70, 70); pag.drawImage(logoCfp, { x: M, y: 740, width: d.width, height: d.height }); }
-    if (logoDg) { const d = logoDg.scaleToFit(110, 60); pag.drawImage(logoDg, { x: W - M - d.width, y: 745, width: d.width, height: d.height }); }
+    if (logoDg) { const d = logoDg.scaleToFit(85, 50); pag.drawImage(logoDg, { x: W - M - d.width, y: 745, width: d.width, height: d.height }); }
     const centrado = (t, y, fuente, size) => pag.drawText(t, { x: (W - fuente.widthOfTextAtSize(t, size)) / 2, y, size, font: fuente, color: negro });
     centrado('Dirección General de Cultura y Educación', 775, hel, 10);
-    centrado('Centro de Formación Profesional N.º 403 «Oscar Smith»', 760, neg, 12);
+    centrado('Centro de Formación Profesional N.º 403 «Oscar Smith»', 760, neg, 11);
     centrado('Luján · Provincia de Buenos Aires', 746, hel, 10);
     pag.drawLine({ start: { x: M, y: 722 }, end: { x: W - M, y: 722 }, thickness: 0.8, color: negro });
 
