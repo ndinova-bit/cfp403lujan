@@ -416,6 +416,7 @@ const Trayectos = {
     });
     const grupoLugar = document.getElementById('grupo-lugar-dictado');
     if (grupoLugar) grupoLugar.style.display = trayecto.sede === 'fuera' ? '' : 'none';
+    if (window.SedesModulo) { await SedesModulo.poblar(); SedesModulo.alCargar(trayecto); }
     this.cargarFilasModulos(modsEditar || []);
     this.cargarSuplentes(trayecto.id);
   },
@@ -467,6 +468,8 @@ const Trayectos = {
         const el = document.getElementById(idEl);
         if (el) camposFicha[col] = el.value.trim() || null;
       });
+      camposFicha.sede_id = /^\d+$/.test(String(camposFicha.sede_id || '')) ? Number(camposFicha.sede_id) : null;
+      if (!window.SedesModulo || !SedesModulo.disponible) delete camposFicha.sede_id;   // todavía sin sql/20
       if (camposFicha.sede !== 'fuera') camposFicha.lugar_dictado = null;
       Object.assign(datosTrayecto, camposFicha);
       // Datos de la planilla de matrícula (sql/15)
@@ -563,6 +566,9 @@ const Trayectos = {
     this.cargarSuplentes(null);
     const grupoLugar = document.getElementById('grupo-lugar-dictado');
     if (grupoLugar) grupoLugar.style.display = 'none';
+    const selSede = document.getElementById('trayecto-sede-id');
+    if (selSede) selSede.value = '';
+    if (window.SedesModulo) SedesModulo.poblar();
     if (typeof UI !== 'undefined') UI.showTab('nuevo-trayecto');
     this.poblarComboDocentes();
   },
@@ -644,7 +650,7 @@ const Trayectos = {
   },
 
   DIAS_PLANILLA: ['L', 'M', 'X', 'J', 'V', 'S'],
-  CAMPOS_FICHA: [['trayecto-sede', 'sede'], ['trayecto-lugar', 'lugar_dictado'], ['trayecto-localidad', 'localidad'], ['trayecto-horario', 'horario'], ['trayecto-fecha-inicio', 'fecha_inicio'], ['trayecto-fecha-cierre', 'fecha_cierre'], ['trayecto-tipo', 'tipo_certificacion'], ['trayecto-codigo', 'codigo_catalogo'], ['trayecto-acto', 'acto_administrativo']],
+  CAMPOS_FICHA: [['trayecto-sede-id', 'sede_id'], ['trayecto-sede', 'sede'], ['trayecto-lugar', 'lugar_dictado'], ['trayecto-localidad', 'localidad'], ['trayecto-horario', 'horario'], ['trayecto-fecha-inicio', 'fecha_inicio'], ['trayecto-fecha-cierre', 'fecha_cierre'], ['trayecto-tipo', 'tipo_certificacion'], ['trayecto-codigo', 'codigo_catalogo'], ['trayecto-acto', 'acto_administrativo']],
 
   /* ---------- Módulos del formulario ---------- */
   filaModuloHTML(m = {}) {
