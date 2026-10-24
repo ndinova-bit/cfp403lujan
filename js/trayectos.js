@@ -369,6 +369,13 @@ const Trayectos = {
     if (elComputa) elComputa.checked = trayecto.computa_asistencia !== false;
     const elHoras = document.getElementById('trayecto-horas');
     if (elHoras) elHoras.value = trayecto.horas || '';
+    // Datos de la planilla de matrícula (sql/15)
+    const dias = trayecto.horario_dias || {};
+    this.DIAS_PLANILLA.forEach(k => { const el = document.getElementById('trayecto-dia-' + k); if (el) el.value = dias[k] || ''; });
+    const elCat = document.getElementById('trayecto-horas-catedra');
+    if (elCat) elCat.value = trayecto.horas_catedra || '';
+    const elObsP = document.getElementById('trayecto-obs-planilla');
+    if (elObsP) elObsP.value = trayecto.obs_planilla || '';
     this.CAMPOS_FICHA.forEach(([idEl, col]) => {
       const el = document.getElementById(idEl);
       if (!el) return;
@@ -430,6 +437,18 @@ const Trayectos = {
       });
       if (camposFicha.sede !== 'fuera') camposFicha.lugar_dictado = null;
       Object.assign(datosTrayecto, camposFicha);
+      // Datos de la planilla de matrícula (sql/15)
+      const horarioDias = {};
+      this.DIAS_PLANILLA.forEach(k => { const v = (document.getElementById('trayecto-dia-' + k)?.value || '').trim().toUpperCase(); if (v) horarioDias[k] = v; });
+      const elCat = document.getElementById('trayecto-horas-catedra');
+      const elObsP = document.getElementById('trayecto-obs-planilla');
+      const camposPlanilla = {
+        horario_dias: Object.keys(horarioDias).length ? horarioDias : null,
+        horas_catedra: elCat && elCat.value ? Number(elCat.value) : null,
+        obs_planilla: elObsP && elObsP.value.trim() ? elObsP.value.trim() : null
+      };
+      Object.assign(datosTrayecto, camposPlanilla);
+      const quitarPlanilla = () => Object.keys(camposPlanilla).forEach(k => delete datosTrayecto[k]);
       const quitarFicha = () => Object.keys(camposFicha).forEach(k => delete datosTrayecto[k]);
 
       if (idRaw && idRaw !== '') {
@@ -439,8 +458,12 @@ const Trayectos = {
           .from('trayectos')
           .update(datosTrayecto)
           .eq('id', idQuery);
-        if (error && /sede|lugar_dictado|localidad|horario|fecha_inicio|fecha_cierre|tipo_certificacion|codigo_catalogo|acto_administrativo/.test(error.message || '')) {
+        if (error && /sede|lugar_dictado|localidad|horario(?!_dias)|fecha_inicio|fecha_cierre|tipo_certificacion|codigo_catalogo|acto_administrativo/.test(error.message || '')) {
           quitarFicha();   // todavía no se ejecutó sql/09
+          ({ error } = await supabase.from('trayectos').update(datosTrayecto).eq('id', idQuery));
+        }
+        if (error && /horario_dias|horas_catedra|obs_planilla/.test(error.message || '')) {
+          quitarPlanilla();   // todavía no se ejecutó sql/15
           ({ error } = await supabase.from('trayectos').update(datosTrayecto).eq('id', idQuery));
         }
         if (error && /computa_asistencia|horas/.test(error.message || '')) {
@@ -457,8 +480,12 @@ const Trayectos = {
         let { data: nuevo, error } = await supabase
           .from('trayectos')
           .insert([datosTrayecto]).select('id').single();
-        if (error && /sede|lugar_dictado|localidad|horario|fecha_inicio|fecha_cierre|tipo_certificacion|codigo_catalogo|acto_administrativo/.test(error.message || '')) {
+        if (error && /sede|lugar_dictado|localidad|horario(?!_dias)|fecha_inicio|fecha_cierre|tipo_certificacion|codigo_catalogo|acto_administrativo/.test(error.message || '')) {
           quitarFicha();
+          ({ data: nuevo, error } = await supabase.from('trayectos').insert([datosTrayecto]).select('id').single());
+        }
+        if (error && /horario_dias|horas_catedra|obs_planilla/.test(error.message || '')) {
+          quitarPlanilla();
           ({ data: nuevo, error } = await supabase.from('trayectos').insert([datosTrayecto]).select('id').single());
         }
         if (error && /computa_asistencia|horas/.test(error.message || '')) {
@@ -584,6 +611,7 @@ const Trayectos = {
     this.cargarSuplentes(tid);
   },
 
+  DIAS_PLANILLA: ['L', 'M', 'X', 'J', 'V', 'S'],
   CAMPOS_FICHA: [['trayecto-sede', 'sede'], ['trayecto-lugar', 'lugar_dictado'], ['trayecto-localidad', 'localidad'], ['trayecto-horario', 'horario'], ['trayecto-fecha-inicio', 'fecha_inicio'], ['trayecto-fecha-cierre', 'fecha_cierre'], ['trayecto-tipo', 'tipo_certificacion'], ['trayecto-codigo', 'codigo_catalogo'], ['trayecto-acto', 'acto_administrativo']],
 
   /* ---------- Módulos del formulario ---------- */

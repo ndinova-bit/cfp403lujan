@@ -119,6 +119,8 @@ const UI = {
       if (b && !esAdminTotal) b.style.setProperty('display', 'none', 'important');
     });
     // Panel de cifras: Secretaría, dirección, regencia y preceptoría
+    const btnPlan = document.getElementById('btn-planilla');   // planilla de matrícula: todo el personal
+    if (btnPlan) btnPlan.style.setProperty('display', (rolNorm !== 'estudiante') ? 'flex' : 'none', 'important');
     const btnSec = document.getElementById('btn-secretaria');
     if (btnSec) btnSec.style.setProperty('display', (esSecretaria || isAdmin || rolNorm === 'preceptor') ? 'flex' : 'none', 'important');
     if (esSecretaria) {
