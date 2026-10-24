@@ -1215,3 +1215,15 @@ textarea.act-in { resize: vertical; }
   .sidebar-nav .nav-item-btn { width: 100% !important; }
   .main-wrapper { width: 100%; min-width: 0; }
 }
+
+/* Seguimiento: trayectos plegables */
+details.seg-grupo { border: 1px solid #DCE5F1; border-radius: 12px; margin-bottom: .6rem; background: #fff; overflow: hidden; }
+details.seg-grupo > summary { display: flex; align-items: center; justify-content: space-between; gap: .6rem; padding: .7rem 1rem; cursor: pointer; list-style: none; font-size: .95rem; font-weight: 800; color: var(--cfp-navy); }
+details.seg-grupo > summary::-webkit-details-marker { display: none; }
+details.seg-grupo > summary::before { content: '▸'; color: var(--cfp-muted); transition: transform .15s; margin-right: .2rem; }
+details.seg-grupo[open] > summary::before { transform: rotate(90deg); }
+details.seg-grupo > summary .seg-g-nom { flex: 1; }
+details.seg-grupo[open] > summary { border-bottom: 1px solid #DCE5F1; background: #F5F8FC; }
+details.seg-grupo > .seg-item { margin: .5rem .7rem; }
+.seg-plegar { display: flex; gap: .5rem; justify-content: flex-end; margin-bottom: .6rem; }
+.seg-plegar button { background: none; border: 1px solid #C9D6E8; border-radius: 8px; padding: .25rem .7rem; font: inherit; font-size: .78rem; font-weight: 700; color: var(--cfp-navy); cursor: pointer; }
