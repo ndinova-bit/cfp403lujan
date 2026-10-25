@@ -1288,3 +1288,22 @@ details.seg-grupo > .seg-item { margin: .5rem .7rem; }
 .obs-form label { display: block; font-size: .8rem; font-weight: 700; margin-top: .6rem; }
 .obs-form .swal2-input, .obs-form .swal2-select, .obs-form .swal2-textarea { margin: .2rem 0 0; width: 100%; box-sizing: border-box; }
 .obs-form .swal2-textarea { min-height: 5.5rem; }
+
+/* ---------- Libro de temas ---------- */
+.lt-barra { display:flex; flex-wrap:wrap; gap:0.6rem; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:0.6rem 0.8rem; }
+.lt-visado { font-size:0.8rem; color:#cbd5e1; }
+.lt-acciones { display:flex; gap:0.4rem; flex-wrap:wrap; }
+.lt-tabla { width:100%; border-collapse:collapse; font-size:0.85rem; }
+.lt-tabla th, .lt-tabla td { padding:0.6rem 0.7rem; border-bottom:1px solid rgba(255,255,255,0.08); text-align:left; vertical-align:top; }
+.lt-tabla th { color:#94a3b8; font-weight:600; background:rgba(255,255,255,0.03); }
+.lt-col-acciones { white-space:nowrap; text-align:right; }
+.lt-com-btn { background:rgba(234,179,8,0.15); border:1px solid rgba(234,179,8,0.35); color:#facc15; border-radius:6px; padding:0.15rem 0.45rem; font-size:0.75rem; cursor:pointer; margin-right:0.25rem; }
+.lt-com-btn-vacio { background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.12); color:#94a3b8; }
+.lt-mini { background:none; border:none; color:#94a3b8; cursor:pointer; font-size:0.85rem; padding:0.1rem 0.25rem; }
+.lt-mini:hover { color:#f8fafc; }
+
+/* ---------- Planificación ---------- */
+.plan-tabs { display:flex; flex-wrap:wrap; gap:0.4rem; margin-bottom:0.7rem; }
+.plan-tab { padding:0.35rem 0.8rem; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.04); color:#94a3b8; font-size:0.8rem; font-weight:600; cursor:pointer; }
+.plan-tab.activo { background:#0284c7; color:#fff; border-color:#0284c7; }
+.plan-meta { font-size:0.78rem; color:#94a3b8; margin:0 0 0.6rem; }

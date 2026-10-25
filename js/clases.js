@@ -145,6 +145,12 @@ const ClasesModulo = {
           ${esPreceptor ? '' : `<button type="button" id="btn-tab-entregas" onclick="ClasesModulo.cambiarVistaPestana('entregas')" style="padding:0.4rem 1rem; border:none; border-radius:6px; background:rgba(255,255,255,0.05); color:#94a3b8; font-weight:600; cursor:pointer;">
             📝 Entregas y Calificaciones
           </button>`}
+          ${esPreceptor ? '' : `<button type="button" id="btn-tab-libro" onclick="ClasesModulo.cambiarVistaPestana('libro')" style="padding:0.4rem 1rem; border:none; border-radius:6px; background:rgba(255,255,255,0.05); color:#94a3b8; font-weight:600; cursor:pointer;">
+            📖 Libro de Temas
+          </button>
+          <button type="button" id="btn-tab-planificacion" onclick="ClasesModulo.cambiarVistaPestana('planificacion')" style="padding:0.4rem 1rem; border:none; border-radius:6px; background:rgba(255,255,255,0.05); color:#94a3b8; font-weight:600; cursor:pointer;">
+            🗂️ Planificación
+          </button>`}
         </div>
       `;
     }
@@ -224,6 +230,18 @@ const ClasesModulo = {
         <div id="vista-tab-entregas" style="display:none;">
           <div id="contenedor-todas-entregas">
             <p style="color:#94a3b8; text-align:center;">Cargando trabajos entregados...</p>
+          </div>
+        </div>
+
+        <div id="vista-tab-libro" style="display:none;">
+          <div id="contenedor-libro-temas">
+            <p style="color:#94a3b8; text-align:center;">Cargando libro de temas...</p>
+          </div>
+        </div>
+
+        <div id="vista-tab-planificacion" style="display:none;">
+          <div id="contenedor-planificacion">
+            <p style="color:#94a3b8; text-align:center;">Cargando planificación...</p>
           </div>
         </div>
       </div>
@@ -313,11 +331,15 @@ const ClasesModulo = {
     const bAlumnos = document.getElementById('btn-tab-alumnos');
     const bAsistencias = document.getElementById('btn-tab-asistencias');
     const bEntregas = document.getElementById('btn-tab-entregas');
+    const vLibro = document.getElementById('vista-tab-libro');
+    const vPlan = document.getElementById('vista-tab-planificacion');
+    const bLibro = document.getElementById('btn-tab-libro');
+    const bPlan = document.getElementById('btn-tab-planificacion');
 
-    [bClases, bAlumnos, bAsistencias, bEntregas].forEach(b => {
+    [bClases, bAlumnos, bAsistencias, bEntregas, bLibro, bPlan].forEach(b => {
       if (b) { b.style.background = 'rgba(255,255,255,0.05)'; b.style.color = '#94a3b8'; }
     });
-    [vClases, vAlumnos, vAsistencias, vEntregas].forEach(v => {
+    [vClases, vAlumnos, vAsistencias, vEntregas, vLibro, vPlan].forEach(v => {
       if (v) v.style.display = 'none';
     });
 
@@ -335,6 +357,14 @@ const ClasesModulo = {
       if (vEntregas) vEntregas.style.display = 'block';
       if (bEntregas) { bEntregas.style.background = '#0284c7'; bEntregas.style.color = '#fff'; }
       this.cargarPanelGeneralEntregas();
+    } else if (pestana === 'libro') {
+      if (vLibro) vLibro.style.display = 'block';
+      if (bLibro) { bLibro.style.background = '#0284c7'; bLibro.style.color = '#fff'; }
+      if (window.LibroTemasModulo) LibroTemasModulo.cargar(this.trayectoActualId, this.nombreTrayectoActual);
+    } else if (pestana === 'planificacion') {
+      if (vPlan) vPlan.style.display = 'block';
+      if (bPlan) { bPlan.style.background = '#0284c7'; bPlan.style.color = '#fff'; }
+      if (window.PlanificacionModulo) PlanificacionModulo.cargar(this.trayectoActualId);
     } else {
       if (vClases) vClases.style.display = 'block';
       if (bClases) { bClases.style.background = '#0284c7'; bClases.style.color = '#fff'; }
