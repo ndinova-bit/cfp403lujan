@@ -178,6 +178,9 @@ const UsuariosAdmin = {
               </button>
             `}
             ${u.rol === 'estudiante' ? `<button title="Ver ficha de cursada" class="btn-ficha" onclick="FichaAlumno.abrir('${Trayectos.esc(String(u.dni || u.usuario || '').replace(/\D/g, ''))}')">Ficha</button>` : ''}
+            <button title="Corregir apellido, nombre o correo" style="padding: 0.35rem 0.6rem; font-size: 0.8rem; background: rgba(148, 163, 184, 0.15); border: 1px solid rgba(148, 163, 184, 0.3); color: #cbd5e1; border-radius: 6px; cursor: pointer;" onclick="UsuariosAdmin.editarDatos('${idPrimario}')">
+              ✏️
+            </button>
             <button title="Restablecer contraseña" style="padding: 0.35rem 0.6rem; font-size: 0.8rem; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; border-radius: 6px; cursor: pointer;" onclick="UsuariosAdmin.restablecerClave('${idPrimario}')">
               🔑
             </button>
@@ -372,6 +375,43 @@ const UsuariosAdmin = {
       this.cargarUsuarios();
     } catch (err) {
       console.error('Error al actualizar estado:', err);
+    }
+  },
+
+  /* Corregir apellido, nombre o correo de contacto. El DNI no se edita acá: lo usan las
+     inscripciones, asistencias y notas para identificar al estudiante, y cambiarlo
+     rompería esos vínculos. Si hay que corregir un DNI mal cargado, avisame y lo vemos aparte. */
+  async editarDatos(userId) {
+    if (typeof Swal === 'undefined') return;
+    const u = this.listaUsuarios.find(x => (x.id || x.usuario) === userId);
+    if (!u) return;
+    const r = await Swal.fire({
+      title: 'Corregir datos del usuario',
+      html: `<div style="text-align:left; font-size:0.85rem;">
+        <p style="margin:0 0 0.6rem; color:#94a3b8;">DNI ${Trayectos.esc(u.dni || u.usuario)} (no se edita acá)</p>
+        <label class="eq-label">Apellido</label><input id="ed-apellido" class="swal2-input eq-motivo" value="${(u.apellido || '').replace(/"/g, '&quot;')}">
+        <label class="eq-label">Nombre</label><input id="ed-nombre" class="swal2-input eq-motivo" value="${(u.nombre || '').replace(/"/g, '&quot;')}">
+        <label class="eq-label">Correo de contacto</label><input id="ed-email" type="email" class="swal2-input eq-motivo" value="${(u.email || '').replace(/"/g, '&quot;')}" placeholder="nombre@dominio.com">
+      </div>`,
+      showCancelButton: true, confirmButtonText: 'Guardar', cancelButtonText: 'Cancelar', focusConfirm: false,
+      preConfirm: () => ({
+        apellido: document.getElementById('ed-apellido').value.trim().toUpperCase(),
+        nombre: document.getElementById('ed-nombre').value.trim(),
+        email: document.getElementById('ed-email').value.trim().toLowerCase()
+      })
+    });
+    if (!r.isConfirmed) return;
+    if (!r.value.apellido || !r.value.nombre) { alert('Apellido y nombre son obligatorios.'); return; }
+    try {
+      const { error } = await supabase.from('profiles')
+        .update({ apellido: r.value.apellido, nombre: r.value.nombre, email: r.value.email || null })
+        .eq('id', userId);
+      if (error) throw error;
+      Object.assign(u, { apellido: r.value.apellido, nombre: r.value.nombre, email: r.value.email || null });
+      this.renderizarTabla();
+      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Datos actualizados', showConfirmButton: false, timer: 2000 });
+    } catch (err) {
+      alert('No se pudo guardar: ' + (err.message || ''));
     }
   },
 
