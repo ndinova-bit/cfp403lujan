@@ -2,13 +2,15 @@
    OBSERVACIONES INSTITUCIONALES (administrativas y pedagógicas)
    Director > Regente > Secretaría > Preceptores y docentes. Cada uno observa
    a quienes están por debajo; la persona observada la lee y deja constancia de
-   "tomé conocimiento", pero no la modifica. Quien observó (o alguien de rango
-   superior) puede agregar seguimientos. Las reglas las controla la base de datos.
+   la notificación oficial es el acta o el correo; la plataforma solo registra
+   cuándo la abrió. Quien observó (o alguien de rango superior) puede agregar
+   seguimientos. Las reglas las controla la base de datos.
    Archivo: js/observaciones.js
    ========================================================================== */
 
 const ObservacionesModulo = {
   lista: [],
+  nuevas: new Set(),
   vista: 'todas',        // 'recibidas' | 'realizadas' | 'todas'
   busqueda: '',
   miId: null,
@@ -45,7 +47,14 @@ const ObservacionesModulo = {
         .order('fecha', { ascending: false }).order('id', { ascending: false });
       if (error) throw error;
       this.lista = data || [];
+      const nuevas = this.lista.filter(o => o.destinatario_id === this.miId && !o.vista_at).map(o => o.id);
+      this.nuevas = new Set(nuevas);
       this.dibujar();
+      if (nuevas.length) {
+        // Abrir la pestaña deja registrada la visualización (la notificación oficial es el acta o el correo)
+        const r = await supabase.rpc('marcar_observaciones_vistas');
+        if (!r.error) { const ahora = new Date().toISOString(); this.lista.forEach(o => { if (this.nuevas.has(o.id)) o.vista_at = ahora; }); }
+      }
       this.contarPendientes();
     } catch (err) {
       console.error('Observaciones:', err);
@@ -54,20 +63,36 @@ const ObservacionesModulo = {
     }
   },
 
-  /* Cuenta las recibidas sin leer y lo muestra en el menú */
+  /* Recibidas sin abrir: contador en el menú y campanita arriba a la derecha */
   async contarPendientes() {
     try {
       await this.identificar();
       const { count } = await supabase.from('observaciones_institucionales')
         .select('id', { count: 'exact', head: true })
-        .eq('destinatario_id', this.miId).is('conocimiento_at', null);
+        .eq('destinatario_id', this.miId).is('vista_at', null);
+      const n = count || 0;
       const btn = document.getElementById('btn-observaciones');
-      if (!btn) return;
-      let b = btn.querySelector('.seg-badge');
-      if (!count) { if (b) b.remove(); return; }
-      if (!b) { b = document.createElement('span'); b.className = 'seg-badge'; btn.appendChild(b); }
-      b.textContent = String(count);
+      if (btn) {
+        let b = btn.querySelector('.seg-badge');
+        if (!n) { if (b) b.remove(); }
+        else { if (!b) { b = document.createElement('span'); b.className = 'seg-badge'; btn.appendChild(b); } b.textContent = String(n); }
+      }
+      this.dibujarCampana(n);
     } catch (e) { /* sin el SQL o sin sesión: no se muestra el contador */ }
+  },
+
+  dibujarCampana(n) {
+    if (this.miRol === 'estudiante' || !this.miRol) return;
+    let c = document.getElementById('btn-notificaciones-campana');
+    if (!c) {
+      c = document.createElement('div');
+      c.id = 'btn-notificaciones-campana';
+      c.style.cssText = 'position:fixed; top:12px; right:20px; z-index:99999; cursor:pointer; font-size:1.3rem; background:#1e293b; padding:0.4rem 0.8rem; border-radius:20px; border:1px solid rgba(255,255,255,0.15); display:flex; align-items:center; gap:0.4rem; color:#fff; box-shadow:0 4px 10px rgba(0,0,0,0.3);';
+      c.title = 'Observaciones';
+      c.onclick = () => { if (window.UI) UI.showTab('observaciones'); };
+      document.body.appendChild(c);
+    }
+    c.innerHTML = `🔔 ${n > 0 ? `<span style="background:#ef4444; color:#fff; font-size:0.75rem; font-weight:bold; padding:0.1rem 0.4rem; border-radius:10px;">${n}</span>` : ''}`;
   },
 
   puedeObservar() { return this.rango(this.miRol) >= 2; },
@@ -88,11 +113,13 @@ const ObservacionesModulo = {
     const yoDest = o.destinatario_id === this.miId;
     const seg = (o.observaciones_seguimiento || []).slice().sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
     const link = this.https(o.link_documento);
-    const leida = !!o.conocimiento_at;
+    const vista = !!o.vista_at;
+    const nueva = yoDest && this.nuevas && this.nuevas.has(o.id);
     return `<article class="obs-card tipo-${this.esc(o.tipo)}">
       <header>
         <div class="act-chips"><span class="act-chip tipo">${this.esc(this.TIPOS[o.tipo] || o.tipo)}</span><span class="act-chip">📅 ${this.esc(this.fecha(o.fecha))}</span>
-          ${leida ? `<span class="act-chip ok">✔ Tomó conocimiento el ${this.esc(this.fechaHora(o.conocimiento_at))}</span>` : '<span class="act-chip mid">Pendiente de lectura</span>'}
+          ${nueva ? '<span class="act-chip mid">🆕 Nueva</span>' : ''}
+          ${vista ? `<span class="act-chip ok" title="Registro de la plataforma; la notificación oficial es el acta o el correo">👁 Abierta por ${this.esc(o.destinatario_nombre)} el ${this.esc(this.fechaHora(o.vista_at))}</span>` : (yoDest ? '' : '<span class="act-chip mid">Todavía no la abrió</span>')}
           ${o.editada_at ? '<span class="act-chip">editada</span>' : ''}</div>
         <h3>${this.esc(o.titulo)}</h3>
         <p class="obs-quien"><b>${this.esc(o.autor_nombre)}</b> (${this.esc(this.rol(o.autor_rol))}) → <b>${this.esc(o.destinatario_nombre)}</b> (${this.esc(this.rol(o.destinatario_rol))})</p>
@@ -100,12 +127,11 @@ const ObservacionesModulo = {
       <p class="obs-texto">${this.esc(o.texto).replace(/\n/g, '<br>')}</p>
       ${link ? `<p><a class="act-btn-sec" href="${this.esc(link)}" target="_blank" rel="noopener noreferrer">📎 Ver acta o correo</a></p>` : ''}
       ${o.texto_documento ? `<details class="obs-doc"><summary>Texto del acta o correo</summary><div>${this.esc(o.texto_documento).replace(/\n/g, '<br>')}</div></details>` : ''}
-      ${leida && o.conocimiento_comentario ? `<p class="obs-resp"><b>Comentario de ${this.esc(o.destinatario_nombre)}:</b> ${this.esc(o.conocimiento_comentario)}</p>` : ''}
+      ${link || o.texto_documento ? '' : '<p class="obs-resp">Sin acta ni correo adjunto: la notificación oficial queda sin respaldo en la plataforma.</p>'}
       ${seg.length ? `<div class="obs-seg"><h4>Seguimiento</h4>${seg.map(s => `<div class="obs-seg-item"><small>${this.esc(this.fechaHora(s.created_at))} · <b>${this.esc(s.autor_nombre)}</b> (${this.esc(this.rol(s.autor_rol))})</small><p>${this.esc(s.texto).replace(/\n/g, '<br>')}</p>${this.https(s.link_documento) ? `<a href="${this.esc(s.link_documento)}" target="_blank" rel="noopener noreferrer">📎 Ver documento</a>` : ''}</div>`).join('')}</div>` : ''}
       <footer class="cuentas-acc">
-        ${yoDest && !leida ? `<button type="button" class="btn btn-gold" onclick="ObservacionesModulo.tomarConocimiento(${o.id})">✔ Tomé conocimiento</button>` : ''}
         ${this.puedeSeguir(o) ? `<button type="button" class="btn btn-outline" onclick="ObservacionesModulo.seguimiento(${o.id})">➕ Agregar seguimiento</button>` : ''}
-        ${o.autor_id === this.miId && !leida ? `<button type="button" class="btn btn-outline" onclick="ObservacionesModulo.formulario(${o.id})">✏️ Corregir</button>` : ''}
+        ${o.autor_id === this.miId && !vista ? `<button type="button" class="btn btn-outline" onclick="ObservacionesModulo.formulario(${o.id})">✏️ Corregir</button>` : ''}
         ${this.miRol === 'admin' ? `<button type="button" class="btn btn-outline" onclick="ObservacionesModulo.eliminar(${o.id})">🗑️ Eliminar</button>` : ''}
       </footer>
     </article>`;
@@ -123,7 +149,7 @@ const ObservacionesModulo = {
         <label>Buscar<input class="form-control" type="search" id="obs-buscar" autocomplete="off" value="${this.esc(this.busqueda)}" oninput="ObservacionesModulo.buscar(this.value)" placeholder="Persona o título"></label>
         <div class="sec-acciones">${this.puedeObservar() ? '<button type="button" class="btn btn-gold" onclick="ObservacionesModulo.formulario()">➕ Nueva observación</button>' : ''}</div>
       </div>
-      <p class="acta-ayuda">${this.puedeObservar() ? 'Las observaciones que dejás las ve la persona observada, que no puede modificarlas. ' : 'Acá ves las observaciones que te hicieron; no se pueden modificar. '}${ve ? 'Como Director o Regente ves todas las observaciones de la institución.' : ''}</p>
+      <p class="acta-ayuda">${this.puedeObservar() ? 'Las observaciones que dejás las ve la persona observada, que no puede modificarlas. La notificación oficial sigue siendo el acta o el correo: adjuntalo acá; la plataforma solo registra cuándo la abrió. ' : 'Acá ves las observaciones que te hicieron; no se pueden modificar. '}${ve ? 'Como Director o Regente ves todas las observaciones de la institución.' : ''}</p>
       ${v.length ? v.map(o => this.tarjeta(o)).join('') : '<div class="prog-vacio">No hay observaciones para mostrar.</div>'}`;
   },
 
@@ -172,19 +198,6 @@ const ObservacionesModulo = {
       : await supabase.rpc('crear_observacion', { p_destinatario: f.dest, p_tipo: f.tipo, p_fecha: f.fecha, p_titulo: f.titulo, p_texto: f.texto, p_link: f.link, p_texto_doc: f.doc, p_trayecto: f.tray });
     if (error) { Swal.fire({ icon: 'error', title: 'No se pudo guardar', text: error.message }); return; }
     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: o ? 'Observación corregida' : 'Observación guardada', showConfirmButton: false, timer: 1800 });
-    this.cargar();
-  },
-
-  async tomarConocimiento(id) {
-    const r = await Swal.fire({
-      title: 'Tomé conocimiento',
-      html: 'Queda registrada la fecha y hora en que la leíste. No implica estar de acuerdo: si querés, podés dejar un comentario.',
-      input: 'textarea', inputPlaceholder: 'Comentario (opcional)', inputAttributes: { maxlength: 2000 },
-      showCancelButton: true, confirmButtonText: 'Confirmar', cancelButtonText: 'Cancelar'
-    });
-    if (!r.isConfirmed) return;
-    const { error } = await supabase.rpc('tomar_conocimiento', { p_id: id, p_comentario: r.value || null });
-    if (error) { Swal.fire({ icon: 'error', title: 'No se pudo registrar', text: error.message }); return; }
     this.cargar();
   },
 
