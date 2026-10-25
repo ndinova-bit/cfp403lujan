@@ -138,7 +138,7 @@ const FichaAlumno = {
       ${lista.length ? `<ul class="obs-lista">${lista.map(o => `
         <li class="obs-item tipo-${this.esc(o.tipo)}">
           <div class="obs-cab"><span class="obs-tipo">${this.esc(this.TIPOS_OBS[o.tipo] || o.tipo)}</span>
-            <span class="obs-meta">${this.esc(new Date(o.created_at).toLocaleDateString('es-AR'))}${o.creado_por_nombre ? ' · ' + this.esc(o.creado_por_nombre) : ''}${o.visible_docente ? ' · visible para el docente' : ''}</span>
+            <span class="obs-meta">${this.esc(new Date(o.created_at).toLocaleDateString('es-AR'))}${o.creado_por_nombre ? ' · ' + this.esc(o.creado_por_nombre) : ''}${o.tipo === 'salud' ? ' · el docente la ve (solo lectura)' : (o.visible_docente ? ' · visible para el docente' : '')}</span>
             ${(esAdmin || o.creado_por === yo.id) && this.esPersonal ? `<button type="button" class="obs-borrar" onclick="FichaAlumno.borrarObservacion(${Number(o.id)})">Borrar</button>` : ''}</div>
           <p>${this.esc(o.texto).replace(/\n/g, '<br>')}</p>
         </li>`).join('')}</ul>` : '<p class="ficha-vacio">Sin observaciones.</p>'}
@@ -150,7 +150,7 @@ const FichaAlumno = {
           </div>
           <textarea id="obs-texto" class="form-control" rows="2" maxlength="2000" placeholder="Ej.: Aprobó Circuitos Eléctricos y Mediciones en Electricista Domiciliario 2025 (N.º egresado 1480)."></textarea>
           <div class="ficha-form-acciones"><button type="submit" class="btn btn-primary">Agregar observación</button></div>
-          <p class="obs-ayuda">Las de salud nunca las ve el docente. Las demás, solo si marcás "Visible para el docente".</p>
+          <p class="obs-ayuda">Las de salud las ve siempre el docente del estudiante (solo lectura). Las demás, solo si marcás "Visible para el docente".</p>
         </form>` : ''}`;
   },
 
@@ -161,7 +161,7 @@ const FichaAlumno = {
     const yo = (window.Auth && Auth.usuarioActual) || {};
     const reg = {
       estudiante_user: this.dniActual, tipo, texto,
-      visible_docente: tipo !== 'salud' && !!document.getElementById('obs-visible')?.checked,
+      visible_docente: tipo === 'salud' || !!document.getElementById('obs-visible')?.checked,
       creado_por_nombre: [yo.nombre, yo.apellido].filter(Boolean).join(' ') || null
     };
     const { error } = await supabase.from('observaciones_estudiante').insert([reg]);
