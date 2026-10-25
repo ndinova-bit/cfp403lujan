@@ -70,6 +70,7 @@ const FichaAlumno = {
       <p>DNI ${this.esc(key)}${p && p.email ? ' · ' + this.esc(p.email) : ''}${p && p.estado ? ' · ' + this.esc(p.estado) : ''} · Consultado el ${hoy}</p>`;
 
     this.dniActual = key;
+    this.perfilActual = p || { dni: key };
     const perfilYo = (window.Auth && Auth.usuarioActual) || {};
     this.esPersonal = !!(window.Auth && Auth.esPersonal && Auth.esPersonal(perfilYo.rol));
     this.cargarDatosPersonales(key);
@@ -106,9 +107,13 @@ const FichaAlumno = {
     if (error) { cont.innerHTML = '<h3>Datos personales</h3><p class="ficha-vacio">Disponible cuando se ejecute sql/09 en Supabase.</p>'; return; }
     const d = data || { tipo_documento: 'DNI' };
     const editable = this.esPersonal;
+    const pe = this.perfilActual || {};
     cont.innerHTML = `
       <h3>Datos personales</h3>
       <form class="ficha-form" onsubmit="event.preventDefault(); FichaAlumno.guardarDatosPersonales();">
+        <div class="form-group"><label for="fd-apellido">Apellido</label><input id="fd-apellido" type="text" class="form-control" maxlength="80" value="${this.esc(pe.apellido || '')}" ${editable ? '' : 'readonly'}></div>
+        <div class="form-group"><label for="fd-nombre">Nombre</label><input id="fd-nombre" type="text" class="form-control" maxlength="80" value="${this.esc(pe.nombre || '')}" ${editable ? '' : 'readonly'}></div>
+        <div class="form-group"><label for="fd-correo">Correo de contacto</label><input id="fd-correo" type="email" class="form-control" maxlength="150" value="${this.esc(pe.email || '')}" ${editable ? '' : 'readonly'}></div>
         ${this.CAMPOS.map(([k, l, t, max]) => t === 'genero' ? `
           <div class="form-group"><label for="fd-${k}">${l}</label>
             <select id="fd-${k}" class="form-control" ${editable ? '' : 'disabled'}>
@@ -127,8 +132,19 @@ const FichaAlumno = {
   async guardarDatosPersonales() {
     const reg = { dni: this.dniActual, actualizado: new Date().toISOString() };
     this.CAMPOS.forEach(([k]) => { const v = (document.getElementById('fd-' + k)?.value || '').trim(); reg[k] = v || null; });
-    const { error } = await supabase.from('datos_estudiante').upsert(reg, { onConflict: 'dni' });
+    const apellido = (document.getElementById('fd-apellido')?.value || '').trim().toUpperCase();
+    const nombre = (document.getElementById('fd-nombre')?.value || '').trim();
+    const correo = (document.getElementById('fd-correo')?.value || '').trim().toLowerCase();
+    if (!apellido || !nombre) { alert('Apellido y nombre son obligatorios.'); return; }
+    const [{ error }, rPerfil] = await Promise.all([
+      supabase.from('datos_estudiante').upsert(reg, { onConflict: 'dni' }),
+      supabase.from('profiles').update({ apellido, nombre, email: correo || null }).eq('dni', this.dniActual)
+    ]);
     if (error) { alert('No se pudieron guardar los datos: ' + error.message); return; }
+    if (rPerfil.error) { alert('Se guardaron los datos, pero no el apellido/nombre/correo: ' + rPerfil.error.message); return; }
+    this.perfilActual = { ...(this.perfilActual || {}), apellido, nombre, email: correo || null };
+    const h2 = document.querySelector('#ficha-titulo h2');
+    if (h2) h2.textContent = `${apellido}, ${nombre}`;
     if (typeof Swal !== 'undefined') Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Datos guardados', showConfirmButton: false, timer: 1800 });
   },
 
