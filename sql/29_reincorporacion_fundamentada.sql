@@ -1,5 +1,5 @@
 -- 29. Reincorporar a un estudiante dado de baja exige una fundamentación escrita (mínimo 10 caracteres);
---     queda guardada con fecha y quién la hizo. Las bajas automáticas se registran solas (sin botón).
+--     queda guardada con fecha y quién la hizo. Las bajas automáticas se registran con el botón de Seguimiento.
 -- Ya aplicado en producción; este archivo es el registro.
 alter table public.inscripciones
   add column if not exists motivo_reincorporacion text,

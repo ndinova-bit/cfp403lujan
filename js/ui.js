@@ -141,8 +141,6 @@ const UI = {
     const puedeSeguir = isAdmin || rolNorm === 'docente' || rolNorm === 'preceptor';
     if (btnSeg) btnSeg.style.setProperty('display', puedeSeguir ? 'flex' : 'none', 'important');
     if (puedeSeguir && window.SeguimientoModulo) setTimeout(() => SeguimientoModulo.contarPendientes(), 800);
-    // Dirección, regencia y preceptoría: las bajas automáticas se registran solas al ingresar
-    if ((isAdmin || rolNorm === 'preceptor') && window.SeguimientoModulo) setTimeout(() => SeguimientoModulo.cargar(), 2500);
 
     if (esSecretaria) {
       this.showTab('secretaria');
