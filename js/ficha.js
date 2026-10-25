@@ -90,6 +90,13 @@ const FichaAlumno = {
     ['estudios', 'Estudios alcanzados', 'text', 120]
   ],
 
+  /* Sugerencias para escribir siempre igual (el cuadro de procedencia agrupa por texto).
+     Se puede escribir cualquier otro valor. */
+  LISTAS: {
+    localidad: ['Luján', 'Carlos Keen', 'Cortínez', 'Jáuregui', 'Lezica y Torrezuri', 'Olivera', 'Open Door', 'Torres', 'Villa Flandria', 'Mercedes', 'General Rodríguez', 'Marcos Paz', 'Pilar', 'Navarro', 'San Andrés de Giles', 'Suipacha', 'Exaltación de la Cruz', 'Moreno', 'Merlo', 'Ciudad Autónoma de Buenos Aires'],
+    estudios: ['Primaria incompleta', 'Primaria completa', 'Secundaria incompleta', 'Secundaria completa', 'Terciario / universitario incompleto', 'Terciario / universitario completo']
+  },
+
   async cargarDatosPersonales(dni) {
     const cont = document.getElementById('ficha-datos');
     if (!cont) return;
@@ -109,7 +116,8 @@ const FichaAlumno = {
               <option value="X" ${d.genero === 'X' ? 'selected' : ''}>Otro / no binario</option>
             </select></div>` : `
           <div class="form-group"><label for="fd-${k}">${l}</label>
-            <input id="fd-${k}" type="${t}" class="form-control" ${max ? `maxlength="${max}"` : ''} value="${this.esc(t === 'date' ? String(d[k] || '').slice(0, 10) : (d[k] || ''))}" ${editable ? '' : 'readonly'}></div>`).join('')}
+            <input id="fd-${k}" type="${t}" class="form-control" ${this.LISTAS[k] ? `list="fd-lista-${k}" autocomplete="off"` : ''} ${max ? `maxlength="${max}"` : ''} value="${this.esc(t === 'date' ? String(d[k] || '').slice(0, 10) : (d[k] || ''))}" ${editable ? '' : 'readonly'}>
+            ${this.LISTAS[k] ? `<datalist id="fd-lista-${k}">${this.LISTAS[k].map(v => `<option value="${this.esc(v)}"></option>`).join('')}</datalist>` : ''}</div>`).join('')}
         ${editable ? '<div class="ficha-form-acciones"><button type="submit" class="btn btn-primary">Guardar datos</button></div>' : ''}
       </form>`;
   },
