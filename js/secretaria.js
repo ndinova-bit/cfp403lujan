@@ -9,6 +9,8 @@ const SecretariaModulo = {
   filas: [],
   ciclo: null,
   modo: 'activos',      // 'activos' (sin bajas) | 'todos' (todos los inscriptos)
+  alcance: 'ciclo',     // 'ciclo' (el ciclo elegido) | 'todos' (todos los ciclos juntos)
+  demo: null,           // procedencia y perfil (panel_demografia); null si no se pudo cargar
 
   esc(v) {
     return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -26,12 +28,62 @@ const SecretariaModulo = {
       const { data, error } = await supabase.rpc('panel_cifras', { p_ciclo: Number(this.ciclo) });
       if (error) throw error;
       this.filas = data || [];
+      await this.cargarDemografia();
       this.dibujar();
     } catch (err) {
       console.error('Panel de cifras:', err);
       const falta = /panel_cifras|function/i.test(err.message || '');
       cont.innerHTML = `<div class="prog-vacio">No se pudo armar el panel.${falta ? ' Falta ejecutar <strong>sql/14_regente_secretaria_alertas.sql</strong> en Supabase.' : ' Probá recargar la página.'}</div>`;
     }
+  },
+
+  /* Procedencia y perfil: es secundario, si falla el panel principal sigue andando */
+  async cargarDemografia() {
+    try {
+      const { data, error } = await supabase.rpc('panel_demografia', {
+        p_ciclo: this.alcance === 'todos' ? null : Number(this.ciclo),
+        p_solo_activos: this.modo === 'activos'
+      });
+      if (error) throw error;
+      this.demo = data || null;
+    } catch (err) {
+      console.error('Panel de procedencia:', err);
+      this.demo = null;
+    }
+  },
+
+  /* Tabla con barras: top N y el resto agrupado */
+  bloqueDemo(titulo, filas, sinDato, total, tope) {
+    const lista = filas || [];
+    let vista = lista, resto = 0;
+    if (tope && lista.length > tope) { vista = lista.slice(0, tope); resto = lista.slice(tope).reduce((a, f) => a + Number(f.n || 0), 0); }
+    const max = Math.max(1, ...vista.map(f => Number(f.n || 0)));
+    const fila = (k, n, extra) => `<tr${extra ? ` class="${extra}"` : ''}><td>${this.esc(k)}</td><td class="demo-n">${n}</td><td class="demo-barra"><i style="width:${Math.round(100 * n / max)}%"></i></td></tr>`;
+    return `<div class="demo-bloque"><h4>${titulo}</h4>
+      <table class="demo-tabla"><tbody>
+        ${vista.length ? vista.map(f => fila(f.k, Number(f.n || 0))).join('') : '<tr><td colspan="3" class="demo-vacio">Todavía no hay datos cargados.</td></tr>'}
+        ${resto ? fila(`Otros (${lista.length - tope})`, resto, 'demo-otros') : ''}
+      </tbody></table>
+      ${sinDato ? `<p class="demo-sin">Sin dato: <b>${sinDato}</b> de ${total}</p>` : ''}</div>`;
+  },
+
+  htmlDemografia() {
+    const alc = this.alcance === 'todos' ? 'todos los ciclos lectivos juntos' : `ciclo ${this.esc(this.ciclo)}`;
+    const cab = `<div class="demo-cab">
+        <div><h3>Procedencia y perfil de los estudiantes</h3>
+        <p class="acta-ayuda">${alc} · ${this.modo === 'activos' ? 'sin bajas' : 'con bajas'} · se cuentan personas, no inscripciones.</p></div>
+        <button type="button" class="btn btn-outline" onclick="SecretariaModulo.cambiarAlcance('${this.alcance === 'todos' ? 'ciclo' : 'todos'}')">${this.alcance === 'todos' ? `Ver solo el ciclo ${this.esc(this.ciclo)}` : '🗂️ Ver todos los ciclos juntos'}</button>
+      </div>`;
+    const d = this.demo;
+    if (!d) return `<section class="demo-panel">${cab}<div class="prog-vacio">No se pudo armar este cuadro. Falta ejecutar <strong>sql/23_panel_demografia.sql</strong> en Supabase.</div></section>`;
+    const sd = d.sin_dato || {}, tot = this.num(d.total);
+    return `<section class="demo-panel">${cab}
+      <div class="demo-grid">
+        ${this.bloqueDemo('Localidad de residencia', d.localidad, sd.localidad, tot, 12)}
+        ${this.bloqueDemo('Lugar de nacimiento', d.lugar_nacimiento, sd.lugar_nacimiento, tot, 12)}
+        ${this.bloqueDemo('Edad', d.edad, sd.edad, tot, 0)}
+        ${this.bloqueDemo('Estudios alcanzados', d.estudios, sd.estudios, tot, 8)}
+      </div></section>`;
   },
 
   valores(f) {
@@ -113,11 +165,13 @@ const SecretariaModulo = {
           ${this.filas.length ? `<tfoot><tr><td>Total</td><td></td><td>${t.inscriptos}</td><td>${t.mujeres}</td><td>${t.varones}</td><td>${t.otros}</td><td>${t.sinDato}</td><td>${t.bajas}</td><td></td><td>${this.pct(t.pct)}</td></tr></tfoot>` : ''}
         </table>
       </div>
-      <p class="acta-ayuda">El porcentaje de asistencia es el de presentes (incluye las llegadas tarde) sobre todos los registros de los estudiantes activos del trayecto. "Clases" son los días con asistencia cargada.</p>`;
+      <p class="acta-ayuda">El porcentaje de asistencia es el de presentes (incluye las llegadas tarde) sobre todos los registros de los estudiantes activos del trayecto. "Clases" son los días con asistencia cargada.</p>
+      ${this.htmlDemografia()}`;
   },
 
   cambiarCiclo(v) { this.ciclo = Number(v); this.cargar(); },
-  cambiarModo(v) { this.modo = v === 'todos' ? 'todos' : 'activos'; this.dibujar(); },
+  async cambiarModo(v) { this.modo = v === 'todos' ? 'todos' : 'activos'; await this.cargarDemografia(); this.dibujar(); },
+  async cambiarAlcance(v) { this.alcance = v === 'todos' ? 'todos' : 'ciclo'; await this.cargarDemografia(); this.dibujar(); },
 
   /* Matriz de la tabla (para copiar o armar el Excel) */
   matriz() {
