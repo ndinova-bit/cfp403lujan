@@ -893,6 +893,7 @@ const ClasesModulo = {
       ]);
       const acreditados = (!rAcred.error && rAcred.data) || [];
       const computa = ReglasFP.computaAsistencia(rTray.data);
+      this.sabanaModulos = modulos || [];   // para el modal de Equivalencias
 
       const tieneModulos = modulos && modulos.length > 0;
 
@@ -945,6 +946,8 @@ const ClasesModulo = {
         const puedeBaja = esAdminG || (!tieneModulos && (rolG === 'docente' || rolG === 'preceptor'));
         // Reincorporar: administración, regencia y preceptoría (en cualquier trayecto)
         const puedeReinc = esAdminG || rolG === 'preceptor';
+        // Fecha de inscripción (cuenta para la planilla de matrícula) y equivalencias por módulos previos aprobados
+        const puedeGestionInsc = esAdminG || rolG === 'preceptor';
         let situacionHTML = '<span class="sit sit-ok">Cursando</span>';
         if (cursada.baja && cursada.guardada) {
           situacionHTML = `<span class="sit sit-baja">${cursada.tipo === 'automatica' ? 'Baja automática' : 'Baja'}${cursada.fecha ? ' · ' + this.esc(String(cursada.fecha).split('-').reverse().join('/')) : ''}</span><span class="sabana-det">${this.esc(cursada.motivo)}</span>
@@ -961,6 +964,9 @@ const ClasesModulo = {
             <td style="padding:0.75rem 1rem; font-weight:600; color:#f8fafc;">
               <button type="button" class="seg-nombre" title="Ver ficha del alumno" onclick="FichaAlumno.abrir('${dniSeguro}')">${this.esc(nombreCompleto)}</button>
               <span style="display:block; font-size:0.75rem; color:#94a3b8;">DNI: ${this.esc(userKey)}</span>
+              ${puedeGestionInsc ? `<span style="display:block; font-size:0.72rem; color:#94a3b8; margin-top:0.15rem;">Insc.: ${insRow.fecha_inscripcion ? this.esc(String(insRow.fecha_inscripcion).split('-').reverse().join('/')) : 's/d'}
+                <button type="button" class="sit-btn" style="margin-left:0.3rem;" onclick="ClasesModulo.editarFechaInscripcion('${dniSeguro}', '${this.esc(insRow.fecha_inscripcion || '')}')">Corregir</button></span>
+                ${tieneModulos ? `<button type="button" class="sit-btn" style="margin-top:0.2rem;" onclick="ClasesModulo.editarEquivalencias('${dniSeguro}')">Módulos previos aprobados</button>` : ''}` : ''}
             </td>
             ${celdasNotasHTML}
             <td style="padding:0.75rem 1rem; text-align:center;">${situacionHTML}</td>
@@ -1029,6 +1035,75 @@ const ClasesModulo = {
     // Pide la fundamentación escrita (queda registrada con fecha y autor)
     const ok = window.SeguimientoModulo ? await SeguimientoModulo.reincorporar(this.trayectoActualId, dni, '') : false;
     if (ok) await this.cargarSabanaEstudiantes();
+  },
+
+  ROMANOS: ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV'],
+
+  /* Corrige la fecha de inscripción (la usa la planilla de matrícula por mes).
+     Útil después de una carga masiva por CSV, que pone siempre la fecha del día de la carga. */
+  async editarFechaInscripcion(dni, fechaActual) {
+    if (typeof Swal === 'undefined') return;
+    const r = await Swal.fire({
+      title: 'Fecha de inscripción', icon: 'question', width: 460,
+      html: `<p style="font-size:.85rem;text-align:left">DNI ${this.esc(dni)}. Es la fecha desde la que cuenta como inscripto en la planilla de matrícula por mes (no afecta los módulos ya acreditados).</p>`,
+      input: 'date', inputValue: fechaActual || '', showCancelButton: true,
+      confirmButtonText: 'Guardar', cancelButtonText: 'Cancelar',
+      inputValidator: (v) => !v ? 'Elegí una fecha.' : null
+    });
+    if (!r.isConfirmed) return;
+    try {
+      const { error } = await supabase.from('inscripciones').update({ fecha_inscripcion: r.value })
+        .eq('trayecto_id', Number(this.trayectoActualId)).eq('estudiante_user', String(dni));
+      if (error) throw error;
+      if (typeof Swal !== 'undefined') Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Fecha corregida', showConfirmButton: false, timer: 2000 });
+      await this.cargarSabanaEstudiantes();
+    } catch (err) {
+      alert('No se pudo corregir la fecha: ' + (err.message || ''));
+    }
+  },
+
+  /* Módulos previos aprobados (acreditados por equivalencia): administración, regencia y preceptoría */
+  async editarEquivalencias(dni) {
+    if (typeof Swal === 'undefined') return;
+    const tid = Number(this.trayectoActualId);
+    const modulos = this.sabanaModulos || [];
+    if (!modulos.length) return;
+    const { data: actualesData, error: errAc } = await supabase.from('modulos_acreditados')
+      .select('*').eq('trayecto_id', tid).eq('estudiante_user', dni);
+    if (errAc) { alert('No se pudieron leer las equivalencias: ' + errAc.message); return; }
+    const actuales = actualesData || [];
+    const motivo = (actuales[0] && actuales[0].motivo) || '';
+    const r = await Swal.fire({
+      title: 'Módulos previos aprobados (equivalencia)',
+      html: `<p class="eq-alumno">DNI ${this.esc(dni)}</p>
+        <div class="eq-lista">${modulos.map((m, i) => `<label class="eq-item"><input type="checkbox" class="eq-chk" value="${Number(m.id)}" ${actuales.some(x => Number(x.modulo_id) === Number(m.id)) ? 'checked' : ''}> Módulo ${this.ROMANOS[i] || i + 1} · ${this.esc(m.nombre)}</label>`).join('')}</div>
+        <label for="eq-motivo" class="eq-label">Motivo / respaldo</label>
+        <input id="eq-motivo" class="swal2-input eq-motivo" maxlength="300" placeholder="Ej: ya cursó y aprobó este módulo en el ciclo anterior" value="${this.esc(motivo)}">`,
+      showCancelButton: true, confirmButtonText: 'Guardar', cancelButtonText: 'Cancelar', focusConfirm: false,
+      preConfirm: () => ({
+        ids: [...document.querySelectorAll('.eq-chk:checked')].map(c => Number(c.value)),
+        motivo: document.getElementById('eq-motivo').value.trim()
+      })
+    });
+    if (!r.isConfirmed) return;
+    const { ids, motivo: mot } = r.value;
+    if (ids.length && !mot) { alert('⚠️ Indicá el motivo (queda registrado).'); return; }
+    try {
+      const borrar = actuales.filter(x => !ids.includes(Number(x.modulo_id))).map(x => x.id);
+      if (borrar.length) {
+        const { error } = await supabase.from('modulos_acreditados').delete().in('id', borrar);
+        if (error) throw error;
+      }
+      const filas = ids.map(id => ({ trayecto_id: tid, modulo_id: id, estudiante_user: dni, motivo: mot }));
+      if (filas.length) {
+        const { error } = await supabase.from('modulos_acreditados').upsert(filas, { onConflict: 'modulo_id,estudiante_user' });
+        if (error) throw error;
+      }
+      if (typeof Swal !== 'undefined') Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Equivalencias actualizadas', showConfirmButton: false, timer: 2000 });
+      await this.cargarSabanaEstudiantes();
+    } catch (err) {
+      alert('No se pudieron guardar las equivalencias: ' + (err.message || '') + (/modulos_acreditados/.test(err.message || '') ? '\n\nFalta ejecutar sql/31_equivalencias_y_fecha_insc_preceptor.sql en Supabase.' : ''));
+    }
   },
 
   async actualizarInscripcion(dni, cambios) {
