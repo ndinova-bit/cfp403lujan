@@ -75,6 +75,8 @@ const PlanillaMatricula = {
     if (typeof ExcelJS === 'undefined') { alert('No se pudo cargar el generador de Excel. Recargá la página.'); return; }
     try {
       if (typeof Swal !== 'undefined') Swal.fire({ title: 'Armando la planilla…', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      // Antes de armar la planilla se registran las bajas automáticas pendientes (la matrícula solo cuenta las guardadas)
+      if (window.SeguimientoModulo) { try { await SeguimientoModulo.cargar(); } catch (e) { /* sigue igual */ } }
       const filas = await this.cargarDatos(ciclo);
       if (typeof Swal !== 'undefined') Swal.close();
       if (!filas.length) { alert(`No hay trayectos cargados en el ciclo ${ciclo}.`); return; }

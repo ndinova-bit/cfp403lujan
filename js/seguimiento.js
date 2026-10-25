@@ -74,6 +74,13 @@ const SeguimientoModulo = {
       }
       this.datos = { trayectos, clases, insc, asis, entregas, alumnos, modulos, acreditados, excepciones };
       this.render();
+      // Las bajas automáticas se guardan solas; si se guardó alguna, se vuelve a dibujar (una sola vez)
+      if (this.puedeRegistrar && this.bajasAuto && this.bajasAuto.length && !this._registrando) {
+        this._registrando = true;
+        try {
+          if (await this.registrarBajasAuto(this.bajasAuto) > 0) { this._registrando = false; await this.cargar(); }
+        } finally { this._registrando = false; }
+      }
     } catch (e) {
       console.error('Seguimiento:', e);
       cont.innerHTML = '<div class="prog-vacio">No se pudo cargar el seguimiento. Probá recargar la página.</div>';
@@ -178,14 +185,14 @@ const SeguimientoModulo = {
         ${g.lista.map(b => `<div class="seg-item riesgo">
           <div class="seg-item-info"><strong>${this.esc(this.nombreDe(alumnos, b.key))}</strong><span>DNI ${this.esc(b.key)}</span></div>
           <button type="button" class="seg-ver" onclick="FichaAlumno.abrir('${this.esc(String(b.key).replace(/\D/g, ''))}')">Ver ficha</button>
+          ${this.puedeRegistrar ? `<button type="button" class="seg-ver" onclick="SeguimientoModulo.reincorporarDesdeLista(${Number(b.t.id)}, '${this.esc(String(b.key).replace(/[^0-9A-Za-z_-]/g, ''))}')">Reincorporar</button>` : ''}
           <div class="seg-chips"><span class="seg-chip">${b.tipo === 'automatica' ? 'Baja automática' : 'Baja'}</span><span class="seg-motivo">${this.esc(b.motivo)}</span></div>
         </div>`).join('')}</details>`).join('');
     }
-    // Bajas automáticas todavía sin guardar (la planilla de matrícula solo cuenta las guardadas)
+    // Bajas automáticas todavía sin guardar: se registran solas (la planilla de matrícula solo cuenta las guardadas)
+    this._bajasVistas = bajas;
     this.bajasAuto = bajas.filter(b => b.tipo === 'automatica' && !b.guardada);
-    const btnRegistrar = (this.puedeRegistrar && this.bajasAuto.length)
-      ? `<div class="seg-registrar"><span><b>${this.bajasAuto.length}</b> baja(s) automática(s) sin registrar: la planilla de matrícula todavía las cuenta como matriculados.</span>
-         <button type="button" class="btn btn-gold" onclick="SeguimientoModulo.registrarBajasAuto()">Registrar bajas automáticas</button></div>` : '';
+    const btnRegistrar = '';
     // Con un solo trayecto con novedades, se muestra desplegado
     const abrirUnico = (h) => (h.match(/<details/g) || []).length === 1 ? h.replace('<details', '<details open') : h;
     htmlPend = abrirUnico(htmlPend); htmlRiesgo = abrirUnico(htmlRiesgo); htmlBajas = abrirUnico(htmlBajas);
@@ -211,7 +218,7 @@ const SeguimientoModulo = {
       </section>
       <section class="card-panel seg-panel">
         <div class="card-panel-header"><h3 style="margin:0">Bajas</h3></div>
-        <p class="seg-ayuda">Baja manual: cargada en la pestaña Estudiantes del trayecto. Baja automática: cerró un módulo (pasó su fecha de fin) y la nota quedó debajo de ${this.MINIMO}; no corre si el docente dio habilitación excepcional.</p>
+        <p class="seg-ayuda">Baja manual: cargada en la pestaña Estudiantes del trayecto. Baja automática: cerró un módulo (pasó su fecha de fin) y la nota quedó debajo de ${this.MINIMO}; no corre si el docente dio habilitación excepcional. Se registra sola al abrir esta pantalla, y se puede revertir con «Reincorporar», escribiendo la fundamentación.</p>
         ${btnRegistrar}
         ${barraPlegar}
         ${htmlBajas}
@@ -224,36 +231,50 @@ const SeguimientoModulo = {
     if (sec) sec.querySelectorAll('details.seg-grupo').forEach(d => { d.open = abrir; });
   },
 
-  /* Pasa las bajas automáticas a bajas guardadas, con la fecha en que cerró el módulo no aprobado */
-  async registrarBajasAuto() {
-    const lista = this.bajasAuto || [];
-    if (!lista.length || typeof Swal === 'undefined') return;
-    const fecha = (f) => String(f || '').split('-').reverse().join('/');
-    const r = await Swal.fire({
-      title: 'Registrar bajas automáticas', width: 720, showCancelButton: true, confirmButtonText: 'Registrar las marcadas', cancelButtonText: 'Cancelar',
-      html: `<p style="font-size:.85rem;text-align:left">Desmarcá a quienes no deban darse de baja. Cada baja queda con la fecha en que cerró el módulo no aprobado, y se puede deshacer con «Reincorporar».</p>
-        <div style="max-height:300px;overflow:auto;text-align:left;font-size:.85rem">${lista.map((b, i) => `<label style="display:flex;gap:.5rem;padding:.35rem 0;border-bottom:1px solid #e5e7eb"><input type="checkbox" class="bj-chk" data-i="${i}" checked>
-          <span><b>${this.esc(b.nombre)}</b> · ${this.esc(b.t.nombre)}<br><small>Baja desde ${this.esc(fecha(b.fecha))} · ${this.esc(b.motivo)}</small></span></label>`).join('')}</div>`,
-      preConfirm: () => [...document.querySelectorAll('.bj-chk')].filter(c => c.checked).map(c => lista[Number(c.dataset.i)])
-    });
-    if (!r.isConfirmed || !r.value.length) return;
-    const perfil = window.Auth && Auth.usuarioActual;
-    Swal.fire({ title: 'Registrando…', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-    let ok = 0; const fallas = [];
-    for (const b of r.value) {
+  /* Pasa las bajas automáticas a bajas guardadas, con la fecha en que cerró el módulo no aprobado.
+     Se hace sola al abrir Seguimiento; se puede revertir con «Reincorporar» (con fundamentación). */
+  async registrarBajasAuto(lista) {
+    let ok = 0; let falla = '';
+    for (const b of lista) {
       const { error } = await supabase.from('inscripciones').update({
-        estado: 'BAJA', fecha_baja: b.fecha, motivo_baja: String(b.motivo).slice(0, 200), baja_tipo: 'automatica', baja_por: perfil ? perfil.id : null
+        estado: 'BAJA', fecha_baja: b.fecha, motivo_baja: String(b.motivo).slice(0, 200), baja_tipo: 'automatica', baja_por: null
       }).eq('trayecto_id', Number(b.t.id)).eq('estudiante_user', String(b.key));
-      if (error) fallas.push(error.message); else ok++;
+      if (error) { falla = falla || error.message; } else ok++;
     }
-    Swal.close();
-    if (fallas.length) {
-      const falta = /baja_tipo|reincorporado/.test(fallas[0]) ? ' Falta ejecutar sql/19_bajas_guardadas.sql en Supabase.' : '';
-      Swal.fire({ icon: 'warning', title: `Se registraron ${ok} de ${r.value.length}`, text: fallas[0] + falta });
-    } else {
-      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `${ok} baja(s) registrada(s)`, showConfirmButton: false, timer: 2500 });
+    if (falla) console.error('Bajas automáticas:', falla);
+    if (ok && typeof Swal !== 'undefined') {
+      Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: `${ok} baja(s) automática(s) registrada(s)`, text: 'Se pueden revertir con «Reincorporar».', showConfirmButton: false, timer: 3500 });
     }
-    this.cargar();
+    return ok;
+  },
+
+  /* Reincorporar a un estudiante con fundamentación escrita (administración, regencia y preceptoría) */
+  async reincorporar(trayectoId, dni, nombre) {
+    if (typeof Swal === 'undefined') return false;
+    const r = await Swal.fire({
+      title: 'Reincorporar estudiante', icon: 'question', width: 560, showCancelButton: true,
+      confirmButtonText: 'Reincorporar', cancelButtonText: 'Cancelar', focusConfirm: false,
+      html: `<p style="font-size:.88rem;text-align:left"><b>${this.esc(nombre || ('DNI ' + dni))}</b> vuelve a figurar como activo en este trayecto y no se le vuelve a aplicar la baja automática. Escribí la fundamentación: queda registrada con tu nombre y la fecha.</p>`,
+      input: 'textarea', inputPlaceholder: 'Ej.: Presentó certificado médico por el período; rindió el recuperatorio el 12/10 con nota 80.',
+      inputAttributes: { maxlength: 1000 },
+      inputValidator: (v) => (!v || v.trim().length < 10) ? 'Escribí la fundamentación (al menos 10 caracteres).' : null
+    });
+    if (!r.isConfirmed) return false;
+    const { error } = await supabase.from('inscripciones').update({
+      estado: 'ACTIVA', motivo_baja: null, fecha_baja: null, baja_tipo: null, reincorporado: true, motivo_reincorporacion: r.value.trim()
+    }).eq('trayecto_id', Number(trayectoId)).eq('estudiante_user', String(dni));
+    if (error) {
+      const falta = /motivo_reincorporacion/.test(error.message || '') ? ' Falta ejecutar sql/29_reincorporacion_fundamentada.sql en Supabase.' : '';
+      Swal.fire({ icon: 'error', title: 'No se pudo reincorporar', text: (error.message || '') + falta });
+      return false;
+    }
+    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Estudiante reincorporado', showConfirmButton: false, timer: 2000 });
+    return true;
+  },
+
+  async reincorporarDesdeLista(trayectoId, dni) {
+    const b = (this._bajasVistas || []).find(x => Number(x.t.id) === Number(trayectoId) && String(x.key) === String(dni));
+    if (await this.reincorporar(trayectoId, dni, b ? b.nombre : '')) this.cargar();
   },
 
   actualizarContador(n) {

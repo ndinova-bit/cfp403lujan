@@ -1026,8 +1026,9 @@ const ClasesModulo = {
   },
 
   async reincorporar(dni) {
-    if (!confirm('¿Reincorporar al estudiante en este trayecto?')) return;
-    await this.actualizarInscripcion(dni, { estado: 'ACTIVA', motivo_baja: null, fecha_baja: null, baja_tipo: null, reincorporado: true });
+    // Pide la fundamentación escrita (queda registrada con fecha y autor)
+    const ok = window.SeguimientoModulo ? await SeguimientoModulo.reincorporar(this.trayectoActualId, dni, '') : false;
+    if (ok) await this.cargarSabanaEstudiantes();
   },
 
   async actualizarInscripcion(dni, cambios) {
