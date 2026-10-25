@@ -6,7 +6,8 @@
 //   2. Si no tiene cuenta, la crea en Supabase Auth ya confirmada, con
 //      usuario = DNI@cfp403.ar y contraseña inicial CFP403_<DNI>,
 //      y deja su perfil como ESTUDIANTE / ACTIVO.
-//      Si ya tenía cuenta pendiente de aprobación, la aprueba.
+//      Si tenía una cuenta pendiente (hecha con "Registrarse"), la reemplaza por una
+//      nueva con la contraseña inicial, para que nadie entre con una clave ajena.
 //   3. Lo inscribe en el trayecto elegido (si todavía no estaba).
 //
 // Seguridad: solo funciona si quien la llama es administración, regencia o preceptoría activa.
@@ -118,16 +119,23 @@ Deno.serve(async (req: Request) => {
         if (String(pf.rol || '').toLowerCase() !== 'estudiante') esPersonal = true;
 
         const { data: au } = await admin.auth.admin.getUserById(pf.id);
-        if (au?.user) {
-          conCuenta = true;
-          if (String(pf.estado || '').toUpperCase() === 'PENDIENTE') {
-            const { error: errAprob } = await admin
-              .from('profiles')
-              .update({ estado: 'ACTIVO' })
-              .eq('id', pf.id);
-            if (errAprob) resultado.errores.push(`DNI ${dni} (aprobación): ${errAprob.message}`);
-            else resultado.aprobados++;
+        if (au?.user && String(pf.estado || '').toUpperCase() === 'PENDIENTE' &&
+            String(pf.rol || '').toLowerCase() === 'estudiante') {
+          // Cuenta creada con "Registrarse" y nunca aprobada: no se sabe quién eligió esa
+          // contraseña (podría ser otra persona usando este DNI). No se aprueba tal cual:
+          // se elimina (con sus sesiones abiertas) y más abajo se crea una cuenta nueva
+          // con la contraseña inicial de siempre, CFP403_<DNI>.
+          const { error: errElim } = await admin.auth.admin.deleteUser(pf.id);
+          if (errElim) {
+            // Queda PENDIENTE (sin acceso a nada) y se avisa.
+            resultado.errores.push(`DNI ${dni} (cuenta pendiente): ${errElim.message}`);
+            conCuenta = true;
+          } else {
+            await admin.from('profiles').delete().eq('id', pf.id);
+            resultado.aprobados++;
           }
+        } else if (au?.user) {
+          conCuenta = true;
         } else {
           huerfanos.push(pf);
         }

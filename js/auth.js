@@ -293,7 +293,7 @@ const Auth = {
         return;
       }
 
-      const { error } = await supabase.auth.updateUser({ password: datos.nueva });
+      const { error } = await supabase.auth.updateUser({ password: datos.nueva, current_password: datos.actual });
       if (error) {
         this.avisar('No se pudo cambiar la contraseña: ' + error.message);
         return;
