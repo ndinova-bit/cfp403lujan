@@ -118,6 +118,9 @@ const UI = {
       const b = document.getElementById(id);
       if (b && !esAdminTotal) b.style.setProperty('display', 'none', 'important');
     });
+    // Novedades: el Director publica todo; docentes y preceptores, avisos internos de trayectos
+    const btnNov = document.getElementById('btn-novedades');
+    if (btnNov) btnNov.style.setProperty('display', (esAdminTotal || rolNorm === 'docente' || rolNorm === 'preceptor') ? 'flex' : 'none', 'important');
     // Crear usuarios y asignar roles: solo el administrador (la regencia no ve esos botones)
     document.querySelectorAll('.solo-admin-total').forEach(el => {
       if (!esAdminTotal) el.style.setProperty('display', 'none', 'important');
@@ -185,7 +188,8 @@ const UI = {
     // Regencia: no entra a usuarios/roles ni a respaldos
     if ((tabId === 'usuarios' || tabId === 'backups') && !Auth.esAdmin(perfil.rol)) tabId = isAdmin ? 'dashboard' : 'trayectos';
 
-    if (!isAdmin && (tabId === 'dashboard' || tabId === 'nuevo-trayecto' || tabId === 'certificados' || tabId === 'usuarios' || tabId === 'actas' || tabId === 'backups' || tabId === 'auditoria' || tabId === 'novedades')) {
+    if (tabId === 'novedades' && !(Auth.esAdmin(rolPerfil) || rolPerfil === 'docente' || rolPerfil === 'preceptor')) tabId = isAdmin ? 'dashboard' : 'trayectos';
+    if (!isAdmin && (tabId === 'dashboard' || tabId === 'nuevo-trayecto' || tabId === 'certificados' || tabId === 'usuarios' || tabId === 'actas' || tabId === 'backups' || tabId === 'auditoria')) {
       tabId = 'trayectos';
     }
 

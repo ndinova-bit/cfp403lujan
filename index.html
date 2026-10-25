@@ -39,7 +39,7 @@
   <!-- 4. CSS Panel de Administración -->
   <link rel="stylesheet" href="css/admin-dashboard.css?v=60005">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/tema-cfp.css?v=70045">
+  <link rel="stylesheet" href="css/tema-cfp.css?v=70046">
   <style>
     /* Los avisos de SweetAlert (progreso, resúmenes, errores) tienen que verse por encima de los paneles de la plataforma */
     .swal2-container { z-index: 20000 !important; }
@@ -355,7 +355,7 @@
   <button id="btn-certificados" class="nav-item-btn admin-only" onclick="UI.showTab('certificados')">
     <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h9a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8z"/><path d="M8 3v5H5M9 13h6M9 17h4"/></svg></span> Emitir Certificados
   </button>
-  <button id="btn-novedades" class="nav-item-btn admin-only" onclick="UI.showTab('novedades')">
+  <button id="btn-novedades" class="nav-item-btn" style="display:none" onclick="UI.showTab('novedades')">
     <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg></span> Novedades
   </button>
   <button id="btn-usuarios" class="nav-item-btn admin-only" onclick="UI.showTab('usuarios')">
@@ -497,7 +497,7 @@
         </section>
 
         <!-- VISTA 2: LISTA DE TRAYECTOS DENTRO DEL DASHBOARD -->
-        <section id="novedades" class="section-tab admin-only" style="display: none;"><div id="novedades-admin"></div></section>
+        <section id="novedades" class="section-tab" style="display: none;"><div id="novedades-admin"></div></section>
 
         <section id="secretaria" class="section-tab" style="display: none;"><div id="secretaria-contenido"></div></section>
         <section id="cuentas" class="section-tab" style="display: none;"><div id="cuentas-contenido"></div></section>
@@ -925,9 +925,9 @@
   <script src="js/supabase-config.js?v=70007" defer></script>
   <script src="js/avisos.js?v=70008" defer></script>
   <script src="js/reglas.js?v=70022" defer></script>
-  <script src="js/ui.js?v=70045" defer></script>
+  <script src="js/ui.js?v=70046" defer></script>
   <script src="js/auth.js?v=70027" defer></script>
-  <script src="js/trayectos.js?v=70045" defer></script>
+  <script src="js/trayectos.js?v=70046" defer></script>
   <script src="js/usuarios.js?v=70027" defer></script>
   <script src="js/auditoria.js?v=70027" defer></script>
   <script src="js/progreso.js?v=70022" defer></script>
@@ -943,13 +943,13 @@
   <script src="js/notificaciones.js?v=70007" defer></script>
   <script src="js/actas.js?v=70025" defer></script>
   <script src="js/usobase.js?v=70020" defer></script>
-  <script src="js/secretaria.js?v=70045" defer></script>
-  <script src="js/cuentas.js?v=70045" defer></script>
-  <script src="js/estadisticas.js?v=70045" defer></script>
-  <script src="js/observaciones.js?v=70045" defer></script>
-  <script src="js/planilla.js?v=70045" defer></script>
-  <script src="js/sedes.js?v=70045" defer></script>
-  <script src="js/constancias.js?v=70045" defer></script>
+  <script src="js/secretaria.js?v=70046" defer></script>
+  <script src="js/cuentas.js?v=70046" defer></script>
+  <script src="js/estadisticas.js?v=70046" defer></script>
+  <script src="js/observaciones.js?v=70046" defer></script>
+  <script src="js/planilla.js?v=70046" defer></script>
+  <script src="js/sedes.js?v=70046" defer></script>
+  <script src="js/constancias.js?v=70046" defer></script>
   <script src="js/fichacurso.js?v=70017" defer></script>
   <script src="js/certificados.js?v=70016" defer></script>
 </body>

@@ -103,11 +103,18 @@ const NovedadesModulo = {
       cont.innerHTML = this.formularioHTML();
       cont.dataset.listo = '1';
     }
+    const perfil = await Auth.obtenerPerfilSesion();
+    this.soloDirector = Auth.esAdmin(perfil.rol);
+    this.miId = perfil.id;
     const { data: tr } = await supabase.from('trayectos').select('id, nombre, ciclo_lectivo').order('nombre');
     this.trayectos = tr || [];
     const sel = document.getElementById('nov-trayecto');
     const actual = sel.value;
-    sel.innerHTML = '<option value="">Todos (aviso general)</option>' +
+    // Avisos generales y web pública: solo el Director. Docentes y preceptores: avisos de un trayecto
+    const chk = document.getElementById('nov-publica');
+    if (chk && chk.closest('label')) chk.closest('label').style.display = this.soloDirector ? '' : 'none';
+    if (chk && !this.soloDirector) chk.checked = false;
+    sel.innerHTML = (this.soloDirector ? '<option value="">Todos (aviso general)</option>' : '<option value="">Elegí el trayecto…</option>') +
       this.trayectos.map(t => `<option value="${Number(t.id)}">${this.esc(t.nombre)}${t.ciclo_lectivo ? ' (' + this.esc(t.ciclo_lectivo) + ')' : ''}</option>`).join('');
     sel.value = actual;
     await this.listarAdmin();
@@ -151,7 +158,7 @@ const NovedadesModulo = {
       cont.innerHTML = `<div class="prog-vacio">No se pudo leer la tabla de novedades. ¿Ya ejecutaste el archivo <strong>sql/06_novedades.sql</strong> en Supabase?</div>`;
       return;
     }
-    this.lista = data || [];
+    this.lista = (data || []).filter(n => this.soloDirector || n.creado_por === this.miId);
     if (!this.lista.length) { cont.innerHTML = '<div class="prog-vacio">Todavía no hay novedades publicadas.</div>'; return; }
     const hoy = this.hoyISO();
     cont.innerHTML = this.lista.map(n => {
@@ -200,6 +207,7 @@ const NovedadesModulo = {
     const titulo = document.getElementById('nov-titulo').value.trim();
     if (titulo.length < 3) { alert('⚠️ El título es obligatorio (mínimo 3 letras).'); return; }
     const trayecto = document.getElementById('nov-trayecto').value;
+    if (!this.soloDirector && !trayecto) { alert('⚠️ Elegí el trayecto al que va el aviso. Los avisos generales los publica el Director.'); return; }
     const registro = {
       titulo,
       tipo: document.getElementById('nov-tipo').value,
@@ -207,7 +215,7 @@ const NovedadesModulo = {
       cuerpo: document.getElementById('nov-cuerpo').value.trim() || null,
       trayecto_id: trayecto ? Number(trayecto) : null,
       vence: document.getElementById('nov-vence').value || null,
-      publica: document.getElementById('nov-publica').checked && !trayecto
+      publica: this.soloDirector && document.getElementById('nov-publica').checked && !trayecto
     };
     const btn = document.getElementById('nov-btn-guardar');
     btn.disabled = true;
