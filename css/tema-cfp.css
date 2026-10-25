@@ -1250,3 +1250,9 @@ details.seg-grupo > .seg-item { margin: .5rem .7rem; }
 .demo-vacio { color: #6b7a90; text-align: center; padding: .8rem 0 !important; }
 .demo-sin { margin: .5rem 0 0; font-size: .78rem; color: #6b7a90; }
 @media (max-width: 600px) { .demo-cab button { width: 100%; } }
+
+/* Cuentas y claves */
+.cuentas-tit { font-size: 1rem; margin: 1.1rem 0 .5rem; color: var(--cfp-navy, #071b38); }
+.cuentas-acc { display: flex; gap: .4rem; flex-wrap: wrap; justify-content: flex-end; }
+.cuentas-acc .btn { padding: .35rem .7rem; font-size: .8rem; }
+#cuentas-buscar { min-width: 260px; }
