@@ -171,6 +171,7 @@ const UI = {
     const rolPerfil = String(perfil.rol || '').toLowerCase().trim();
     if (Auth.esSecretaria(rolPerfil) && tabId !== 'secretaria') tabId = 'secretaria';
     if (tabId === 'secretaria' && !(Auth.esSecretaria(rolPerfil) || isAdmin || rolPerfil === 'preceptor')) tabId = 'trayectos';
+    if (tabId === 'estadisticas' && !isAdmin) tabId = 'trayectos';
     if (tabId === 'cuentas' && !(rolPerfil === 'regente' || rolPerfil === 'preceptor')) tabId = isAdmin ? 'dashboard' : 'trayectos';
     // Regencia: no entra a usuarios/roles ni a respaldos
     if ((tabId === 'usuarios' || tabId === 'backups') && !Auth.esAdmin(perfil.rol)) tabId = isAdmin ? 'dashboard' : 'trayectos';
@@ -208,6 +209,7 @@ const UI = {
         'seguimiento': 'Seguimiento',
         'secretaria': 'Panel de cifras por trayecto',
         'cuentas': 'Cuentas y claves',
+        'estadisticas': 'Estadísticas de trayectos',
         'novedades': 'Novedades y calendario',
         'trayectos': (isAdmin || rolActual === 'preceptor') ? 'Trayectos Formativos' : 'Mis Trayectos Formativos',
         'actas': 'Fichas de Curso / Actas de Examen',
@@ -246,6 +248,10 @@ const UI = {
 
     if (tabId === 'progreso' && window.ProgresoModulo) {
       window.ProgresoModulo.cargar();
+    }
+
+    if (tabId === 'estadisticas' && window.EstadisticasModulo) {
+      window.EstadisticasModulo.cargar();
     }
 
     if (tabId === 'cuentas' && window.CuentasModulo) {

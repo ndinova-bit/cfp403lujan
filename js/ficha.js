@@ -30,6 +30,7 @@ const FichaAlumno = {
           </div>
           <div class="ficha-cuerpo">
             <section class="ficha-entregas ficha-datos" id="ficha-datos"></section>
+            <section class="ficha-entregas" id="ficha-historial" style="display:none"></section>
             <section class="ficha-entregas" id="ficha-observaciones"></section>
             <div id="ficha-progreso"></div>
             <section class="ficha-entregas">
@@ -73,6 +74,7 @@ const FichaAlumno = {
     this.esPersonal = !!(window.Auth && Auth.esPersonal && Auth.esPersonal(perfilYo.rol));
     this.cargarDatosPersonales(key);
     this.cargarObservaciones(key);
+    this.cargarHistorial(key);
     const res = await ProgresoModulo.cargarPara(key, document.getElementById('ficha-progreso'), { boton: false });
     this.dibujarEntregas(res);
   },
@@ -128,6 +130,23 @@ const FichaAlumno = {
     const { error } = await supabase.from('datos_estudiante').upsert(reg, { onConflict: 'dni' });
     if (error) { alert('No se pudieron guardar los datos: ' + error.message); return; }
     if (typeof Swal !== 'undefined') Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Datos guardados', showConfirmButton: false, timer: 1800 });
+  },
+
+  /* ---------- Trayectos cursados (historial) ---------- */
+  async cargarHistorial(dni) {
+    const cont = document.getElementById('ficha-historial');
+    if (!cont) return;
+    cont.style.display = 'none';
+    try {
+      const { data, error } = await supabase.rpc('historial_estudiante', { p_dni: String(dni) });
+      if (error || !Array.isArray(data)) return;      // docentes u otros roles sin acceso: no se muestra
+      const clase = { 'Aprobado': 'ok', 'Baja': 'bad', 'Cursando': 'mid' };
+      cont.innerHTML = `<h3>Trayectos cursados</h3>${data.length ? `<table class="sec-tabla"><thead><tr><th>Ciclo</th><th>Trayecto</th><th>Estado</th><th>N.º de egresado</th></tr></thead><tbody>
+        ${data.map(h => `<tr><td>${this.esc(h.ciclo)}</td><td class="sec-nombre">${this.esc(h.trayecto)}</td>
+          <td><span class="act-chip ${clase[h.estado] || ''}">${this.esc(h.estado)}</span>${h.estado === 'Baja' && (h.fecha_baja || h.motivo_baja) ? `<br><small>${this.esc([h.fecha_baja ? String(h.fecha_baja).split('-').reverse().join('/') : '', h.motivo_baja || ''].filter(Boolean).join(' · '))}</small>` : ''}</td>
+          <td>${this.esc(h.num_egresado || '—')}</td></tr>`).join('')}</tbody></table>` : '<p class="ficha-vacio">Sin trayectos registrados.</p>'}`;
+      cont.style.display = '';
+    } catch (e) { /* sin acceso o sin SQL: la ficha sigue igual */ }
   },
 
   /* ---------- Observaciones ---------- */

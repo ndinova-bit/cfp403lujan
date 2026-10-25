@@ -39,7 +39,7 @@
   <!-- 4. CSS Panel de Administración -->
   <link rel="stylesheet" href="css/admin-dashboard.css?v=60005">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/tema-cfp.css?v=70039">
+  <link rel="stylesheet" href="css/tema-cfp.css?v=70040">
   <style>
     /* Los avisos de SweetAlert (progreso, resúmenes, errores) tienen que verse por encima de los paneles de la plataforma */
     .swal2-container { z-index: 20000 !important; }
@@ -361,6 +361,9 @@
   <button id="btn-backups" class="nav-item-btn admin-only" onclick="UI.showTab('backups')">
     <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.700 3.600 3 8 3s8-1.300 8-3V6M4 12v6c0 1.700 3.600 3 8 3s8-1.300 8-3v-6"/></svg></span> Base de Datos
   </button>
+  <button id="btn-estadisticas" class="nav-item-btn admin-only" onclick="UI.showTab('estadisticas')">
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/></svg></span> Estadísticas
+  </button>
   <button id="btn-auditoria" class="nav-item-btn admin-only" onclick="UI.showTab('auditoria')">
     <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 3.400 8.200 8 9 4.600-.800 8-4 8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></span> Auditoría
   </button>
@@ -495,6 +498,7 @@
 
         <section id="secretaria" class="section-tab" style="display: none;"><div id="secretaria-contenido"></div></section>
         <section id="cuentas" class="section-tab" style="display: none;"><div id="cuentas-contenido"></div></section>
+        <section id="estadisticas" class="section-tab admin-only" style="display: none;"><div id="estadisticas-contenido"></div></section>
         <section id="seguimiento" class="section-tab" style="display: none;"><div id="seguimiento-contenido"></div></section>
 
         <section id="progreso" class="section-tab" style="display: none;"><div data-novedades-usuario></div><div id="progreso-contenido"></div></section>
@@ -917,9 +921,9 @@
   <script src="js/supabase-config.js?v=70007" defer></script>
   <script src="js/avisos.js?v=70008" defer></script>
   <script src="js/reglas.js?v=70022" defer></script>
-  <script src="js/ui.js?v=70039" defer></script>
+  <script src="js/ui.js?v=70040" defer></script>
   <script src="js/auth.js?v=70027" defer></script>
-  <script src="js/trayectos.js?v=70039" defer></script>
+  <script src="js/trayectos.js?v=70040" defer></script>
   <script src="js/usuarios.js?v=70027" defer></script>
   <script src="js/auditoria.js?v=70027" defer></script>
   <script src="js/progreso.js?v=70022" defer></script>
@@ -935,11 +939,12 @@
   <script src="js/notificaciones.js?v=70007" defer></script>
   <script src="js/actas.js?v=70025" defer></script>
   <script src="js/usobase.js?v=70020" defer></script>
-  <script src="js/secretaria.js?v=70039" defer></script>
-  <script src="js/cuentas.js?v=70039" defer></script>
-  <script src="js/planilla.js?v=70039" defer></script>
-  <script src="js/sedes.js?v=70039" defer></script>
-  <script src="js/constancias.js?v=70039" defer></script>
+  <script src="js/secretaria.js?v=70040" defer></script>
+  <script src="js/cuentas.js?v=70040" defer></script>
+  <script src="js/estadisticas.js?v=70040" defer></script>
+  <script src="js/planilla.js?v=70040" defer></script>
+  <script src="js/sedes.js?v=70040" defer></script>
+  <script src="js/constancias.js?v=70040" defer></script>
   <script src="js/fichacurso.js?v=70017" defer></script>
   <script src="js/certificados.js?v=70016" defer></script>
 </body>

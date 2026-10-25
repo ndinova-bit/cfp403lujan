@@ -1256,3 +1256,14 @@ details.seg-grupo > .seg-item { margin: .5rem .7rem; }
 .cuentas-acc { display: flex; gap: .4rem; flex-wrap: wrap; justify-content: flex-end; }
 .cuentas-acc .btn { padding: .35rem .7rem; font-size: .8rem; }
 #cuentas-buscar { min-width: 260px; }
+
+/* Estadísticas */
+.est-ranks { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: .8rem; margin-bottom: 1rem; }
+.est-rank { background: #fff; border: 1px solid var(--cfp-line); border-radius: 14px; padding: .8rem .9rem; }
+.est-rank h4 { margin: 0 0 .4rem; font-size: .9rem; color: var(--cfp-navy, #071b38); }
+.est-rank ol { margin: 0; padding-left: 1.2rem; font-size: .85rem; }
+.est-rank li { padding: .15rem 0; }
+.est-rank li span { display: inline-block; max-width: 70%; vertical-align: bottom; }
+.est-rank li b { float: right; }
+.est-ord { background: none; border: 0; color: inherit; font: inherit; font-weight: 700; cursor: pointer; padding: 0; }
+.est-ord.sel { text-decoration: underline; }
