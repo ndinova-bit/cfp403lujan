@@ -125,6 +125,9 @@ const UI = {
     if (btnCons) btnCons.style.setProperty('display', (esSecretaria || isAdmin || rolNorm === 'preceptor') ? 'flex' : 'none', 'important');
     const btnCue = document.getElementById('btn-cuentas');   // restablecer claves y aprobar estudiantes: regencia y preceptoría
     if (btnCue) btnCue.style.setProperty('display', (rolNorm === 'regente' || rolNorm === 'preceptor') ? 'flex' : 'none', 'important');
+    const btnObs = document.getElementById('btn-observaciones');   // todo el personal (no estudiantes)
+    if (btnObs) btnObs.style.setProperty('display', rolNorm !== 'estudiante' ? 'flex' : 'none', 'important');
+    if (rolNorm !== 'estudiante' && window.ObservacionesModulo) setTimeout(() => ObservacionesModulo.contarPendientes(), 1000);
     const btnSec = document.getElementById('btn-secretaria');
     if (btnSec) btnSec.style.setProperty('display', (esSecretaria || isAdmin || rolNorm === 'preceptor') ? 'flex' : 'none', 'important');
     if (esSecretaria) {
@@ -169,9 +172,10 @@ const UI = {
     }
     const isAdmin = Auth.esDireccion(perfil.rol);
     const rolPerfil = String(perfil.rol || '').toLowerCase().trim();
-    if (Auth.esSecretaria(rolPerfil) && tabId !== 'secretaria') tabId = 'secretaria';
+    if (Auth.esSecretaria(rolPerfil) && tabId !== 'secretaria' && tabId !== 'observaciones') tabId = 'secretaria';
     if (tabId === 'secretaria' && !(Auth.esSecretaria(rolPerfil) || isAdmin || rolPerfil === 'preceptor')) tabId = 'trayectos';
     if (tabId === 'estadisticas' && !isAdmin) tabId = 'trayectos';
+    if (tabId === 'observaciones' && rolPerfil === 'estudiante') tabId = 'trayectos';
     if (tabId === 'cuentas' && !(rolPerfil === 'regente' || rolPerfil === 'preceptor')) tabId = isAdmin ? 'dashboard' : 'trayectos';
     // Regencia: no entra a usuarios/roles ni a respaldos
     if ((tabId === 'usuarios' || tabId === 'backups') && !Auth.esAdmin(perfil.rol)) tabId = isAdmin ? 'dashboard' : 'trayectos';
@@ -210,6 +214,7 @@ const UI = {
         'secretaria': 'Panel de cifras por trayecto',
         'cuentas': 'Cuentas y claves',
         'estadisticas': 'Estadísticas de trayectos',
+        'observaciones': 'Observaciones',
         'novedades': 'Novedades y calendario',
         'trayectos': (isAdmin || rolActual === 'preceptor') ? 'Trayectos Formativos' : 'Mis Trayectos Formativos',
         'actas': 'Fichas de Curso / Actas de Examen',
@@ -248,6 +253,10 @@ const UI = {
 
     if (tabId === 'progreso' && window.ProgresoModulo) {
       window.ProgresoModulo.cargar();
+    }
+
+    if (tabId === 'observaciones' && window.ObservacionesModulo) {
+      window.ObservacionesModulo.cargar();
     }
 
     if (tabId === 'estadisticas' && window.EstadisticasModulo) {

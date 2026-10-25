@@ -1267,3 +1267,24 @@ details.seg-grupo > .seg-item { margin: .5rem .7rem; }
 .est-rank li b { float: right; }
 .est-ord { background: none; border: 0; color: inherit; font: inherit; font-weight: 700; cursor: pointer; padding: 0; }
 .est-ord.sel { text-decoration: underline; }
+
+/* Observaciones institucionales */
+.obs-card { background: #fff; border: 1px solid var(--cfp-line); border-left: 4px solid var(--cfp-blue, #1f5fbf); border-radius: 14px; padding: .9rem 1rem; margin-bottom: .9rem; }
+.obs-card.tipo-pedagogica { border-left-color: #1f9d6b; }
+.obs-card.tipo-administrativa { border-left-color: #1f5fbf; }
+.obs-card.tipo-otra { border-left-color: #8a96a8; }
+.obs-card h3 { margin: .4rem 0 .15rem; font-size: 1.02rem; color: var(--cfp-navy, #071b38); }
+.obs-quien { margin: 0 0 .5rem; font-size: .85rem; color: #4a5a72; }
+.obs-texto { margin: .4rem 0; line-height: 1.5; }
+.obs-doc { margin: .4rem 0; font-size: .85rem; }
+.obs-doc div { margin-top: .4rem; padding: .6rem; background: #f4f7fb; border-radius: 10px; }
+.obs-resp { font-size: .88rem; background: #f4f7fb; padding: .5rem .7rem; border-radius: 10px; }
+.obs-seg { margin-top: .6rem; border-top: 1px dashed var(--cfp-line); padding-top: .5rem; }
+.obs-seg h4 { margin: 0 0 .3rem; font-size: .88rem; }
+.obs-seg-item { margin-bottom: .5rem; padding-left: .7rem; border-left: 3px solid var(--cfp-yellow, #f5b800); }
+.obs-seg-item p { margin: .15rem 0; }
+.obs-card footer { margin-top: .6rem; justify-content: flex-start; }
+.obs-form { text-align: left; }
+.obs-form label { display: block; font-size: .8rem; font-weight: 700; margin-top: .6rem; }
+.obs-form .swal2-input, .obs-form .swal2-select, .obs-form .swal2-textarea { margin: .2rem 0 0; width: 100%; box-sizing: border-box; }
+.obs-form .swal2-textarea { min-height: 5.5rem; }
