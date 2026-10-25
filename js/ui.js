@@ -118,6 +118,11 @@ const UI = {
       const b = document.getElementById(id);
       if (b && !esAdminTotal) b.style.setProperty('display', 'none', 'important');
     });
+    // Crear usuarios y asignar roles: solo el administrador (la regencia no ve esos botones)
+    document.querySelectorAll('.solo-admin-total').forEach(el => {
+      if (!esAdminTotal) el.style.setProperty('display', 'none', 'important');
+      else el.style.removeProperty('display');
+    });
     // Panel de cifras: Secretaría, dirección, regencia y preceptoría
     const btnPlan = document.getElementById('btn-planilla');   // planilla de matrícula: todo el personal
     if (btnPlan) btnPlan.style.setProperty('display', (rolNorm !== 'estudiante') ? 'flex' : 'none', 'important');

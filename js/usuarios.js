@@ -9,6 +9,9 @@ const UsuariosAdmin = {
   filtroRolActual: 'todos',
 
   abrirModal() {
+    // Solo el Director (administrador) crea cuentas y asigna roles; la regencia solo restablece claves y aprueba pendientes
+    const rolYo = (window.Auth && Auth.usuarioActual && Auth.usuarioActual.rol) || '';
+    if (window.Auth && !Auth.esAdmin(rolYo)) { alert('Solo el administrador puede crear usuarios y asignar roles.'); return; }
     const modal = document.getElementById('modal-alta-usuario');
     if (modal) {
       modal.classList.add('open', 'active');
