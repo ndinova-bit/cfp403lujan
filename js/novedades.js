@@ -104,7 +104,10 @@ const NovedadesModulo = {
       cont.dataset.listo = '1';
     }
     const perfil = await Auth.obtenerPerfilSesion();
-    this.soloDirector = Auth.esAdmin(perfil.rol);
+    // Avisos generales/institucionales: Director y Regente (Art. 37.49-50: comunica
+    // novedades y suscribe con el Director las comunicaciones). Docentes y preceptores
+    // siguen limitados a avisos internos (no públicos) de sus propios trayectos.
+    this.soloDirector = Auth.esDireccion(perfil.rol);
     this.miId = perfil.id;
     const { data: tr } = await supabase.from('trayectos').select('id, nombre, ciclo_lectivo').order('nombre');
     this.trayectos = tr || [];
