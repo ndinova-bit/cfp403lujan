@@ -138,6 +138,9 @@ const UI = {
     if (rolNorm !== 'estudiante' && window.ObservacionesModulo) setTimeout(() => ObservacionesModulo.contarPendientes(), 1000);
     const btnSec = document.getElementById('btn-secretaria');
     if (btnSec) btnSec.style.setProperty('display', (esSecretaria || isAdmin || rolNorm === 'preceptor') ? 'flex' : 'none', 'important');
+    // Cooperadora: carga (director, regente, preceptoría) y visualización (+ secretaría). Nunca docentes ni estudiantes.
+    const btnCoop = document.getElementById('btn-cooperadora');
+    if (btnCoop) btnCoop.style.setProperty('display', (Auth.esPersonal(rolNorm) || esSecretaria) ? 'flex' : 'none', 'important');
     if (esSecretaria) {
       const bt = document.getElementById('btn-trayectos');
       if (bt) bt.style.setProperty('display', 'none', 'important');
@@ -185,6 +188,7 @@ const UI = {
     if (tabId === 'estadisticas' && !isAdmin) tabId = 'trayectos';
     if (tabId === 'observaciones' && rolPerfil === 'estudiante') tabId = 'trayectos';
     if (tabId === 'cuentas' && !(rolPerfil === 'regente' || rolPerfil === 'preceptor')) tabId = isAdmin ? 'dashboard' : 'trayectos';
+    if (tabId === 'cooperadora' && !(Auth.esPersonal(rolPerfil) || Auth.esSecretaria(rolPerfil))) tabId = isAdmin ? 'dashboard' : 'trayectos';
     // Regencia: no entra a usuarios/roles ni a respaldos
     if ((tabId === 'usuarios' || tabId === 'backups') && !Auth.esAdmin(perfil.rol)) tabId = isAdmin ? 'dashboard' : 'trayectos';
 
@@ -224,6 +228,7 @@ const UI = {
         'cuentas': 'Cuentas y claves',
         'estadisticas': 'Estadísticas de trayectos',
         'observaciones': 'Observaciones',
+        'cooperadora': 'Cooperadora Escolar',
         'novedades': 'Novedades y calendario',
         'trayectos': (isAdmin || rolActual === 'preceptor') ? 'Trayectos Formativos' : 'Mis Trayectos Formativos',
         'actas': 'Fichas de Curso / Actas de Examen',
@@ -278,6 +283,10 @@ const UI = {
 
     if (tabId === 'secretaria' && window.SecretariaModulo) {
       window.SecretariaModulo.cargar();
+    }
+
+    if (tabId === 'cooperadora' && window.CooperadoraModulo) {
+      window.CooperadoraModulo.cargar();
     }
 
     if (tabId === 'auditoria' && window.AuditoriaModulo) {
