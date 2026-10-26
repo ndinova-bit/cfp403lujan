@@ -972,8 +972,8 @@ const ClasesModulo = {
         const dniSeguro = String(userKey).replace(/[^0-9A-Za-z_-]/g, '');
         const rolG = this.rolGestor || '';
         const esAdminG = Auth.esDireccion(rolG);
-        // Baja manual: la dirección en cualquier trayecto; docente y preceptor en trayectos sin módulos
-        const puedeBaja = esAdminG || (!tieneModulos && (rolG === 'docente' || rolG === 'preceptor'));
+        // Baja manual: la dirección y la preceptoría en cualquier trayecto; docente solo en trayectos sin módulos
+        const puedeBaja = esAdminG || rolG === 'preceptor' || (!tieneModulos && rolG === 'docente');
         // Reincorporar: administración, regencia y preceptoría (en cualquier trayecto)
         const puedeReinc = esAdminG || rolG === 'preceptor';
         // Fecha de inscripción (cuenta para la planilla de matrícula) y equivalencias por módulos previos aprobados
