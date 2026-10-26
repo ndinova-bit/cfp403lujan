@@ -118,7 +118,10 @@ const ClasesModulo = {
     let htmlModal = `
       <div style="background:#1e293b; border:1px solid rgba(255,255,255,0.1); border-radius:12px; width:100%; max-width:980px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden; color:#f8fafc;">
         <div style="padding:1.2rem 1.5rem; background:#0f172a; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
-          <h3 style="margin:0; font-size:1.15rem;">📚 Trayecto: <span style="color:#38bdf8;">${this.esc(nombreTrayecto)}</span></h3>
+          <div>
+            <h3 style="margin:0; font-size:1.15rem;">📚 Trayecto: <span style="color:#38bdf8;">${this.esc(nombreTrayecto)}</span></h3>
+            <div id="resumen-fechas-modulos" style="font-size:0.75rem; color:#94a3b8; margin-top:0.2rem;"></div>
+          </div>
           <div style="display:flex; gap:0.5rem; align-items:center;">
             ${Auth.esAdmin(rolNorm) ? `
               <button type="button" onclick="ReportesModulo.descargarBackupCompletoJSON()" style="padding:0.35rem 0.7rem; background:rgba(34,197,94,0.2); border:1px solid rgba(34,197,94,0.4); color:#4ade80; border-radius:6px; font-size:0.78rem; font-weight:600; cursor:pointer;">
@@ -256,9 +259,32 @@ const ClasesModulo = {
       await this.poblarComboModulos();
       await this.poblarComboEstudiantes();
     }
+    if (!esEstudiante) this.cargarResumenFechasModulos(trayectoId);
     await this.cargarListaClases(esEstudiante);
     // El preceptor entra directo a la toma de asistencia; sin señal, también el docente
     if (esPreceptor || (!esEstudiante && !navigator.onLine)) this.cambiarVistaPestana('asistencias');
+  },
+
+  // Solo visual (no va a actas ni certificados): fechas de inicio/fin de cada módulo,
+  // para que preceptoría e instructores vean de un vistazo cuándo arranca y termina cada uno.
+  async cargarResumenFechasModulos(trayectoId) {
+    const el = document.getElementById('resumen-fechas-modulos');
+    if (!el) return;
+    el.textContent = '';
+    try {
+      const { data: modulos, error } = await supabase
+        .from('modulos')
+        .select('id, nombre, fecha_inicio, fecha_fin')
+        .eq('trayecto_id', Number(trayectoId))
+        .order('id', { ascending: true });
+      if (error || !modulos || !modulos.length) return;
+      const f = (d) => d ? String(d).slice(0, 10).split('-').reverse().slice(0, 2).join('/') : 's/f';
+      const conFechas = modulos.filter(m => m.fecha_inicio || m.fecha_fin);
+      if (!conFechas.length) return;
+      el.innerHTML = conFechas.map(m => `<span style="margin-right:0.9rem; white-space:nowrap;">📘 ${this.esc(m.nombre)}: ${f(m.fecha_inicio)} → ${f(m.fecha_fin)}</span>`).join('');
+    } catch (err) {
+      console.error('Error al cargar fechas de módulos:', err);
+    }
   },
 
   async poblarComboModulos() {
