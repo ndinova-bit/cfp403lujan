@@ -139,6 +139,17 @@ const CooperadoraModulo = {
   money(n) { return '$ ' + Number(n || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
   fecha(s) { return s ? String(s).slice(0, 10).split('-').reverse().join('/') : ''; },
 
+  // Cuenta el padrón en vivo (socios activos en estado ACTIVO, por categoría) para
+  // completar solo el Cuadro 2 de la PIA sin pedirlo a mano.
+  contarSocios() {
+    const act = this.socios.filter(s => s.estado === 'ACTIVO');
+    return {
+      activos: act.filter(s => s.categoria === 'activo').length,
+      honorarios: act.filter(s => s.categoria === 'honorario').length,
+      adherentes: act.filter(s => s.categoria === 'adherente').length
+    };
+  },
+
   async cargar() {
     const cont = document.getElementById('cooperadora-contenido');
     if (!cont) return;
@@ -222,11 +233,35 @@ const CooperadoraModulo = {
     `;
   },
 
+  // Trae una vez (y cachea) a todas las personas ya cargadas en la plataforma
+  // (estudiantes y personal), para poder completar el alta de un socio sin
+  // tipear de nuevo apellido/nombre/DNI si ya están. El padrón de socios sigue
+  // siendo independiente: esto solo precarga el formulario, no lo vincula.
+  async cargarPersonasCache() {
+    if (this.personasCache) return this.personasCache;
+    try {
+      const { data, error } = await supabase.from('profiles').select('dni, apellido, nombre, rol').order('apellido');
+      if (error) throw error;
+      this.personasCache = (data || []).filter(p => p.dni && p.apellido);
+    } catch (err) {
+      console.warn('No se pudo cargar la lista de personas para autocompletar:', err);
+      this.personasCache = [];
+    }
+    return this.personasCache;
+  },
+
   async formSocio(id) {
     const s = id ? this.socios.find(x => x.id === id) : null;
+    const personas = s ? [] : await this.cargarPersonasCache();
+    const etiqueta = p => `${p.apellido}, ${p.nombre} — DNI ${p.dni}${p.rol ? ' (' + p.rol + ')' : ''}`;
     const { value } = await Swal.fire({
       title: s ? 'Editar socio' : 'Nuevo socio',
       html: `
+        ${s ? '' : `
+        <input id="sw-buscar" class="swal2-input" list="sw-buscar-list" autocomplete="off" placeholder="Buscar por apellido o DNI (si ya está en la plataforma)…">
+        <datalist id="sw-buscar-list">${personas.map(p => `<option value="${this.esc(etiqueta(p))}">`).join('')}</datalist>
+        <p class="plan-meta" style="margin-top:-0.3rem;">Elegí a alguien de la lista para completar los datos, o escribilos abajo si no está cargado/a.</p>
+        `}
         <input id="sw-apellido" class="swal2-input" placeholder="Apellido" value="${this.esc(s?.apellido || '')}">
         <input id="sw-nombre" class="swal2-input" placeholder="Nombre" value="${this.esc(s?.nombre || '')}">
         <input id="sw-dni" class="swal2-input" placeholder="DNI" value="${this.esc(s?.dni || '')}">
@@ -242,6 +277,17 @@ const CooperadoraModulo = {
           <option value="BAJA" ${s?.estado === 'BAJA' ? 'selected' : ''}>Baja</option>
         </select>
       `,
+      didOpen: () => {
+        const buscar = document.getElementById('sw-buscar');
+        if (!buscar) return;
+        buscar.addEventListener('input', () => {
+          const p = personas.find(x => etiqueta(x) === buscar.value);
+          if (!p) return;
+          document.getElementById('sw-apellido').value = p.apellido || '';
+          document.getElementById('sw-nombre').value = p.nombre || '';
+          document.getElementById('sw-dni').value = p.dni || '';
+        });
+      },
       focusConfirm: false, showCancelButton: true, confirmButtonText: 'Guardar',
       preConfirm: () => {
         const apellido = document.getElementById('sw-apellido').value.trim();
@@ -457,7 +503,7 @@ const CooperadoraModulo = {
           <tr><td>Escuela</td><td>${this.esc(ej.escuela_nombre || '')} N.º ${this.esc(ej.escuela_nro || '')} — ${this.esc(ej.distrito || '')}</td></tr>
           <tr><td>Domicilio</td><td>${this.esc(ej.domicilio || '')} ${ej.barrio ? '(' + this.esc(ej.barrio) + ')' : ''} — ${this.esc(ej.localidad || '')}</td></tr>
           <tr><td>CUIT</td><td>${this.esc(ej.cuit || '')}</td></tr>
-          <tr><td>Socios</td><td>Activos: ${ej.socios_activos ?? '–'} · Honorarios: ${ej.socios_honorarios ?? '–'} · Adherentes: ${ej.socios_adherentes ?? '–'}</td></tr>
+          <tr><td>Socios (padrón actual)</td><td>Activos: ${this.contarSocios().activos} · Honorarios: ${this.contarSocios().honorarios} · Adherentes: ${this.contarSocios().adherentes}</td></tr>
           <tr><td>Acta de asamblea</td><td>N.º ${this.esc(ej.acta_numero || '')}, fojas ${this.esc(ej.acta_fojas || '')} — ${this.fecha(ej.asamblea_fecha)} (asistieron ${ej.asamblea_asistieron ?? '–'})</td></tr>
           <tr><td>Cuota social</td><td>${ej.cuota_monto ? this.money(ej.cuota_monto) : '–'} (${this.esc(ej.cuota_periodicidad || '')})</td></tr>
           <tr><td>Caja chica aprobada</td><td>${ej.caja_chica_monto ? this.money(ej.caja_chica_monto) : '–'}</td></tr>
@@ -502,9 +548,7 @@ const CooperadoraModulo = {
         <input id="e-coop-tel" class="swal2-input" placeholder="Teléfono de la cooperadora" value="${this.esc(e?.cooperadora_telefono || '')}">
         <input id="e-asesor-email" class="swal2-input" placeholder="E-mail del asesor/a" value="${this.esc(e?.asesor_email || '')}">
         <input id="e-asesor-tel" class="swal2-input" placeholder="Teléfono del asesor/a" value="${this.esc(e?.asesor_telefono || '')}">
-        <input id="e-activos" type="number" class="swal2-input" placeholder="Socios activos" value="${e?.socios_activos ?? ''}">
-        <input id="e-honorarios" type="number" class="swal2-input" placeholder="Socios honorarios" value="${e?.socios_honorarios ?? ''}">
-        <input id="e-adherentes" type="number" class="swal2-input" placeholder="Socios adherentes" value="${e?.socios_adherentes ?? ''}">
+        <p class="plan-meta">Socios activos/honorarios/adherentes: se cuentan solos desde la pestaña "Socios" (${this.contarSocios().activos} / ${this.contarSocios().honorarios} / ${this.contarSocios().adherentes} ahora mismo). No hace falta cargarlos acá.</p>
         <hr><strong>Síntesis del acta de asamblea</strong>
         <input id="e-acta-nro" class="swal2-input" placeholder="Acta N.º" value="${this.esc(e?.acta_numero || '')}">
         <input id="e-acta-fojas" class="swal2-input" placeholder="Fojas" value="${this.esc(e?.acta_fojas || '')}">
@@ -556,7 +600,7 @@ const CooperadoraModulo = {
           domicilio: g('e-domicilio') || null, barrio: g('e-barrio') || null, localidad: g('e-localidad') || null,
           cooperadora_email: g('e-coop-email') || null, cooperadora_telefono: g('e-coop-tel') || null,
           asesor_email: g('e-asesor-email') || null, asesor_telefono: g('e-asesor-tel') || null,
-          socios_activos: Number(g('e-activos')) || null, socios_honorarios: Number(g('e-honorarios')) || null, socios_adherentes: Number(g('e-adherentes')) || null,
+          ...(() => { const c = this.contarSocios(); return { socios_activos: c.activos, socios_honorarios: c.honorarios, socios_adherentes: c.adherentes }; })(),
           acta_numero: g('e-acta-nro') || null, acta_fojas: g('e-acta-fojas') || null,
           asamblea_fecha: g('e-asamblea-fecha') || null, asamblea_asistieron: Number(g('e-asamblea-asist')) || null,
           cuota_monto: Number(g('e-cuota-monto')) || null, cuota_periodicidad: document.getElementById('e-cuota-period').value,
@@ -688,7 +732,8 @@ const CooperadoraModulo = {
       const cuitPartes = String(ej.cuit || '').split('-');
       setTx(c1.cuit1, cuitPartes[0] || ''); setTx(c1.cuit2, cuitPartes[1] || ''); setTx(c1.cuit3, cuitPartes[2] || '');
       setTx(c1.domicilio, ej.domicilio); setTx(c1.barrio, ej.barrio); setTx(c1.localidad, ej.localidad);
-      setTx(c1.socios_activos, ej.socios_activos); setTx(c1.socios_honorarios, ej.socios_honorarios); setTx(c1.socios_adherentes, ej.socios_adherentes);
+      const conteoSocios = this.contarSocios();
+      setTx(c1.socios_activos, conteoSocios.activos); setTx(c1.socios_honorarios, conteoSocios.honorarios); setTx(c1.socios_adherentes, conteoSocios.adherentes);
       setTx(c1.cooperadora_email, ej.cooperadora_email); setTx(c1.cooperadora_telefono, ej.cooperadora_telefono);
       setTx(c1.asesor_email, ej.asesor_email); setTx(c1.asesor_telefono, ej.asesor_telefono);
 
