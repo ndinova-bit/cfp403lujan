@@ -955,7 +955,19 @@ const ClasesModulo = {
 
       let thModulosHTML = '';
       if (tieneModulos) {
-        thModulosHTML = modulos.map(m => `<th style="padding:0.75rem; text-align:center;">${this.esc(m.nombre)}</th>`).join('');
+        // Fechas de inicio y fin bajo el nombre del módulo: solo visual (se dibujan con CSS, no entran en
+        // el CSV ni en lo que se copia), para docentes y equipo de conducción.
+        const rolVer = String((window.Auth && Auth.usuarioActual && Auth.usuarioActual.rol) || '').toLowerCase().trim();
+        const verFechas = !!rolVer && rolVer !== 'estudiante';
+        const fcorta = f => { const x = String(f || '').slice(0, 10).split('-'); return x.length === 3 ? `${x[2]}/${x[1]}/${x[0].slice(2)}` : ''; };
+        const rango = m => {
+          const a = fcorta(m.fecha_inicio), b = fcorta(m.fecha_fin);
+          return a && b ? `${a} al ${b}` : (a ? `desde ${a}` : (b ? `hasta ${b}` : ''));
+        };
+        thModulosHTML = modulos.map(m => {
+          const r = verFechas ? rango(m) : '';
+          return `<th class="${r ? 'sabana-fechas' : ''}" ${r ? `data-fechas="${this.esc(r)}"` : ''} style="padding:0.75rem; text-align:center;">${this.esc(m.nombre)}</th>`;
+        }).join('');
       } else {
         thModulosHTML = `<th style="padding:0.75rem; text-align:center;">Promedio General</th>`;
       }

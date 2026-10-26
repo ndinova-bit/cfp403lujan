@@ -34,9 +34,7 @@ const ReglasFP = {
 
   // % de asistencia (0-100) o null si no hay registros
   porcentajeAsistencia(registros) {
-    // Los días 'sin_clase' (licencia del instructor, jornada institucional, paro, etc.)
-    // no se dictó clase: no cuentan ni a favor ni en contra de nadie.
-    const r = (registros || []).filter(a => String(a?.estado || '').toLowerCase() !== 'sin_clase');
+    const r = registros || [];
     if (!r.length) return null;
     return (r.filter(a => this.esPresente(a.estado)).length / r.length) * 100;
   },

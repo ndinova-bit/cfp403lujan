@@ -74,6 +74,7 @@ const FichaAlumno = {
     const perfilYo = (window.Auth && Auth.usuarioActual) || {};
     this.esPersonal = !!(window.Auth && Auth.esPersonal && Auth.esPersonal(perfilYo.rol));
     this.cargarDatosPersonales(key);
+    this.cargarInclusion(key);
     this.cargarObservaciones(key);
     this.cargarHistorial(key);
     const res = await ProgresoModulo.cargarPara(key, document.getElementById('ficha-progreso'), { boton: false });
@@ -127,6 +128,83 @@ const FichaAlumno = {
             ${this.LISTAS[k] ? `<datalist id="fd-lista-${k}">${this.LISTAS[k].map(v => `<option value="${this.esc(v)}"></option>`).join('')}</datalist>` : ''}</div>`).join('')}
         ${editable ? '<div class="ficha-form-acciones"><button type="submit" class="btn btn-primary">Guardar datos</button></div>' : ''}
       </form>`;
+  },
+
+  /* ---------- País de origen y discapacidad (Relevamiento Anual) ----------
+     Dato sensible: solo lo ven y lo cargan Dirección y Preceptoría (public.es_personal() en la base,
+     el mismo grupo que ya edita los Datos personales de esta ficha). No se imprime con la ficha. */
+  PAISES: ['Argentina', 'Bolivia', 'Brasil', 'Chile', 'Colombia', 'Ecuador', 'Paraguay', 'Perú', 'Uruguay', 'Venezuela', 'Otros países de América', 'Europa', 'Asia', 'África', 'Oceanía'],
+
+  async cargarInclusion(dni) {
+    const datos = document.getElementById('ficha-datos');
+    let box = document.getElementById('ficha-inclusion');
+    if (!datos || !this.esPersonal) { if (box) box.remove(); return; }
+    if (!box) { box = document.createElement('div'); box.id = 'ficha-inclusion'; box.className = datos.className; datos.after(box); }
+    const { data, error } = await supabase.from('datos_inclusion').select('*').eq('dni', dni).maybeSingle();
+    if (error) { box.innerHTML = '<h3>País de origen y discapacidad</h3><p class="ficha-vacio">Disponible cuando se ejecuten sql/41 y sql/42 en Supabase.</p>'; return; }
+    const d = data || {};
+    const lugarNac = ((await supabase.from('datos_estudiante').select('lugar_nacimiento').eq('dni', dni).maybeSingle()).data || {}).lugar_nacimiento || '';
+    const tri = v => v === true ? 'si' : (v === false ? 'no' : '');
+    box.innerHTML = `
+      <h3>País de origen y discapacidad</h3>
+      <p class="ficha-vacio" style="margin:0 0 .6rem">Para el Relevamiento Anual. Reservado a Dirección y Preceptoría; no se imprime con la ficha.</p>
+      <form class="ficha-form" onsubmit="event.preventDefault(); FichaAlumno.guardarInclusion();">
+        <div class="form-group"><label for="fi-pais">País de origen</label>
+          <select id="fi-pais" class="form-control">
+            <option value="">Argentina (sin confirmar)</option>
+            ${this.PAISES.map(p => `<option value="${this.esc(p)}" ${d.pais_origen === p ? 'selected' : ''}>${this.esc(p)}${p === 'Argentina' ? ' (confirmado)' : ''}</option>`).join('')}
+          </select>
+          ${!d.pais_origen && this.lugarParecePaisExtranjero(lugarNac) ? `<small style="color:#B42318">El lugar de nacimiento dice «${this.esc(lugarNac)}»: revisá si corresponde otro país.</small>` : ''}</div>
+        <div class="form-group"><label for="fi-disc">Discapacidad</label>
+          <select id="fi-disc" class="form-control" onchange="FichaAlumno.alternarDiscapacidad()">
+            <option value="" ${tri(d.discapacidad) === '' ? 'selected' : ''}>Sin dato</option>
+            <option value="no" ${tri(d.discapacidad) === 'no' ? 'selected' : ''}>No</option>
+            <option value="si" ${tri(d.discapacidad) === 'si' ? 'selected' : ''}>Sí</option>
+          </select></div>
+        <div class="form-group fi-extra"><label for="fi-cud">Tiene CUD (Certificado Único de Discapacidad)</label>
+          <select id="fi-cud" class="form-control">
+            <option value="" ${tri(d.con_cud) === '' ? 'selected' : ''}>Sin dato</option>
+            <option value="si" ${tri(d.con_cud) === 'si' ? 'selected' : ''}>Sí</option>
+            <option value="no" ${tri(d.con_cud) === 'no' ? 'selected' : ''}>No</option>
+          </select></div>
+        <div class="form-group fi-extra"><label for="fi-apoyo">Apoyo a la inclusión</label>
+          <select id="fi-apoyo" class="form-control">
+            <option value="" ${!d.apoyo ? 'selected' : ''}>Sin dato</option>
+            <option value="docente" ${d.apoyo === 'docente' ? 'selected' : ''}>Con apoyo docente</option>
+            <option value="no_docente" ${d.apoyo === 'no_docente' ? 'selected' : ''}>Con apoyo no docente</option>
+            <option value="sin_apoyo" ${d.apoyo === 'sin_apoyo' ? 'selected' : ''}>Sin apoyo a la inclusión</option>
+          </select></div>
+        <div class="ficha-form-acciones"><button type="submit" class="btn btn-primary">Guardar</button></div>
+      </form>`;
+    this.alternarDiscapacidad();
+  },
+
+  // Pista (no definitiva): el lugar de nacimiento nombra un país o ciudad de otro país
+  lugarParecePaisExtranjero(t) {
+    const n = String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    if (!n || /argentina/.test(n)) return false;
+    return /(^|[^a-z])(bolivia|boliviano|boliviana|brasil|brazil|brasilero|brasilera|chile|chileno|chilena|colombia|colombiano|colombiana|bogota|ecuador|ecuatoriano|ecuatoriana|quito|paraguay|paraguayo|paraguaya|asuncion|peru|peruano|peruana|uruguay|uruguayo|uruguaya|montevideo|venezuela|venezolano|venezolana|caracas|cuba|cubano|cubana|mexico|mexicano|mexicana|haiti|dominicana|nicaragua|honduras|guatemala|panama|costa rica|el salvador|espana|espanol|espanola|italia|italiano|italiana|francia|alemania|portugal|polonia|ucrania|rusia|china|japon|corea|senegal|nigeria|africa|europa|asia)([^a-z]|$)/.test(n);
+  },
+
+  alternarDiscapacidad() {
+    const si = document.getElementById('fi-disc')?.value === 'si';
+    document.querySelectorAll('#ficha-inclusion .fi-extra').forEach(el => { el.style.display = si ? '' : 'none'; });
+  },
+
+  async guardarInclusion() {
+    const v = id => document.getElementById(id)?.value || '';
+    const disc = v('fi-disc');
+    const reg = {
+      dni: this.dniActual,
+      pais_origen: v('fi-pais') || null,
+      discapacidad: disc === 'si' ? true : (disc === 'no' ? false : null),
+      con_cud: disc === 'si' ? (v('fi-cud') === 'si' ? true : (v('fi-cud') === 'no' ? false : null)) : null,
+      apoyo: disc === 'si' ? (v('fi-apoyo') || null) : null,
+      actualizado: new Date().toISOString()
+    };
+    const { error } = await supabase.from('datos_inclusion').upsert(reg, { onConflict: 'dni' });
+    if (error) { alert('No se pudieron guardar los datos: ' + error.message); return; }
+    if (typeof Swal !== 'undefined') Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Datos guardados', showConfirmButton: false, timer: 1800 });
   },
 
   async guardarDatosPersonales() {

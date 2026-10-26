@@ -29,6 +29,7 @@ const SecretariaModulo = {
       if (error) throw error;
       this.filas = data || [];
       await this.cargarDemografia();
+      if (window.MatriculaEscolar && MatriculaEscolar.abierta) await MatriculaEscolar.cargarDatos();
       this.dibujar();
     } catch (err) {
       console.error('Panel de cifras:', err);
@@ -130,6 +131,7 @@ const SecretariaModulo = {
           </select></label>
         <div class="sec-acciones">
           <button type="button" class="btn btn-outline" onclick="PlanillaMatricula.descargar(SecretariaModulo.ciclo)">📑 Planilla de matrícula (POF/POFA)</button>
+          <button type="button" class="btn btn-outline" onclick="MatriculaEscolar.abrir()">🏫 Matrícula escolar</button>
           <button type="button" class="btn btn-outline" onclick="SecretariaModulo.copiar()">📋 Copiar tabla</button>
           <button type="button" class="btn btn-gold" onclick="SecretariaModulo.excel()" ${this.filas.length ? '' : 'disabled'}>📊 Descargar Excel</button>
         </div>
@@ -166,11 +168,17 @@ const SecretariaModulo = {
         </table>
       </div>
       <p class="acta-ayuda">El porcentaje de asistencia es el de presentes (incluye las llegadas tarde) sobre todos los registros de los estudiantes activos del trayecto. "Clases" son los días con asistencia cargada.</p>
+      ${window.MatriculaEscolar ? MatriculaEscolar.html() : ''}
       ${this.htmlDemografia()}`;
   },
 
   cambiarCiclo(v) { this.ciclo = Number(v); this.cargar(); },
-  async cambiarModo(v) { this.modo = v === 'todos' ? 'todos' : 'activos'; await this.cargarDemografia(); this.dibujar(); },
+  async cambiarModo(v) {
+    this.modo = v === 'todos' ? 'todos' : 'activos';
+    await this.cargarDemografia();
+    if (window.MatriculaEscolar && MatriculaEscolar.abierta) await MatriculaEscolar.cargarDatos();
+    this.dibujar();
+  },
   async cambiarAlcance(v) { this.alcance = v === 'todos' ? 'todos' : 'ciclo'; await this.cargarDemografia(); this.dibujar(); },
 
   /* Matriz de la tabla (para copiar o armar el Excel) */

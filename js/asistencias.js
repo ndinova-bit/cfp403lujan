@@ -13,8 +13,14 @@ const AsistenciasModulo = {
   historial: [],
   estados: {},          // dni -> estado de la fecha/módulo en pantalla
   cargadoPrevio: false,
-  sinClase: false,       // true: el día elegido se marca como "no hubo clase" (no cuenta para nadie)
-  motivoSinClase: '',
+  diasSinClase: [],     // días en que NO se dictó clase (paro, jornada institucional, licencia, otros)
+
+  MOTIVOS_SIN_CLASE: {
+    paro: 'Paro',
+    jornada_institucional: 'Jornada institucional',
+    licencia: 'Licencia',
+    otro: 'Otro motivo'
+  },
 
   ESTADOS: [
     { k: 'presente',    l: 'P', t: 'Presente' },
@@ -22,8 +28,6 @@ const AsistenciasModulo = {
     { k: 'ausente',     l: 'A', t: 'Ausente' },
     { k: 'justificado', l: 'J', t: 'Ausente justificado (cuenta como ausente)' }
   ],
-
-  MOTIVOS_SIN_CLASE: ['Licencia del instructor', 'Jornada institucional', 'Paro'],
 
   esc(t) { return (window.escHtml ? window.escHtml(t) : String(t ?? '')); },
   hoy() {
@@ -62,6 +66,11 @@ const AsistenciasModulo = {
       this.trayecto = rT.data || {};
       this.modulos = rM.data || [];
       this.historial = rH.data || [];
+      this.diasSinClase = [];
+      try {
+        const rS = await supabase.from('dias_sin_clase').select('*').eq('trayecto_id', this.trayectoActualId);
+        if (!rS.error) this.diasSinClase = rS.data || [];
+      } catch (e) { /* si falta el SQL 39, la asistencia funciona igual */ }
 
       const dnis = (rI.data || []).map(i => String(i.estudiante_user));
       if (!dnis.length) {
@@ -119,7 +128,7 @@ const AsistenciasModulo = {
     try {
       localStorage.setItem(this.claveCopia(), JSON.stringify({
         dni: this.miDni(), fecha: Date.now(), trayecto: this.trayecto, modulos: this.modulos, alumnos: this.alumnos,
-        bajas: this.bajas || [], historial: (this.historial || []).slice(0, 4000)
+        bajas: this.bajas || [], historial: (this.historial || []).slice(0, 4000), diasSinClase: this.diasSinClase || []
       }));
     } catch (e) { /* sin espacio: se sigue sin copia */ }
   },
@@ -127,7 +136,7 @@ const AsistenciasModulo = {
     try {
       const c = JSON.parse(localStorage.getItem(this.claveCopia()) || 'null');
       if (!c || String(c.dni) !== this.miDni()) return false;
-      Object.assign(this, { trayecto: c.trayecto || {}, modulos: c.modulos || [], alumnos: c.alumnos || [], bajas: c.bajas || [], historial: c.historial || [] });
+      Object.assign(this, { trayecto: c.trayecto || {}, modulos: c.modulos || [], alumnos: c.alumnos || [], bajas: c.bajas || [], historial: c.historial || [], diasSinClase: c.diasSinClase || [] });
       this.copiaFecha = c.fecha;
       return this.alumnos.length > 0;
     } catch (e) { return false; }
@@ -219,27 +228,16 @@ const AsistenciasModulo = {
               <option value="">General (todos los módulos)</option>
               ${this.modulos.map(m => `<option value="${Number(m.id)}">${this.esc(m.nombre)}</option>`).join('')}
             </select></div>
+          <div class="form-group asis-sinclase-btn"><label>&nbsp;</label>
+            <button type="button" class="btn btn-outline" onclick="AsistenciasModulo.marcarSinClase()">🚫 Ese día no hubo clase</button></div>
         </div>
         <div id="asis-estado-dia" class="asis-estado-dia"></div>
-        <div class="asis-sinclase-toggle form-group">
-          <label><input type="checkbox" id="asis-sinclase-chk" onchange="AsistenciasModulo.toggleSinClase(this.checked)"> No hubo clase este día (licencia del instructor, jornada institucional, paro, otro)</label>
+        <div class="asis-lote">
+          <button type="button" class="btn btn-secondary" onclick="AsistenciasModulo.marcarTodos('presente')">Todos presentes</button>
+          <button type="button" class="btn btn-outline" onclick="AsistenciasModulo.marcarTodos('ausente')">Todos ausentes</button>
+          <span class="asis-leyenda"><b>P</b> presente · <b>T</b> tarde (cuenta como presente) · <b>A</b> ausente · <b>J</b> justificado (cuenta como ausente)</span>
         </div>
-        <div id="asis-sinclase-motivo" class="form-group" style="display:none;">
-          <label for="asis-sinclase-select">Motivo</label>
-          <select id="asis-sinclase-select" class="form-control" onchange="AsistenciasModulo.dibujarToggleSinClase()">
-            ${this.MOTIVOS_SIN_CLASE.map(m => `<option>${this.esc(m)}</option>`).join('')}
-            <option>Otro</option>
-          </select>
-          <input id="asis-sinclase-detalle" class="form-control" maxlength="200" placeholder="Detalle (opcional)" style="margin-top:0.4rem;">
-        </div>
-        <div id="asis-normal-dia">
-          <div class="asis-lote">
-            <button type="button" class="btn btn-secondary" onclick="AsistenciasModulo.marcarTodos('presente')">Todos presentes</button>
-            <button type="button" class="btn btn-outline" onclick="AsistenciasModulo.marcarTodos('ausente')">Todos ausentes</button>
-            <span class="asis-leyenda"><b>P</b> presente · <b>T</b> tarde (cuenta como presente) · <b>A</b> ausente · <b>J</b> justificado (cuenta como ausente)</span>
-          </div>
-          <div id="asis-lista" class="asis-lista" role="list"></div>
-        </div>
+        <div id="asis-lista" class="asis-lista" role="list"></div>
         <div class="asis-guardar">
           <span id="asis-resumen" class="asis-resumen"></span>
           <button type="button" id="asis-btn-guardar" class="btn btn-gold" onclick="AsistenciasModulo.guardarAsistenciaLote()">Guardar asistencia</button>
@@ -288,7 +286,7 @@ const AsistenciasModulo = {
   porcentajes() {
     const out = {};
     this.alumnos.forEach(a => {
-      const r = this.historial.filter(h => String(h.estudiante_user) === a.dni && String(h.estado).toLowerCase() !== 'sin_clase');
+      const r = this.historial.filter(h => String(h.estudiante_user) === a.dni);
       out[a.dni] = r.length ? Math.round(r.filter(h => ReglasFP.esPresente(h.estado)).length / r.length * 100) : null;
     });
     return out;
@@ -305,14 +303,25 @@ const AsistenciasModulo = {
     const mod = document.getElementById('asistencia-modulo-id')?.value;
     const regs = this.historial.filter(h => String(h.fecha).slice(0, 10) === fecha && this.mismoModulo(h.modulo_id, mod));
     this.cargadoPrevio = regs.length > 0;
-    this.sinClase = regs.length > 0 && regs.every(h => String(h.estado).toLowerCase() === 'sin_clase');
-    this.motivoSinClase = this.sinClase ? (regs.find(h => h.motivo)?.motivo || '') : '';
     this.estados = {};
     this.listaDelDia(fecha).forEach(a => {
       const r = regs.find(h => String(h.estudiante_user) === a.dni);
       this.estados[a.dni] = r ? String(r.estado).toLowerCase() : 'presente';
     });
     const info = document.getElementById('asis-estado-dia');
+    const sinClase = this.buscarSinClase(fecha, mod);
+    ['.asis-lote', '#asis-lista', '.asis-guardar'].forEach(sel => {
+      const el = document.querySelector(`#${this.contenedorId} ${sel}`);
+      if (el) el.style.display = sinClase ? 'none' : '';
+    });
+    if (info && sinClase) {
+      info.className = 'asis-estado-dia sinclase';
+      info.innerHTML = `🚫 <strong>Sin clase</strong> el ${this.fechaAR(fecha)} (${this.esc(this.nombreModulo(mod))}): ${this.esc(this.MOTIVOS_SIN_CLASE[sinClase.motivo] || sinClase.motivo)}${sinClase.detalle ? ' · ' + this.esc(sinClase.detalle) : ''}. No computa asistencia ni inasistencia.
+        <button type="button" class="asis-quitar-sc" onclick="AsistenciasModulo.quitarSinClase()">Sí hubo clase: tomar asistencia</button>`;
+      this.cargadoPrevio = false;
+      this.estados = {};
+      return;
+    }
     if (info) {
       info.className = 'asis-estado-dia ' + (this.cargadoPrevio ? 'editando' : 'nuevo');
       const pend = regs.some(h => h._pendiente);
@@ -322,34 +331,7 @@ const AsistenciasModulo = {
         ? `Este día ya está cargado (${this.fechaAR(fecha)} · ${this.esc(this.nombreModulo(mod))}). Estás <strong>corrigiendo</strong> lo registrado.`
         : `Día nuevo: ${this.fechaAR(fecha)} · ${this.esc(this.nombreModulo(mod))}. Todos empiezan como presentes.`;
     }
-    this.dibujarToggleSinClase();
     this.dibujarLista();
-  },
-
-  toggleSinClase(checked) {
-    this.sinClase = checked;
-    this.dibujarToggleSinClase();
-  },
-
-  // Muestra/oculta el bloque de motivo y la lista de estudiantes según el estado del toggle
-  dibujarToggleSinClase() {
-    const chk = document.getElementById('asis-sinclase-chk');
-    if (chk) chk.checked = !!this.sinClase;
-    const motivoBox = document.getElementById('asis-sinclase-motivo');
-    const normal = document.getElementById('asis-normal-dia');
-    if (motivoBox) motivoBox.style.display = this.sinClase ? 'block' : 'none';
-    if (normal) normal.style.display = this.sinClase ? 'none' : '';
-    const sel = document.getElementById('asis-sinclase-select');
-    const det = document.getElementById('asis-sinclase-detalle');
-    if (sel && this.motivoSinClase) {
-      if (this.MOTIVOS_SIN_CLASE.includes(this.motivoSinClase)) { sel.value = this.motivoSinClase; if (det) det.value = ''; }
-      else { sel.value = 'Otro'; if (det) det.value = this.motivoSinClase.replace(/^Otro:\s*/, ''); }
-    }
-    const btn = document.getElementById('asis-btn-guardar');
-    if (btn) btn.textContent = this.sinClase ? 'Guardar (no hubo clase)' : 'Guardar asistencia';
-    const resumen = document.getElementById('asis-resumen');
-    if (resumen && this.sinClase) resumen.textContent = 'No se registra asistencia este día: no cuenta para nadie.';
-    else this.actualizarResumen();
   },
 
   dibujarLista() {
@@ -397,15 +379,7 @@ const AsistenciasModulo = {
     if (fecha > this.hoy()) {
       if (!confirm('La fecha elegida es posterior a hoy. ¿Guardar igual?')) return;
     }
-    let registros;
-    if (this.sinClase) {
-      const sel = document.getElementById('asis-sinclase-select')?.value || 'Otro';
-      const det = document.getElementById('asis-sinclase-detalle')?.value.trim() || '';
-      const motivo = sel === 'Otro' ? (det ? `Otro: ${det}` : 'Otro') : (sel + (det ? `: ${det}` : ''));
-      registros = this.listaDelDia(fecha).map(a => ({ estudiante_user: a.dni, estado: 'sin_clase', motivo }));
-    } else {
-      registros = this.listaDelDia(fecha).map(a => ({ estudiante_user: a.dni, estado: this.estados[a.dni] || 'presente' }));
-    }
+    const registros = this.listaDelDia(fecha).map(a => ({ estudiante_user: a.dni, estado: this.estados[a.dni] || 'presente' }));
     const btn = document.getElementById('asis-btn-guardar');
     if (btn) btn.disabled = true;
 
@@ -452,6 +426,7 @@ const AsistenciasModulo = {
       this.guardarPendientes(this.pendientes().filter(x => !(Number(x.tid) === Number(this.trayectoActualId) && x.fecha === fecha && String(x.modulo) === String(modulo) && String(x.por) === this.miDni())));
       const { data } = await supabase.from('asistencias').select('*').eq('trayecto_id', this.trayectoActualId).order('fecha', { ascending: false });
       this.historial = data || [];
+      this.diasSinClase = (this.diasSinClase || []).filter(d => !(String(d.fecha).slice(0, 10) === fecha && this.mismoModulo(d.modulo_id, modulo)));
       this.aplicarPendientes();
       this.guardarCopia();
       this.dibujarHistorial();
@@ -465,20 +440,83 @@ const AsistenciasModulo = {
     }
   },
 
+  /* ---------- Días sin clase ---------- */
+  buscarSinClase(fecha, modulo) {
+    return (this.diasSinClase || []).find(d => String(d.fecha).slice(0, 10) === fecha && this.mismoModulo(d.modulo_id, modulo)) || null;
+  },
+
+  async refrescarSinClase() {
+    const { data } = await supabase.from('dias_sin_clase').select('*').eq('trayecto_id', this.trayectoActualId);
+    this.diasSinClase = data || [];
+    this.guardarCopia();
+    this.dibujarHistorial();
+    this.cargarFecha();
+  },
+
+  async marcarSinClase() {
+    const fecha = document.getElementById('asistencia-fecha')?.value;
+    const modVal = document.getElementById('asistencia-modulo-id')?.value;
+    const modulo = modVal ? Number(modVal) : null;
+    if (!fecha) { alert('⚠️ Elegí primero la fecha.'); return; }
+    if (!navigator.onLine) { alert('Para registrar un día sin clase necesitás conexión.'); return; }
+
+    const yaTieneAsistencia = this.historial.some(h => String(h.fecha).slice(0, 10) === fecha && this.mismoModulo(h.modulo_id, modulo));
+    let motivo = '', detalle = '';
+    const opciones = Object.entries(this.MOTIVOS_SIN_CLASE).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+
+    if (typeof Swal !== 'undefined') {
+      const r = await Swal.fire({
+        title: 'Ese día no hubo clase',
+        html: `<p style="margin:0 0 .75rem;text-align:left;font-size:.9rem">${this.fechaAR(fecha)} · ${this.esc(this.nombreModulo(modulo))}. No se computa asistencia ni inasistencia.${yaTieneAsistencia ? ' <b>Se borrará la asistencia ya cargada de ese día.</b>' : ''}</p>
+          <select id="sc-motivo" class="swal2-select" style="display:flex;width:100%;margin:0 0 .5rem">${opciones}</select>
+          <input id="sc-detalle" class="swal2-input" style="margin:0;width:100%" maxlength="300" placeholder="Detalle (opcional)">`,
+        showCancelButton: true, confirmButtonText: 'Registrar', cancelButtonText: 'Cancelar', focusConfirm: false,
+        preConfirm: () => ({ motivo: document.getElementById('sc-motivo').value, detalle: document.getElementById('sc-detalle').value })
+      });
+      if (!r.isConfirmed) return;
+      motivo = r.value.motivo; detalle = r.value.detalle;
+    } else {
+      const k = prompt('Motivo (paro, jornada_institucional, licencia, otro):', 'paro');
+      if (!k || !this.MOTIVOS_SIN_CLASE[k.trim()]) return;
+      motivo = k.trim();
+      detalle = prompt('Detalle (opcional):', '') || '';
+    }
+
+    const { error } = await supabase.rpc('marcar_dia_sin_clase', { p_trayecto: this.trayectoActualId, p_modulo: modulo, p_fecha: fecha, p_motivo: motivo, p_detalle: detalle });
+    if (error) {
+      const falta = /marcar_dia_sin_clase|PGRST202|42883|dias_sin_clase/i.test(error.message || '') || error.code === 'PGRST202';
+      alert(falta ? 'Falta ejecutar sql/39_dias_sin_clase.sql en Supabase para poder registrar días sin clase.' : 'No se pudo registrar el día sin clase: ' + error.message);
+      return;
+    }
+    this.guardarPendientes(this.pendientes().filter(x => !(Number(x.tid) === Number(this.trayectoActualId) && x.fecha === fecha && String(x.modulo) === String(modulo) && String(x.por) === this.miDni())));
+    this.historial = this.historial.filter(h => !(String(h.fecha).slice(0, 10) === fecha && this.mismoModulo(h.modulo_id, modulo)));
+    await this.refrescarSinClase();
+    if (typeof Swal !== 'undefined') Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `Día sin clase registrado (${this.fechaAR(fecha)})`, showConfirmButton: false, timer: 2200 });
+  },
+
+  async quitarSinClase() {
+    const fecha = document.getElementById('asistencia-fecha')?.value;
+    const modVal = document.getElementById('asistencia-modulo-id')?.value;
+    const modulo = modVal ? Number(modVal) : null;
+    if (!navigator.onLine) { alert('Necesitás conexión para modificar un día sin clase.'); return; }
+    const { error } = await supabase.rpc('quitar_dia_sin_clase', { p_trayecto: this.trayectoActualId, p_modulo: modulo, p_fecha: fecha });
+    if (error) { alert('No se pudo modificar: ' + error.message); return; }
+    await this.refrescarSinClase();
+  },
+
   // Agrupa por fecha + módulo
   dias() {
     const mapa = {};
     this.historial.forEach(h => {
       const mod = (h.modulo_id === null || h.modulo_id === undefined) ? '' : String(h.modulo_id);
       const k = String(h.fecha).slice(0, 10) + '|' + mod;
-      if (!mapa[k]) mapa[k] = { fecha: String(h.fecha).slice(0, 10), modulo: mod, p: 0, t: 0, a: 0, j: 0, s: 0, total: 0, motivo: '' };
+      if (!mapa[k]) mapa[k] = { fecha: String(h.fecha).slice(0, 10), modulo: mod, p: 0, t: 0, a: 0, j: 0, total: 0 };
       const e = String(h.estado).toLowerCase();
       mapa[k].total++;
       if (h._pendiente) mapa[k].pend = true;
       if (e === 'presente') mapa[k].p++;
       else if (e === 'tarde') mapa[k].t++;
       else if (e === 'justificado') mapa[k].j++;
-      else if (e === 'sin_clase') { mapa[k].s++; if (h.motivo) mapa[k].motivo = h.motivo; }
       else mapa[k].a++;
     });
     return Object.values(mapa).sort((x, y) => y.fecha.localeCompare(x.fecha));
@@ -487,15 +525,22 @@ const AsistenciasModulo = {
   dibujarHistorial() {
     const el = document.getElementById('asis-historial');
     if (!el) return;
-    const dias = this.dias();
+    const sc = (this.diasSinClase || []).map(d => ({ sinClase: true, fecha: String(d.fecha).slice(0, 10), modulo: (d.modulo_id === null || d.modulo_id === undefined) ? '' : String(d.modulo_id), motivo: d.motivo, detalle: d.detalle }));
+    const dias = [...this.dias(), ...sc].sort((x, y) => y.fecha.localeCompare(x.fecha));
     if (!dias.length) { el.innerHTML = '<p class="asis-vacio">Todavía no se cargó asistencia en este trayecto.</p>'; return; }
     el.innerHTML = `<div class="asis-hist">${dias.map(d => {
-      const sinClase = d.s > 0 && d.s === d.total;
-      const pct = sinClase ? null : Math.round((d.p + d.t) / d.total * 100);
-      return `<button type="button" class="asis-dia${sinClase ? ' asis-dia-sinclase' : ''}" onclick="AsistenciasModulo.abrirDia('${d.fecha}','${d.modulo}')" title="Abrir para corregir">
+      if (d.sinClase) {
+        return `<button type="button" class="asis-dia asis-dia-sc" onclick="AsistenciasModulo.abrirDia('${d.fecha}','${d.modulo}')" title="Abrir">
         <strong>${this.fechaAR(d.fecha)}</strong>
         <span class="asis-dia-mod">${this.esc(this.nombreModulo(d.modulo))}</span>
-        <span class="asis-dia-cnt">${sinClase ? `🚫 No hubo clase${d.motivo ? ' · ' + this.esc(d.motivo) : ''}` : `${d.p + d.t}/${d.total} presentes · ${pct}%`}${d.pend ? ' · 📤 sin enviar' : ''}</span>
+        <span class="asis-dia-cnt">🚫 Sin clase · ${this.esc(this.MOTIVOS_SIN_CLASE[d.motivo] || d.motivo)}</span>
+      </button>`;
+      }
+      const pct = Math.round((d.p + d.t) / d.total * 100);
+      return `<button type="button" class="asis-dia" onclick="AsistenciasModulo.abrirDia('${d.fecha}','${d.modulo}')" title="Abrir para corregir">
+        <strong>${this.fechaAR(d.fecha)}</strong>
+        <span class="asis-dia-mod">${this.esc(this.nombreModulo(d.modulo))}</span>
+        <span class="asis-dia-cnt">${d.p + d.t}/${d.total} presentes · ${pct}%${d.pend ? ' · 📤 sin enviar' : ''}</span>
       </button>`;
     }).join('')}</div>`;
   },
@@ -512,7 +557,9 @@ const AsistenciasModulo = {
   async descargarPlanilla() {
     if (typeof ExcelJS === 'undefined') { alert('No se pudo cargar el generador de Excel. Recargá la página.'); return; }
     const mes = document.getElementById('asis-mes')?.value || this.hoy().slice(0, 7);
-    const dias = this.dias().filter(d => d.fecha.startsWith(mes)).sort((x, y) => x.fecha.localeCompare(y.fecha) || x.modulo.localeCompare(y.modulo));
+    const scMes = (this.diasSinClase || []).filter(d => String(d.fecha).startsWith(mes))
+      .map(d => ({ sinClase: true, fecha: String(d.fecha).slice(0, 10), modulo: (d.modulo_id === null || d.modulo_id === undefined) ? '' : String(d.modulo_id), motivo: d.motivo }));
+    const dias = [...this.dias().filter(d => d.fecha.startsWith(mes)), ...scMes].sort((x, y) => x.fecha.localeCompare(y.fecha) || x.modulo.localeCompare(y.modulo));
     if (!dias.length) { alert('⚠️ No hay asistencia cargada en ese mes.'); return; }
 
     const wb = new ExcelJS.Workbook();
@@ -526,7 +573,7 @@ const AsistenciasModulo = {
     ws.getCell(1, 1).value = `CFP N.º 403 "Oscar Smith" · Registro de asistencia · ${nombreMes} ${anio}`;
     ws.getCell(1, 1).font = { bold: true, size: 13 };
     ws.mergeCells(2, 1, 2, ultima);
-    ws.getCell(2, 1).value = `Trayecto: ${this.trayecto.nombre || ''}${this.trayecto.certificacion_oficial ? ' · Curso N.º ' + this.trayecto.certificacion_oficial : ''}   ·   P presente · T tarde · A ausente · J justificado · S no hubo clase (no cuenta)`;
+    ws.getCell(2, 1).value = `Trayecto: ${this.trayecto.nombre || ''}${this.trayecto.certificacion_oficial ? ' · Curso N.º ' + this.trayecto.certificacion_oficial : ''}   ·   P presente · T tarde · A ausente · J justificado · S/C sin clase`;
     ws.getCell(2, 1).font = { size: 10 };
 
     const cab = ['N.º', 'Apellido y nombre', 'DNI', ...dias.map(d => {
@@ -543,13 +590,14 @@ const AsistenciasModulo = {
     hr.height = variosModulos ? 30 : 18;
     filaCab.height = 4;
 
-    const L = { presente: 'P', tarde: 'T', ausente: 'A', justificado: 'J', sin_clase: 'S' };
+    const L = { presente: 'P', tarde: 'T', ausente: 'A', justificado: 'J' };
     this.alumnos.forEach((a, i) => {
       const celdas = dias.map(d => {
+        if (d.sinClase) return 'S/C';
         const r = this.historial.find(h => String(h.estudiante_user) === a.dni && String(h.fecha).slice(0, 10) === d.fecha && this.mismoModulo(h.modulo_id, d.modulo));
         return r ? (L[String(r.estado).toLowerCase()] || '') : '';
       });
-      const tomadas = celdas.filter(c => c && c !== 'S').length;
+      const tomadas = celdas.filter(c => c && c !== 'S/C').length;
       const asistio = celdas.filter(c => c === 'P' || c === 'T').length;
       const row = ws.addRow([i + 1, a.nombre + (a.bajaDesde ? ' (BAJA)' : ''), a.dni, ...celdas, asistio, tomadas ? Math.round(asistio / tomadas * 100) / 100 : '']);
       row.getCell(cab.length).numFmt = '0%';
@@ -557,6 +605,7 @@ const AsistenciasModulo = {
       for (let c = 4; c <= cab.length; c++) row.getCell(c).alignment = { horizontal: 'center' };
       celdas.forEach((v, k) => {
         if (v === 'A' || v === 'J') row.getCell(4 + k).font = { color: { argb: 'FFB42318' }, bold: true };
+        if (v === 'S/C') row.getCell(4 + k).font = { color: { argb: 'FF64748B' }, italic: true, size: 8 };
       });
     });
 
@@ -571,6 +620,12 @@ const AsistenciasModulo = {
       for (let c = 1; c <= cab.length; c++) ws.getCell(r, c).border = { top: borde, left: borde, bottom: borde, right: borde };
     }
     ws.views = [{ state: 'frozen', xSplit: 3, ySplit: 4 }];
+    const notasSC = dias.filter(d => d.sinClase).map(d => `${d.fecha.slice(8, 10)}/${d.fecha.slice(5, 7)}: ${this.MOTIVOS_SIN_CLASE[d.motivo] || d.motivo}`);
+    if (notasSC.length) {
+      ws.addRow([]);
+      const nr = ws.addRow(['Sin clase (S/C) — no computa asistencia: ' + notasSC.join(' · ')]);
+      nr.font = { italic: true, size: 9 };
+    }
 
     const buf = await wb.xlsx.writeBuffer();
     const link = document.createElement('a');

@@ -608,6 +608,11 @@ button.seg-ver { border: none; cursor: pointer; font-family: inherit; }
 .asis-estado-dia { font-size: .85rem; padding: .6rem .85rem; border-radius: 10px; margin-bottom: .9rem; }
 .asis-estado-dia.nuevo { background: var(--cfp-celeste-soft); color: var(--cfp-blue); }
 .asis-estado-dia.editando { background: var(--cfp-yellow-soft); color: #5C4200; }
+.asis-estado-dia.sinclase { background: #EEF1F6; color: #3B4658; border: 1px dashed #9AA6B8; }
+.asis-quitar-sc { margin-left: .5rem; padding: .3rem .7rem; font-size: .8rem; font-family: inherit; border: 1px solid #9AA6B8; border-radius: 8px; background: #fff; color: var(--cfp-ink); cursor: pointer; }
+.asis-quitar-sc:hover { border-color: var(--cfp-celeste); }
+.asis-sinclase-btn .btn { width: 100%; }
+.asis-dia-sc { background: #EEF1F6; border-style: dashed; }
 .asis-lote { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-bottom: .9rem; }
 .asis-lote .btn { padding: .45rem .85rem !important; font-size: .85rem !important; }
 .asis-leyenda { font-size: .78rem; color: var(--cfp-muted); margin-left: auto; }
@@ -640,9 +645,6 @@ button.seg-ver { border: none; cursor: pointer; font-family: inherit; }
 .asis-dia strong { color: var(--cfp-ink); font-size: .9rem; }
 .asis-dia-mod { font-size: .76rem; color: var(--cfp-blue); font-weight: 600; }
 .asis-dia-cnt { font-size: .76rem; color: var(--cfp-muted); }
-.asis-dia-sinclase { background: #FFF8E8; border-color: var(--cfp-yellow); }
-.asis-sinclase-toggle label { display: flex; align-items: center; gap: .5rem; font-weight: 600; color: var(--cfp-ink); cursor: pointer; }
-#asis-sinclase-motivo { background: #FFF8E8; border: 1px solid var(--cfp-yellow); border-radius: 10px; padding: .6rem .75rem; }
 @media (max-width: 560px) {
   .asis-fila { flex-wrap: wrap; }
   .asis-alumno { flex-basis: calc(100% - 2.5rem); }
@@ -1310,3 +1312,15 @@ details.seg-grupo > .seg-item { margin: .5rem .7rem; }
 .plan-tab { padding:0.35rem 0.8rem; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.04); color:#94a3b8; font-size:0.8rem; font-weight:600; cursor:pointer; }
 .plan-tab.activo { background:#0284c7; color:#fff; border-color:#0284c7; }
 .plan-meta { font-size:0.78rem; color:#94a3b8; margin:0 0 0.6rem; }
+
+/* Matrícula escolar (cuadro 1.1 del Relevamiento Anual) */
+.matesc-tabla { min-width: 1100px; }
+.matesc-tabla th, .matesc-tabla td { padding: .45rem .4rem; }
+.matesc-tabla td.sec-nombre { min-width: 260px; }
+
+/* País de origen y discapacidad: dato sensible, no se imprime con la ficha */
+@media print { #ficha-inclusion { display: none !important; } }
+
+/* Fechas de inicio y fin bajo cada módulo en la sábana: solo visual (no se exporta ni se imprime) */
+.sabana-fechas::after { content: attr(data-fechas); display: block; margin-top: .2rem; font-size: .68rem; font-weight: 500; opacity: .75; white-space: nowrap; }
+@media print { .sabana-fechas::after { display: none !important; } }
