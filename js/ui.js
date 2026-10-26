@@ -107,7 +107,8 @@ const UI = {
     if (btnNuevoTrayecto) btnNuevoTrayecto.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
     if (btnCertificados) btnCertificados.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
     if (btnUsuarios) btnUsuarios.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
-    if (btnActas) btnActas.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
+    // Fichas / Actas de Examen: carga para dirección; Secretaría solo ve e imprime (sin editar).
+    if (btnActas) btnActas.style.setProperty('display', (isAdmin || esSecretaria) ? 'flex' : 'none', 'important');
 
     document.querySelectorAll('.admin-only').forEach(el => {
       el.style.setProperty('display', isAdmin ? (el.tagName === 'BUTTON' ? 'inline-flex' : 'block') : 'none', 'important');
@@ -183,7 +184,7 @@ const UI = {
     }
     const isAdmin = Auth.esDireccion(perfil.rol);
     const rolPerfil = String(perfil.rol || '').toLowerCase().trim();
-    if (Auth.esSecretaria(rolPerfil) && tabId !== 'secretaria' && tabId !== 'observaciones') tabId = 'secretaria';
+    if (Auth.esSecretaria(rolPerfil) && !['secretaria', 'observaciones', 'cooperadora', 'actas'].includes(tabId)) tabId = 'secretaria';
     if (tabId === 'secretaria' && !(Auth.esSecretaria(rolPerfil) || isAdmin || rolPerfil === 'preceptor')) tabId = 'trayectos';
     if (tabId === 'estadisticas' && !isAdmin) tabId = 'trayectos';
     if (tabId === 'observaciones' && rolPerfil === 'estudiante') tabId = 'trayectos';
@@ -193,7 +194,9 @@ const UI = {
     if ((tabId === 'usuarios' || tabId === 'backups') && !Auth.esAdmin(perfil.rol)) tabId = isAdmin ? 'dashboard' : 'trayectos';
 
     if (tabId === 'novedades' && !(Auth.esAdmin(rolPerfil) || rolPerfil === 'docente' || rolPerfil === 'preceptor')) tabId = isAdmin ? 'dashboard' : 'trayectos';
-    if (!isAdmin && (tabId === 'dashboard' || tabId === 'nuevo-trayecto' || tabId === 'certificados' || tabId === 'usuarios' || tabId === 'actas' || tabId === 'backups' || tabId === 'auditoria')) {
+    // Fichas / Actas de Examen: dirección edita; Secretaría solo ve e imprime (ver showTab de más abajo).
+    if (tabId === 'actas' && !(isAdmin || Auth.esSecretaria(rolPerfil))) tabId = isAdmin ? 'dashboard' : 'trayectos';
+    if (!isAdmin && (tabId === 'dashboard' || tabId === 'nuevo-trayecto' || tabId === 'certificados' || tabId === 'usuarios' || tabId === 'backups' || tabId === 'auditoria')) {
       tabId = 'trayectos';
     }
 

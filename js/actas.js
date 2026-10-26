@@ -17,6 +17,12 @@ const ActasModulo = {
   esc(t) { return window.escHtml ? window.escHtml(t) : String(t ?? ''); },
 
   async inicializar() {
+    const perfil = (window.Auth && Auth.usuarioActual) || await Auth.obtenerPerfilSesion();
+    const rol = String(perfil?.rol || '').toLowerCase().trim();
+    // Secretaría ve e imprime/descarga el acta oficial, pero no corrige notas, ajustes,
+    // equivalencias ni los datos de la mesa examinadora (eso sigue siendo de dirección,
+    // regencia, preceptoría o el/la docente del trayecto).
+    this.soloLectura = Auth.esSecretaria(rol) && !Auth.esPersonal(rol);
     this.poblarCiclos();
     await this.cargarTrayectosActas();
   },
@@ -204,12 +210,13 @@ const ActasModulo = {
         </div>
       </div>
 
+      ${this.soloLectura ? '<p class="plan-meta">Modo solo lectura: Secretaría puede ver e imprimir/descargar el acta, pero no corregir notas, ajustes, equivalencias ni los datos de la mesa examinadora.</p>' : ''}
       <div class="acta-datos">
-        <div class="form-group"><label for="acta-fecha">Fecha del examen</label><input type="date" id="acta-fecha" class="form-control" value="${this.esc(a.fecha_examen || '')}"></div>
-        <div class="form-group"><label for="acta-presidente">Presidente</label><input id="acta-presidente" class="form-control" maxlength="120" value="${this.esc(a.presidente || '')}" placeholder="Nombre y apellido"></div>
-        <div class="form-group"><label for="acta-vocal">Vocal</label><input id="acta-vocal" class="form-control" maxlength="120" value="${this.esc(a.vocal || '')}" placeholder="Nombre y apellido"></div>
-        <div class="form-group"><label for="acta-director">Director/a</label><input id="acta-director" class="form-control" maxlength="120" value="${this.esc(a.director || '')}" placeholder="Nombre y apellido"></div>
-        <div class="form-group"><label for="acta-inspector">Inspector/a</label><input id="acta-inspector" class="form-control" maxlength="120" value="${this.esc(a.inspector || '')}" placeholder="Nombre y apellido"></div>
+        <div class="form-group"><label for="acta-fecha">Fecha del examen</label><input type="date" id="acta-fecha" class="form-control" value="${this.esc(a.fecha_examen || '')}" ${this.soloLectura ? 'disabled' : ''}></div>
+        <div class="form-group"><label for="acta-presidente">Presidente</label><input id="acta-presidente" class="form-control" maxlength="120" value="${this.esc(a.presidente || '')}" placeholder="Nombre y apellido" ${this.soloLectura ? 'disabled' : ''}></div>
+        <div class="form-group"><label for="acta-vocal">Vocal</label><input id="acta-vocal" class="form-control" maxlength="120" value="${this.esc(a.vocal || '')}" placeholder="Nombre y apellido" ${this.soloLectura ? 'disabled' : ''}></div>
+        <div class="form-group"><label for="acta-director">Director/a</label><input id="acta-director" class="form-control" maxlength="120" value="${this.esc(a.director || '')}" placeholder="Nombre y apellido" ${this.soloLectura ? 'disabled' : ''}></div>
+        <div class="form-group"><label for="acta-inspector">Inspector/a</label><input id="acta-inspector" class="form-control" maxlength="120" value="${this.esc(a.inspector || '')}" placeholder="Nombre y apellido" ${this.soloLectura ? 'disabled' : ''}></div>
       </div>
 
       ${modulos.length > 10 ? `<div class="asis-aviso">Este trayecto tiene ${modulos.length} módulos y el acta tiene lugar para 10: en el Excel salen los 10 primeros.</div>` : ''}
@@ -229,7 +236,7 @@ const ActasModulo = {
                 <td><strong>${this.esc(al.nombre)}</strong><span>DNI ${this.esc(al.dni)}${al.baja ? ' · BAJA' + (al.fechaBaja ? ' ' + String(al.fechaBaja).split('-').reverse().join('/') : '') : ''}${al.numEgresado ? ' · Egresado N.º ' + this.esc(al.numEgresado) : ''}</span></td>
                 ${al.final.map(m => this.celdaModulo(al, m)).join('')}
                 <td><span class="acta-res ${al.resultado.toLowerCase()}">${al.resultado}</span></td>
-                <td>${modulos.length ? `<button type="button" class="btn-ficha" onclick="ActasModulo.editarEquivalencias('${this.esc(al.dni)}')" title="Acreditar módulos por equivalencia">Equivalencias</button>` : ''}</td>
+                <td>${(modulos.length && !this.soloLectura) ? `<button type="button" class="btn-ficha" onclick="ActasModulo.editarEquivalencias('${this.esc(al.dni)}')" title="Acreditar módulos por equivalencia">Equivalencias</button>` : ''}</td>
               </tr>`).join('') : `<tr><td colspan="${mods.length + 4}">No hay estudiantes inscriptos.</td></tr>`}
           </tbody>
         </table>
@@ -237,7 +244,7 @@ const ActasModulo = {
 
       <div class="acta-acciones">
         <button type="button" class="btn btn-secondary" onclick="FichaCurso.descargar(${Number(trayecto.id)})">Ficha de Curso (Excel)</button>
-        <button type="button" class="btn btn-outline" onclick="ActasModulo.guardarDatos()">Guardar datos y ajustes</button>
+        ${this.soloLectura ? '' : `<button type="button" class="btn btn-outline" onclick="ActasModulo.guardarDatos()">Guardar datos y ajustes</button>`}
         <button type="button" class="btn btn-gold" onclick="ActasModulo.generarExcelOficialDesdePlantilla()" ${alumnos.length ? '' : 'disabled'}>Descargar acta (Excel)</button>
       </div>`;
   },
@@ -255,9 +262,16 @@ const ActasModulo = {
     const calc = m.nota === null ? 'sin datos' : `calculada: ${m.nota}`;
     const det = [m.promAct !== null ? `actividades ${m.promAct}` : null, m.pctAsis !== null ? `asistencia ${m.pctAsis}%` : null].filter(Boolean).join(' · ');
     const cls = m.valor === null ? 'vacia' : (m.valor >= ReglasFP.MINIMO ? 'ok' : 'bad');
+    const valorTexto = m.manual ? m.valor : (m.valor === null ? '' : m.valor);
+    if (this.soloLectura) {
+      return `<td class="acta-celda ${cls} ${m.manual ? 'manual' : ''}">
+        <span>${valorTexto === '' ? '–' : this.esc(valorTexto)}</span>
+        <small title="${this.esc(det)}">${m.manual ? calc : this.esc(det || calc)}</small>
+      </td>`;
+    }
     return `<td class="acta-celda ${cls} ${m.manual ? 'manual' : ''}">
       <input type="text" inputmode="numeric" maxlength="3" aria-label="Nota ${this.esc(m.nombre)} de ${this.esc(al.nombre)}"
-        value="${m.manual ? m.valor : (m.valor === null ? '' : m.valor)}" placeholder="–"
+        value="${valorTexto}" placeholder="–"
         onchange="ActasModulo.ajustar('${this.esc(al.dni)}', '${m.id}', this.value)">
       <small title="${this.esc(det)}">${m.manual ? calc : this.esc(det || calc)}</small>
     </td>`;
