@@ -292,14 +292,17 @@ const PreinscripcionesModulo = {
       const estudios = niv ? `${niv} ${d.estado_estudios === 'completo' ? 'completo' : (d.estado_estudios === 'incompleto' ? 'incompleto' : '')}`.trim() : null;
       const ficha = { dni: p.dni, tipo_documento: d.tipo_doc || null, genero: d.sexo_dni || null, fecha_nacimiento: d.fecha_nac || null, lugar_nacimiento: d.lugar_nac || null,
         domicilio: dom || null, localidad: d.localidad || null, codigo_postal: d.cp || null, telefono: d.telefono || d.whatsapp || null, estudios, actualizado: new Date().toISOString() };
-      const incl = { dni: p.dni, pais_origen: d.nacionalidad || null, discapacidad: d.discapacidad === 'si' ? true : (d.discapacidad === 'no' ? false : null), actualizado: new Date().toISOString() };
+      const conDisc = d.discapacidad === 'si';
+      const incl = { dni: p.dni, pais_origen: d.nacionalidad || null, discapacidad: conDisc ? true : (d.discapacidad === 'no' ? false : null),
+        con_cud: conDisc ? (d.cud === 'si' ? true : (d.cud === 'no' ? false : null)) : null,
+        apoyo: conDisc ? (d.apoyo_inclusion || null) : null, actualizado: new Date().toISOString() };
       const avisos = [];
       // Si ya había datos cargados por Secretaría, no se pisan los campos que ya tienen valor
       const { data: previo } = await supabase.from('datos_estudiante').select('*').eq('dni', p.dni).maybeSingle();
       if (previo) Object.keys(ficha).forEach(k => { if (k !== 'dni' && k !== 'actualizado' && previo[k]) ficha[k] = previo[k]; });
       const r1 = await supabase.from('datos_estudiante').upsert(ficha, { onConflict: 'dni' }); if (r1.error) avisos.push('ficha: ' + r1.error.message);
       const { data: pi } = await supabase.from('datos_inclusion').select('*').eq('dni', p.dni).maybeSingle();
-      if (pi) { incl.con_cud = pi.con_cud; incl.apoyo = pi.apoyo; }
+      if (pi) { if (incl.con_cud === null) incl.con_cud = pi.con_cud; if (!incl.apoyo) incl.apoyo = pi.apoyo; }
       const r2 = await supabase.from('datos_inclusion').upsert(incl, { onConflict: 'dni' }); if (r2.error) avisos.push('inclusión: ' + r2.error.message);
 
       const { data: u } = await supabase.auth.getUser();

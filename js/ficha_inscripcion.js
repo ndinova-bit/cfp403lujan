@@ -120,6 +120,8 @@ const FichaInscripcion = {
       { id: 'salud', titulo: 'Información de salud', campos: [
         { k: 'discapacidad', l: '¿Tiene algún tipo de discapacidad?', t: 'radio', op: SN, w: 0.4 },
         { k: 'discapacidad_cual', l: '¿Cuál?', t: 'text', w: 0.6, max: 160, si: { k: 'discapacidad', v: 'si' } },
+        { k: 'cud', l: '¿Tiene Certificado Único de Discapacidad (CUD)?', t: 'radio', op: SN, w: 0.5, si: { k: 'discapacidad', v: 'si' } },
+        { k: 'apoyo_inclusion', l: 'Apoyo a la inclusión que recibe', t: 'radio', op: [['docente', 'Apoyo docente'], ['no_docente', 'Apoyo no docente'], ['sin_apoyo', 'Sin apoyo']], w: 0.5, si: { k: 'discapacidad', v: 'si' } },
         { k: 'enfermedad', l: '¿Padece alguna enfermedad que requiera tratamiento o control médico?', t: 'radio', op: SN, w: 0.4 },
         { k: 'enfermedad_cual', l: '¿Cuál?', t: 'text', w: 0.6, max: 160, si: { k: 'enfermedad', v: 'si' } },
         { k: 'alergia', l: '¿Tiene algún tipo de alergia?', t: 'radio', op: SN, w: 0.4 },
