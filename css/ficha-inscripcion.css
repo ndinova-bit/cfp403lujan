@@ -1,0 +1,17 @@
+/* Ficha de inscripción: formulario público y edición interna (js/ficha_inscripcion.js) */
+.fi-form { background: #fff; color: #14213d; font-family: 'Inter', system-ui, sans-serif; }
+.fi-seccion { border: 1px solid #d5dbe6; border-radius: 14px; padding: 1rem 1.1rem 1.1rem; margin: 0 0 1rem; background: #fff; min-width: 0; }
+.fi-seccion > legend { font-weight: 700; font-size: .9rem; padding: 0 .5rem; color: #071b38; }
+.fi-fila { display: flex; flex-wrap: wrap; gap: .8rem .75rem; }
+.fi-campo { min-width: 0; }
+.fi-label { display: block; font-size: .74rem; font-weight: 600; color: #44506a; margin-bottom: .25rem; }
+.fi-req { color: #b42318; }
+.fi-input { width: 100%; box-sizing: border-box; padding: .55rem .65rem; border: 1px solid #b8c1d1; border-radius: 9px; font: inherit; font-size: .92rem; background: #fff; color: #14213d; }
+.fi-input:focus { outline: 2px solid #2563eb; outline-offset: 1px; border-color: #2563eb; }
+.fi-input:disabled { background: #f3f5f9; color: #3b4658; }
+.fi-opciones { display: flex; flex-wrap: wrap; gap: .35rem 1rem; padding-top: .15rem; }
+.fi-op { display: inline-flex; align-items: center; gap: .35rem; font-size: .88rem; cursor: pointer; }
+.fi-op input { width: 1.05rem; height: 1.05rem; accent-color: #2563eb; }
+.fi-error { background: #fdecec; border: 1px solid #f3b4b4; color: #8a1f1f; border-radius: 10px; padding: .7rem .9rem; font-size: .88rem; margin: 0 0 1rem; }
+.fi-error ul { margin: .3rem 0 0 1.1rem; padding: 0; }
+@media (max-width: 720px) { .fi-campo { flex: 1 1 100% !important; } .fi-seccion { padding: .85rem; } }

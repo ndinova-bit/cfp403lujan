@@ -132,6 +132,8 @@ const UI = {
     if (btnPlan) btnPlan.style.setProperty('display', (rolNorm !== 'estudiante') ? 'flex' : 'none', 'important');
     const btnCons = document.getElementById('btn-constancias');   // constancias: dirección, regencia, preceptoría y secretaría
     if (btnCons) btnCons.style.setProperty('display', (esSecretaria || isAdmin || rolNorm === 'preceptor') ? 'flex' : 'none', 'important');
+    const btnPre = document.getElementById('btn-preinscripciones');   // preinscripciones: dirección, regencia, preceptoría; docentes solo lectura
+    if (btnPre) btnPre.style.setProperty('display', (Auth.esPersonal(rolNorm) || rolNorm === 'docente') ? 'flex' : 'none', 'important');
     const btnCue = document.getElementById('btn-cuentas');   // restablecer claves y aprobar estudiantes: regencia y preceptoría
     if (btnCue) btnCue.style.setProperty('display', (rolNorm === 'regente' || rolNorm === 'preceptor') ? 'flex' : 'none', 'important');
     const btnObs = document.getElementById('btn-observaciones');   // todo el personal (no estudiantes)
@@ -188,6 +190,7 @@ const UI = {
     if (tabId === 'secretaria' && !(Auth.esSecretaria(rolPerfil) || isAdmin || rolPerfil === 'preceptor')) tabId = 'trayectos';
     if (tabId === 'estadisticas' && !isAdmin) tabId = 'trayectos';
     if (tabId === 'observaciones' && rolPerfil === 'estudiante') tabId = 'trayectos';
+    if (tabId === 'preinscripciones' && !(Auth.esPersonal(rolPerfil) || rolPerfil === 'docente')) tabId = isAdmin ? 'dashboard' : 'trayectos';
     if (tabId === 'cuentas' && !(rolPerfil === 'regente' || rolPerfil === 'preceptor')) tabId = isAdmin ? 'dashboard' : 'trayectos';
     if (tabId === 'cooperadora' && !(Auth.esPersonal(rolPerfil) || Auth.esSecretaria(rolPerfil))) tabId = isAdmin ? 'dashboard' : 'trayectos';
     // Regencia: no entra a usuarios/roles ni a respaldos
@@ -228,6 +231,7 @@ const UI = {
         'progreso': 'Mi progreso',
         'seguimiento': 'Seguimiento',
         'secretaria': 'Panel de cifras por trayecto',
+        'preinscripciones': 'Preinscripciones',
         'cuentas': 'Cuentas y claves',
         'estadisticas': 'Estadísticas de trayectos',
         'observaciones': 'Observaciones',
@@ -278,6 +282,10 @@ const UI = {
 
     if (tabId === 'estadisticas' && window.EstadisticasModulo) {
       window.EstadisticasModulo.cargar();
+    }
+
+    if (tabId === 'preinscripciones' && window.PreinscripcionesModulo) {
+      window.PreinscripcionesModulo.cargar();
     }
 
     if (tabId === 'cuentas' && window.CuentasModulo) {
