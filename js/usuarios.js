@@ -391,7 +391,7 @@ const UsuariosAdmin = {
         <p style="margin:0 0 0.6rem; color:#94a3b8;">DNI ${Trayectos.esc(u.dni || u.usuario)} (no se edita acá)</p>
         <label class="eq-label">Apellido</label><input id="ed-apellido" class="swal2-input eq-motivo" value="${(u.apellido || '').replace(/"/g, '&quot;')}">
         <label class="eq-label">Nombre</label><input id="ed-nombre" class="swal2-input eq-motivo" value="${(u.nombre || '').replace(/"/g, '&quot;')}">
-        <label class="eq-label">Correo de contacto</label><input id="ed-email" type="email" class="swal2-input eq-motivo" value="${(u.email || '').replace(/"/g, '&quot;')}" placeholder="nombre@dominio.com">
+        <label class="eq-label">${String(u.rol || '').toLowerCase() === 'estudiante' ? 'Correo de contacto' : 'Correo (también es el de acceso)'}</label><input id="ed-email" type="email" class="swal2-input eq-motivo" value="${(u.email || '').replace(/"/g, '&quot;')}" placeholder="nombre@dominio.com">
       </div>`,
       showCancelButton: true, confirmButtonText: 'Guardar', cancelButtonText: 'Cancelar', focusConfirm: false,
       preConfirm: () => ({
@@ -403,11 +403,19 @@ const UsuariosAdmin = {
     if (!r.isConfirmed) return;
     if (!r.value.apellido || !r.value.nombre) { alert('Apellido y nombre son obligatorios.'); return; }
     try {
+      const esEstudiante = String(u.rol || '').toLowerCase() === 'estudiante';
+      const cambioMail = (r.value.email || '') !== String(u.email || '').toLowerCase();
+      let emailPerfil = r.value.email || null;
+      if (cambioMail && r.value.email && !esEstudiante) {
+        // Personal: el correo es también el de acceso (Auth), se cambia en los dos lugares
+        const { error: errAcc } = await supabase.rpc('cambiar_email_acceso', { p_user_id: userId, p_email: r.value.email });
+        if (errAcc) throw errAcc;
+      }
       const { error } = await supabase.from('profiles')
-        .update({ apellido: r.value.apellido, nombre: r.value.nombre, email: r.value.email || null })
+        .update({ apellido: r.value.apellido, nombre: r.value.nombre, email: emailPerfil })
         .eq('id', userId);
       if (error) throw error;
-      Object.assign(u, { apellido: r.value.apellido, nombre: r.value.nombre, email: r.value.email || null });
+      Object.assign(u, { apellido: r.value.apellido, nombre: r.value.nombre, email: emailPerfil });
       this.renderizarTabla();
       Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Datos actualizados', showConfirmButton: false, timer: 2000 });
     } catch (err) {
