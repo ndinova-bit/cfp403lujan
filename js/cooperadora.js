@@ -412,8 +412,16 @@ const CooperadoraModulo = {
           if (!libre) { Swal.showValidationMessage('Describí el rubro "Otro…" elegido.'); return false; }
           rubroNombre = libre;
         }
+        const f = document.getElementById('sw-fecha').value;
+        const dentro = this.ejercicios.some(e => f >= `${e.ciclo_desde}-05-01` && f <= `${e.ciclo_hasta}-04-30`);
+        if (!f || !dentro) {
+          Swal.showValidationMessage(this.ejercicios.length
+            ? 'La fecha debe estar dentro de un ejercicio cargado (' + this.ejercicios.map(e => `01/05/${e.ciclo_desde} al 30/04/${e.ciclo_hasta}`).join(' · ') + '). Para otras fechas, creá antes el ejercicio en «Ejercicio / PIA».'
+            : 'Primero creá el ejercicio en «Ejercicio / PIA»: los movimientos deben caer dentro de un ejercicio (01/05 al 30/04).');
+          return false;
+        }
         return {
-          fecha: document.getElementById('sw-fecha').value,
+          fecha: f,
           tipo,
           seccion: Number(seccion),
           rubro_codigo: codigo,
