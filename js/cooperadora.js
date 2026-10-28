@@ -524,6 +524,7 @@ const CooperadoraModulo = {
         ${this.puedeEditar ? `<button class="act-btn" onclick="CooperadoraModulo.formEjercicio()">➕ Nuevo ejercicio</button>` : ''}
         ${this.ejercicioActual && this.puedeEditar ? `<button class="act-btn" onclick="CooperadoraModulo.formEjercicio(${this.ejercicioActual})">✏️ Editar datos (Cuadros 1, 3, 7)</button>` : ''}
         ${this.ejercicioActual && this.puedeEditar ? `<button class="act-btn" onclick="CooperadoraModulo.formComision(${this.ejercicioActual})">✏️ Comisión (Cuadros 4, 5, 6)</button>` : ''}
+        ${this.ejercicioActual ? `<button class="act-btn" onclick="CooperadoraModulo.irA('nomina')">🖨️ Nómina de autoridades</button>` : ''}
         ${this.ejercicioActual ? `<button class="act-btn" style="background:#0f766e;" onclick="CooperadoraModulo.generarPIA()">📄 Generar PIA en PDF</button>` : ''}
       </div>
       ${!this.ejercicioActual ? '<div class="prog-vacio">Elegí o creá un ejercicio para ver y completar sus datos.</div>' : `
@@ -664,33 +665,43 @@ const CooperadoraModulo = {
     const tabla = tipo => this.comision.filter(c => c.tipo === tipo && c.ejercicio_id === ejercicioId);
     const dir = tabla('directiva');
     const fila = (i, c) => `
-      <div style="display:grid; grid-template-columns:1.3fr 2fr 1.3fr 0.9fr; gap:0.3rem; margin-bottom:0.3rem;">
+      <div style="display:grid; grid-template-columns:1.1fr 1.8fr 1.2fr 1.5fr 1fr 0.8fr; gap:0.3rem; margin-bottom:0.3rem;">
         <input id="d-cargo${i}" class="swal2-input" style="margin:0;" placeholder="Cargo" value="${this.esc(c?.cargo || '')}">
         <input id="d-nombre${i}" class="swal2-input" style="margin:0;" placeholder="Apellido y nombre" value="${this.esc(c?.apellido_nombre || '')}">
         <input id="d-cuil${i}" class="swal2-input" style="margin:0;" placeholder="CUIL XX-XXXXXXXX-X" value="${this.esc(c?.documento || '')}">
+        <input id="d-dom${i}" class="swal2-input" style="margin:0;" placeholder="Domicilio" value="${this.esc(c?.domicilio || '')}">
+        <input id="d-loc${i}" class="swal2-input" style="margin:0;" placeholder="Localidad" value="${this.esc(c?.localidad || '')}">
         <input id="d-venc${i}" class="swal2-input" style="margin:0;" placeholder="Vencimiento" value="${this.esc(c?.vencimiento || '')}">
       </div>`;
     const { value } = await Swal.fire({
-      title: 'Comisión Directiva, Revisora y Representante (Cuadros 4, 5 y 6)', width: 760,
+      title: 'Comisión Directiva, Revisora y Representante (Cuadros 4, 5 y 6)', width: 1100,
       html: `
         <strong>Comisión Directiva (hasta 14 cargos)</strong>
         ${Array.from({ length: 14 }).map((_, i) => fila(i, dir[i])).join('')}
         <hr><strong>Comisión Revisora de Cuentas</strong>
-        <div style="display:grid; grid-template-columns:1fr 2fr 1fr; gap:0.3rem; margin-bottom:0.3rem;"><b>Titular Docente</b>
+        <div style="display:grid; grid-template-columns:1fr 2fr 1fr 1.5fr 1fr; gap:0.3rem; margin-bottom:0.3rem;"><b>Titular Docente</b>
           <input id="r-nombre0" class="swal2-input" style="margin:0;" placeholder="Apellido y nombre" value="${this.esc(tabla('revisora').find(c => c.cargo === 'Titular Docente')?.apellido_nombre || '')}">
           <input id="r-dni0" class="swal2-input" style="margin:0;" placeholder="DNI" value="${this.esc(tabla('revisora').find(c => c.cargo === 'Titular Docente')?.documento || '')}">
+          <input id="r-dom0" class="swal2-input" style="margin:0;" placeholder="Domicilio" value="${this.esc(tabla('revisora').find(c => c.cargo === 'Titular Docente')?.domicilio || '')}">
+          <input id="r-loc0" class="swal2-input" style="margin:0;" placeholder="Localidad" value="${this.esc(tabla('revisora').find(c => c.cargo === 'Titular Docente')?.localidad || '')}">
         </div>
-        <div style="display:grid; grid-template-columns:1fr 2fr 1fr; gap:0.3rem; margin-bottom:0.3rem;"><b>Titular</b>
+        <div style="display:grid; grid-template-columns:1fr 2fr 1fr 1.5fr 1fr; gap:0.3rem; margin-bottom:0.3rem;"><b>Titular</b>
           <input id="r-nombre1" class="swal2-input" style="margin:0;" value="${this.esc(tabla('revisora').find(c => c.cargo === 'Titular')?.apellido_nombre || '')}">
           <input id="r-dni1" class="swal2-input" style="margin:0;" value="${this.esc(tabla('revisora').find(c => c.cargo === 'Titular')?.documento || '')}">
+          <input id="r-dom1" class="swal2-input" style="margin:0;" placeholder="Domicilio" value="${this.esc(tabla('revisora').find(c => c.cargo === 'Titular')?.domicilio || '')}">
+          <input id="r-loc1" class="swal2-input" style="margin:0;" placeholder="Localidad" value="${this.esc(tabla('revisora').find(c => c.cargo === 'Titular')?.localidad || '')}">
         </div>
-        <div style="display:grid; grid-template-columns:1fr 2fr 1fr; gap:0.3rem; margin-bottom:0.3rem;"><b>Suplente</b>
+        <div style="display:grid; grid-template-columns:1fr 2fr 1fr 1.5fr 1fr; gap:0.3rem; margin-bottom:0.3rem;"><b>Suplente</b>
           <input id="r-nombre2" class="swal2-input" style="margin:0;" value="${this.esc(tabla('revisora').find(c => c.cargo === 'Suplente')?.apellido_nombre || '')}">
           <input id="r-dni2" class="swal2-input" style="margin:0;" value="${this.esc(tabla('revisora').find(c => c.cargo === 'Suplente')?.documento || '')}">
+          <input id="r-dom2" class="swal2-input" style="margin:0;" placeholder="Domicilio" value="${this.esc(tabla('revisora').find(c => c.cargo === 'Suplente')?.domicilio || '')}">
+          <input id="r-loc2" class="swal2-input" style="margin:0;" placeholder="Localidad" value="${this.esc(tabla('revisora').find(c => c.cargo === 'Suplente')?.localidad || '')}">
         </div>
-        <div style="display:grid; grid-template-columns:1fr 2fr 1fr; gap:0.3rem; margin-bottom:0.3rem;"><b>Asesor/a</b>
+        <div style="display:grid; grid-template-columns:1fr 2fr 1fr 1.5fr 1fr; gap:0.3rem; margin-bottom:0.3rem;"><b>Asesor/a</b>
           <input id="r-nombre3" class="swal2-input" style="margin:0;" value="${this.esc(tabla('revisora').find(c => c.cargo === 'Asesor/a')?.apellido_nombre || '')}">
           <input id="r-dni3" class="swal2-input" style="margin:0;" value="${this.esc(tabla('revisora').find(c => c.cargo === 'Asesor/a')?.documento || '')}">
+          <input id="r-dom3" class="swal2-input" style="margin:0;" placeholder="Domicilio" value="${this.esc(tabla('revisora').find(c => c.cargo === 'Asesor/a')?.domicilio || '')}">
+          <input id="r-loc3" class="swal2-input" style="margin:0;" placeholder="Localidad" value="${this.esc(tabla('revisora').find(c => c.cargo === 'Asesor/a')?.localidad || '')}">
         </div>
         <hr><strong>Representante ante la Federación</strong>
         <div style="display:grid; grid-template-columns:1fr 2fr 1fr; gap:0.3rem; margin-bottom:0.3rem;"><b>Titular</b>
@@ -709,12 +720,12 @@ const CooperadoraModulo = {
           const cargo = document.getElementById(`d-cargo${i}`).value.trim();
           const nombre = document.getElementById(`d-nombre${i}`).value.trim();
           if (!cargo && !nombre) continue;
-          filas.push({ tipo: 'directiva', cargo: cargo || `Vocal ${i + 1}`, apellido_nombre: nombre || null, documento: document.getElementById(`d-cuil${i}`).value.trim() || null, vencimiento: document.getElementById(`d-venc${i}`).value.trim() || null, orden: i });
+          filas.push({ tipo: 'directiva', cargo: cargo || `Vocal ${i + 1}`, apellido_nombre: nombre || null, documento: document.getElementById(`d-cuil${i}`).value.trim() || null, domicilio: document.getElementById(`d-dom${i}`).value.trim() || null, localidad: document.getElementById(`d-loc${i}`).value.trim() || null, vencimiento: document.getElementById(`d-venc${i}`).value.trim() || null, orden: i });
         }
         ['Titular Docente', 'Titular', 'Suplente', 'Asesor/a'].forEach((cargo, i) => {
           const nombre = document.getElementById(`r-nombre${i}`).value.trim();
           const dni = document.getElementById(`r-dni${i}`).value.trim();
-          if (nombre || dni) filas.push({ tipo: 'revisora', cargo, apellido_nombre: nombre || null, documento: dni || null, orden: i });
+          if (nombre || dni) filas.push({ tipo: 'revisora', cargo, apellido_nombre: nombre || null, documento: dni || null, domicilio: document.getElementById(`r-dom${i}`).value.trim() || null, localidad: document.getElementById(`r-loc${i}`).value.trim() || null, orden: i });
         });
         ['Titular', 'Suplente'].forEach((cargo, i) => {
           const nombre = document.getElementById(`f-nombre${i}`).value.trim();
