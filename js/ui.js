@@ -141,9 +141,9 @@ const UI = {
     if (rolNorm !== 'estudiante' && window.ObservacionesModulo) setTimeout(() => ObservacionesModulo.contarPendientes(), 1000);
     const btnSec = document.getElementById('btn-secretaria');
     if (btnSec) btnSec.style.setProperty('display', (esSecretaria || isAdmin || rolNorm === 'preceptor') ? 'flex' : 'none', 'important');
-    // Cooperadora: carga (director, regente, preceptoría); secretaría ve balance; el resto solo ve la nómina de la comisión directiva.
+    // Cooperadora: carga (director, regente, preceptoría); secretaría ve balance; docentes solo ven la nómina; estudiantes no la ven.
     const btnCoop = document.getElementById('btn-cooperadora');
-    if (btnCoop) btnCoop.style.setProperty('display', 'flex', 'important');
+    if (btnCoop) btnCoop.style.setProperty('display', rolNorm !== 'estudiante' ? 'flex' : 'none', 'important');
     if (esSecretaria) {
       const bt = document.getElementById('btn-trayectos');
       if (bt) bt.style.setProperty('display', 'none', 'important');
@@ -186,6 +186,7 @@ const UI = {
     }
     const isAdmin = Auth.esDireccion(perfil.rol);
     const rolPerfil = String(perfil.rol || '').toLowerCase().trim();
+    if (tabId === 'cooperadora' && rolPerfil === 'estudiante') tabId = 'trayectos';
     if (Auth.esSecretaria(rolPerfil) && !['secretaria', 'observaciones', 'cooperadora', 'actas'].includes(tabId)) tabId = 'secretaria';
     if (tabId === 'secretaria' && !(Auth.esSecretaria(rolPerfil) || isAdmin || rolPerfil === 'preceptor')) tabId = 'trayectos';
     if (tabId === 'estadisticas' && !isAdmin) tabId = 'trayectos';

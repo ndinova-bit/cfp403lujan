@@ -20,6 +20,10 @@ language plpgsql stable security definer set search_path = public as $$
 declare ej public.cooperadora_ejercicios;
 begin
   if auth.uid() is null then raise exception 'No autorizado'; end if;
+  -- los estudiantes no acceden a la Cooperadora
+  if exists (select 1 from public.profiles p where p.id = auth.uid() and lower(p.rol) = 'estudiante') then
+    raise exception 'No autorizado';
+  end if;
   select * into ej from public.cooperadora_ejercicios
    where id = coalesce(p_ejercicio, (select id from public.cooperadora_ejercicios order by ciclo_desde desc limit 1));
   return jsonb_build_object(
