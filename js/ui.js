@@ -144,6 +144,9 @@ const UI = {
     // Cooperadora: carga (director, regente, preceptoría) y visualización (+ secretaría). Nunca docentes ni estudiantes.
     const btnCoop = document.getElementById('btn-cooperadora');
     if (btnCoop) btnCoop.style.setProperty('display', (Auth.esPersonal(rolNorm) || esSecretaria) ? 'flex' : 'none', 'important');
+    // Nómina de la comisión directiva: la ve y descarga cualquier usuario con sesión (carga: solo personal)
+    const btnNom = document.getElementById('btn-nomina-coop');
+    if (btnNom) btnNom.style.setProperty('display', 'flex', 'important');
     if (esSecretaria) {
       const bt = document.getElementById('btn-trayectos');
       if (bt) bt.style.setProperty('display', 'none', 'important');
@@ -186,7 +189,7 @@ const UI = {
     }
     const isAdmin = Auth.esDireccion(perfil.rol);
     const rolPerfil = String(perfil.rol || '').toLowerCase().trim();
-    if (Auth.esSecretaria(rolPerfil) && !['secretaria', 'observaciones', 'cooperadora', 'actas'].includes(tabId)) tabId = 'secretaria';
+    if (Auth.esSecretaria(rolPerfil) && !['secretaria', 'observaciones', 'cooperadora', 'actas', 'nomina-coop'].includes(tabId)) tabId = 'secretaria';
     if (tabId === 'secretaria' && !(Auth.esSecretaria(rolPerfil) || isAdmin || rolPerfil === 'preceptor')) tabId = 'trayectos';
     if (tabId === 'estadisticas' && !isAdmin) tabId = 'trayectos';
     if (tabId === 'observaciones' && rolPerfil === 'estudiante') tabId = 'trayectos';
@@ -236,6 +239,7 @@ const UI = {
         'estadisticas': 'Estadísticas de trayectos',
         'observaciones': 'Observaciones',
         'cooperadora': 'Cooperadora Escolar',
+        'nomina-coop': 'Nómina de la Comisión Directiva',
         'novedades': 'Novedades y calendario',
         'trayectos': (isAdmin || rolActual === 'preceptor') ? 'Trayectos Formativos' : 'Mis Trayectos Formativos',
         'actas': 'Fichas de Curso / Actas de Examen',
@@ -294,6 +298,10 @@ const UI = {
 
     if (tabId === 'secretaria' && window.SecretariaModulo) {
       window.SecretariaModulo.cargar();
+    }
+
+    if (tabId === 'nomina-coop' && window.NominaCoopModulo) {
+      window.NominaCoopModulo.cargar();
     }
 
     if (tabId === 'cooperadora' && window.CooperadoraModulo) {
