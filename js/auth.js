@@ -214,6 +214,10 @@ const Auth = {
       // 3. Solo entran cuentas aprobadas
       if (perfil.estado !== 'ACTIVO') {
         await supabase.auth.signOut();
+        if (perfil.estado === 'INACTIVO') {
+          this.avisar('Tu cuenta está inactiva porque no tenés una inscripción vigente. Si querés volver a cursar, consultá con la administración del CFP.');
+          return;
+        }
         this.avisar('Tu cuenta está pendiente de aprobación o fue inhabilitada. Consultá con la administración del CFP.');
         return;
       }

@@ -170,7 +170,7 @@ const UsuariosAdmin = {
           <td style="padding: 0.85rem 0.75rem; text-align: right; display: flex; gap: 0.4rem; justify-content: flex-end; align-items: center;">
             ${!esActivo ? `
               <button class="btn btn-gold" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="UsuariosAdmin.cambiarEstado('${idPrimario}', 'ACTIVO')">
-                ${estadoRaw === 'INHABILITADO' ? '↩ Reactivar' : '✓ Aprobar'}
+                ${(estadoRaw === 'INHABILITADO' || estadoRaw === 'INACTIVO') ? '↩ Reactivar' : '✓ Aprobar'}
               </button>
             ` : `
               <button class="btn btn-danger" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171;" onclick="UsuariosAdmin.cambiarEstado('${idPrimario}', 'INHABILITADO')">
@@ -358,6 +358,54 @@ const UsuariosAdmin = {
 
   esMiUsuario(userId) {
     return !!(window.Auth && Auth.usuarioActual && String(Auth.usuarioActual.id) === String(userId));
+  },
+
+  /* Cierre de año: pasa a INACTIVO a los estudiantes sin inscripción vigente (sin baja) en un ciclo
+     posterior al que se cierra. No borra nada: ficha, inscripciones, notas y asistencias quedan.
+     Se reactivan solos cuando los inscriben de nuevo. Solo Director y Regente (lo exige la base). */
+  async cierreAnio() {
+    if (typeof Swal === 'undefined') return;
+    const esc = s => Trayectos.esc(String(s ?? ''));
+    const ciclo0 = new Date().getFullYear();
+    const { value: ciclo } = await Swal.fire({
+      title: 'Cierre de año', input: 'number', inputValue: ciclo0, inputLabel: 'Ciclo lectivo que se cierra',
+      text: 'Se listan los estudiantes activos que NO tienen una inscripción vigente (sin baja) en un ciclo posterior.',
+      showCancelButton: true, confirmButtonText: 'Ver lista', cancelButtonText: 'Cancelar',
+      inputValidator: v => (!v || Number(v) < 2020 || Number(v) > 2100) ? 'Ingresá un año válido' : null
+    });
+    if (!ciclo) return;
+    const cierre = Number(ciclo);
+    try {
+      const { data, error } = await supabase.rpc('cierre_estudiantes_inactivables', { p_ciclo: cierre });
+      if (error) throw error;
+      const lista = data || [];
+      if (!lista.length) { Swal.fire('Nada para inactivar', 'Todos los estudiantes activos tienen una inscripción vigente posterior al ciclo ' + cierre + '.', 'info'); return; }
+      const r = await Swal.fire({
+        title: `${lista.length} estudiantes para inactivar`, width: 720, showCancelButton: true,
+        confirmButtonText: 'Inactivar seleccionados', cancelButtonText: 'Cancelar', focusConfirm: false,
+        html: `
+          <p style="font-size:.9rem;text-align:left;">Pierden el acceso al login, pero <strong>no se borra nada</strong>. Si se vuelven a inscribir, se reactivan solos. Destildá a quien quieras dejar activo.</p>
+          <label style="display:block;text-align:left;margin:.3rem 0;"><input type="checkbox" id="cierre-todos" checked> Seleccionar todos</label>
+          <div style="max-height:320px;overflow:auto;text-align:left;border:1px solid #cbd5e1;border-radius:8px;padding:.4rem .6rem;">
+            ${lista.map(u => `<label style="display:block;font-size:.88rem;padding:.15rem 0;"><input type="checkbox" class="cierre-dni" value="${esc(u.dni)}" checked> ${esc(u.apellido)}, ${esc(u.nombre)} <span style="color:#64748b;">· DNI ${esc(u.dni)}${u.ultimo_ciclo ? ' · último ciclo ' + esc(u.ultimo_ciclo) : ' · sin inscripciones'}</span></label>`).join('')}
+          </div>`,
+        didOpen: () => {
+          document.getElementById('cierre-todos').addEventListener('change', e => document.querySelectorAll('.cierre-dni').forEach(c => { c.checked = e.target.checked; }));
+        },
+        preConfirm: () => {
+          const dnis = [...document.querySelectorAll('.cierre-dni:checked')].map(c => c.value);
+          if (!dnis.length) { Swal.showValidationMessage('No seleccionaste a nadie.'); return false; }
+          return dnis;
+        }
+      });
+      if (!r.isConfirmed) return;
+      const { data: n, error: e2 } = await supabase.rpc('cierre_inactivar_estudiantes', { p_ciclo: cierre, p_dnis: r.value });
+      if (e2) throw e2;
+      Swal.fire('Listo', `${n} estudiantes quedaron INACTIVOS.`, 'success');
+      this.cargarUsuarios();
+    } catch (err) {
+      Swal.fire('No se pudo completar', err.message || '', 'error');
+    }
   },
 
   async cambiarEstado(userId, nuevoEstado) {
