@@ -58,7 +58,7 @@ Deno.serve(async (req: Request) => {
     if (!env('APPS_SCRIPT_URL') || !env('APPS_SCRIPT_SECRET')) throw new Error('Faltan los secretos APPS_SCRIPT_URL y APPS_SCRIPT_SECRET');
 
     // PDF: el mismo generador que usa la plataforma
-    const sitio = (env('SITE_URL') || 'https://ndinova-bit.github.io/cfp403lujan').replace(/\/$/, '');
+    const sitio = (env('SITE_URL') || 'https://cfp403lujan.com.ar').replace(/\/$/, '');
     const fetchSitio = (ruta: string) => fetch(/^https?:/.test(ruta) ? ruta : `${sitio}/${ruta.replace(/^\//, '')}`);
     // El generador de PDF se toma de la propia plataforma publicada (js/ficha_inscripcion.js): así el PDF
     // de Drive siempre es idéntico al que descarga la gente.
