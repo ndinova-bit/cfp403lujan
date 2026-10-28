@@ -157,7 +157,9 @@ const CooperadoraModulo = {
     const rol = String(perfil?.rol || '').toLowerCase().trim();
     this.puedeEditar = Auth.esPersonal(rol);
     this.puedeVer = this.puedeEditar || Auth.esSecretaria(rol);
-    if (!this.puedeVer) { cont.innerHTML = '<div class="prog-vacio">No tenés acceso a este panel.</div>'; return; }
+    // Docentes y estudiantes: solo la nómina de la comisión directiva
+    if (!this.puedeVer) { this.soloNomina = true; this.tab = 'nomina'; this.render(); return; }
+    this.soloNomina = false;
 
     cont.innerHTML = '<p class="seg-cargando">Cargando cooperadora…</p>';
     // Secretaría: solo el balance del mes y del año en curso (totales por rubro, sin datos de socios)
@@ -201,9 +203,10 @@ const CooperadoraModulo = {
   render() {
     const cont = document.getElementById('cooperadora-contenido');
     if (!cont) return;
-    const tabs = this.soloBalance ? [['balance', '📊 Balance']] : [
+    const NOM = ['nomina', '👤 Nómina de autoridades'];
+    const tabs = this.soloNomina ? [NOM] : this.soloBalance ? [['balance', '📊 Balance'], NOM] : [
       ['socios', '👥 Socios'], ['movimientos', '💵 Ingresos y Egresos'],
-      ['balance', '📊 Balance'], ['ejercicio', '📋 Ejercicio / PIA'], ['constancias', '🧾 Constancias']
+      ['balance', '📊 Balance'], ['ejercicio', '📋 Ejercicio / PIA'], ['constancias', '🧾 Constancias'], NOM
     ];
     cont.innerHTML = `
       <div class="plan-tabs">
@@ -217,6 +220,7 @@ const CooperadoraModulo = {
     else if (this.tab === 'balance') panel.innerHTML = this.vistaBalance();
     else if (this.tab === 'ejercicio') panel.innerHTML = this.vistaEjercicio();
     else if (this.tab === 'constancias') panel.innerHTML = this.vistaConstancias();
+    else if (this.tab === 'nomina' && window.NominaCoopModulo) NominaCoopModulo.cargar('coop-panel');
   },
 
   /* ============================== SOCIOS ============================== */

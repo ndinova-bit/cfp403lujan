@@ -23,8 +23,11 @@ const NominaCoopModulo = {
     return res;
   },
 
-  async cargar() {
-    const cont = document.getElementById('nomina-coop-contenido');
+  destinoId: 'coop-panel',
+
+  async cargar(destinoId) {
+    if (destinoId) this.destinoId = destinoId;
+    const cont = document.getElementById(this.destinoId);
     if (!cont) return;
     cont.innerHTML = '<p class="seg-cargando">Cargando nómina…</p>';
     try {
@@ -47,7 +50,7 @@ const NominaCoopModulo = {
   },
 
   dibujar() {
-    const cont = document.getElementById('nomina-coop-contenido');
+    const cont = document.getElementById(this.destinoId);
     if (!cont) return;
     const d = this.datos, ed = this.editando;
     const inp = (id, v, ph = '', w = '') => `<input id="${id}" class="form-control" style="${w}" value="${this.esc(v)}" placeholder="${ph}">`;
@@ -90,7 +93,7 @@ const NominaCoopModulo = {
       escuela: document.getElementById('nc-escuela')?.value.trim() || '',
       asociacion: document.getElementById('nc-asoc')?.value.trim() || ''
     };
-    document.querySelectorAll('#nomina-coop-contenido .nc-in').forEach(el => {
+    document.querySelectorAll('#' + this.destinoId + ' .nc-in').forEach(el => {
       this.filas[Number(el.dataset.i)][el.dataset.k] = el.value.trim();
     });
   },
