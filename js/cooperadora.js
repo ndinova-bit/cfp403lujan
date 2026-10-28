@@ -160,6 +160,21 @@ const CooperadoraModulo = {
     if (!this.puedeVer) { cont.innerHTML = '<div class="prog-vacio">No tenés acceso a este panel.</div>'; return; }
 
     cont.innerHTML = '<p class="seg-cargando">Cargando cooperadora…</p>';
+    // Secretaría: solo el balance del mes y del año en curso (totales por rubro, sin datos de socios)
+    this.soloBalance = !this.puedeEditar;
+    if (this.soloBalance) {
+      try {
+        const { data, error } = await supabase.rpc('coop_balance_vigente');
+        if (error) throw error;
+        this.balVigente = data || { mes: '', anio: '', movs_mes: [], movs_anio: [] };
+        this.tab = 'balance';
+        this.render();
+      } catch (err) {
+        console.error('Cooperadora (balance):', err);
+        cont.innerHTML = `<div class="prog-vacio">No se pudo cargar el balance. ${/coop_balance_vigente/i.test(err.message || '') ? 'Falta ejecutar <strong>sql/50_cooperadora_secretaria_balance.sql</strong> en Supabase.' : this.esc(err.message || '')}</div>`;
+      }
+      return;
+    }
     try {
       const [rSocios, rMov, rEjer, rCom] = await Promise.all([
         supabase.from('cooperadora_socios').select('*').order('apellido'),
@@ -186,7 +201,7 @@ const CooperadoraModulo = {
   render() {
     const cont = document.getElementById('cooperadora-contenido');
     if (!cont) return;
-    const tabs = [
+    const tabs = this.soloBalance ? [['balance', '📊 Balance']] : [
       ['socios', '👥 Socios'], ['movimientos', '💵 Ingresos y Egresos'],
       ['balance', '📊 Balance'], ['ejercicio', '📋 Ejercicio / PIA'], ['constancias', '🧾 Constancias']
     ];
@@ -450,14 +465,8 @@ const CooperadoraModulo = {
     return res;
   },
 
-  vistaBalance() {
-    if (!this.balMes) this.balMes = new Date().toISOString().slice(0, 7);
-    if (!this.balAnio) this.balAnio = new Date().getFullYear();
-    const movsMes = this.movimientos.filter(m => String(m.fecha || '').slice(0, 7) === this.balMes);
-    const movsAnio = this.movimientos.filter(m => String(m.fecha || '').slice(0, 4) === String(this.balAnio));
-    const bMes = this.balanceDe(movsMes);
-    const bAnio = this.balanceDe(movsAnio);
-    const bloque = (titulo, b) => `
+  bloqueBalance(titulo, b) {
+    return `
       <h4 style="margin:1rem 0 0.4rem;">${titulo}</h4>
       <div class="sec-tabla-wrap"><table class="sec-tabla">
         <thead><tr><th>Entradas</th><th style="text-align:right;">Monto</th><th>Salidas</th><th style="text-align:right;">Monto</th></tr></thead>
@@ -471,6 +480,21 @@ const CooperadoraModulo = {
         </tbody>
       </table></div>
     `;
+  },
+
+  vistaBalance() {
+    if (this.soloBalance) {
+      const v = this.balVigente || { mes: '', anio: '', movs_mes: [], movs_anio: [] };
+      return `${this.bloqueBalance('Balance mensual — ' + v.mes, this.balanceDe(v.movs_mes || []))}
+        ${this.bloqueBalance('Balance anual — ' + v.anio, this.balanceDe(v.movs_anio || []))}`;
+    }
+    if (!this.balMes) this.balMes = new Date().toISOString().slice(0, 7);
+    if (!this.balAnio) this.balAnio = new Date().getFullYear();
+    const movsMes = this.movimientos.filter(m => String(m.fecha || '').slice(0, 7) === this.balMes);
+    const movsAnio = this.movimientos.filter(m => String(m.fecha || '').slice(0, 4) === String(this.balAnio));
+    const bMes = this.balanceDe(movsMes);
+    const bAnio = this.balanceDe(movsAnio);
+    const bloque = (t, b) => this.bloqueBalance(t, b);
     return `
       <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:0.5rem;">
         <label>Balance mensual: <input type="month" class="form-control" value="${this.balMes}" onchange="CooperadoraModulo.balMes=this.value; CooperadoraModulo.render();"></label>
