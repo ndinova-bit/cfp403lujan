@@ -41,6 +41,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/tema-cfp.css?v=70052">
   <link rel="stylesheet" href="css/ficha-inscripcion.css?v=70065">
+  <link rel="stylesheet" href="css/ayuda.css?v=70076">
   <style>
     /* Los avisos de SweetAlert (progreso, resúmenes, errores) tienen que verse por encima de los paneles de la plataforma */
     .swal2-container { z-index: 20000 !important; }
@@ -377,6 +378,9 @@
   <button id="btn-auditoria" class="nav-item-btn admin-only" onclick="UI.showTab('auditoria')">
     <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 3.400 8.200 8 9 4.600-.800 8-4 8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></span> Auditoría
   </button>
+  <button id="btn-ayuda" class="nav-item-btn" onclick="UI.showTab('ayuda')">
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.500 9.500a2.500 2.500 0 1 1 3.500 2.300c-.700.400-1 .900-1 1.700"/><circle cx="12" cy="17" r=".6"/></svg></span> Ayuda y guía
+  </button>
 </nav>
 
       <button type="button" class="btn btn-outline app-boton-instalar" style="margin-top: auto; width: 100%; margin-bottom: 0.5rem;" onclick="AppCFP.instalar()">
@@ -398,6 +402,7 @@
         <div class="admin-header-title">
           <button type="button" id="btn-menu-movil" class="menu-movil-btn" aria-label="Abrir menú" onclick="UI.toggleMenu()">☰</button>
           <h2 id="current-section-title">Dashboard</h2>
+          <button type="button" id="btn-ayuda-pantalla" class="ayuda-btn" title="Ayuda de esta pantalla" aria-label="Ayuda de esta pantalla" onclick="AyudaModulo.deEstaPantalla()">?</button>
         </div>
         <div class="admin-user-profile">
           <div class="user-badge">
@@ -511,6 +516,7 @@
         <section id="cuentas" class="section-tab" style="display: none;"><div id="cuentas-contenido"></div></section>
         <section id="estadisticas" class="section-tab admin-only" style="display: none;"><div id="estadisticas-contenido"></div></section>
         <section id="observaciones" class="section-tab" style="display: none;"><div id="observaciones-contenido"></div></section>
+        <section id="ayuda" class="section-tab" style="display: none;"><div id="ayuda-contenido"></div></section>
         <section id="cooperadora" class="section-tab" style="display: none;"><div id="cooperadora-contenido"></div></section>
         <section id="seguimiento" class="section-tab" style="display: none;"><div id="seguimiento-contenido"></div></section>
 
@@ -937,7 +943,7 @@
   <script src="js/supabase-config.js?v=70007" defer></script>
   <script src="js/avisos.js?v=70008" defer></script>
   <script src="js/reglas.js?v=70024" defer></script>
-  <script src="js/ui.js?v=70073" defer></script>
+  <script src="js/ui.js?v=70078" defer></script>
   <script src="js/auth.js?v=70074" defer></script>
   <script src="js/trayectos.js?v=70050" defer></script>
   <script src="js/usuarios.js?v=70075" defer></script>
@@ -965,6 +971,7 @@
   <script src="js/observaciones.js?v=70050" defer></script>
   <script src="js/cooperadora.js?v=70072" defer></script>
   <script src="js/nomina_cooperadora.js?v=70071" defer></script>
+  <script src="js/ayuda.js?v=70079" defer></script>
   <script src="js/planilla.js?v=70050" defer></script>
   <script src="js/sedes.js?v=70050" defer></script>
   <script src="js/constancias.js?v=70050" defer></script>

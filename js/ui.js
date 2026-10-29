@@ -163,6 +163,8 @@ const UI = {
     } else {
       this.showTab('dashboard');
     }
+    // Recorrido guiado la primera vez que entra cada persona
+    if (window.AyudaModulo) setTimeout(() => AyudaModulo.iniciarSiPrimeraVez(), 1500);
   },
 
 // Menú lateral en celulares: se abre con el botón ☰ y se cierra al elegir una opción
@@ -187,7 +189,7 @@ const UI = {
     const isAdmin = Auth.esDireccion(perfil.rol);
     const rolPerfil = String(perfil.rol || '').toLowerCase().trim();
     if (tabId === 'cooperadora' && rolPerfil === 'estudiante') tabId = 'trayectos';
-    if (Auth.esSecretaria(rolPerfil) && !['secretaria', 'observaciones', 'cooperadora', 'actas'].includes(tabId)) tabId = 'secretaria';
+    if (Auth.esSecretaria(rolPerfil) && !['secretaria', 'observaciones', 'cooperadora', 'actas', 'ayuda'].includes(tabId)) tabId = 'secretaria';
     if (tabId === 'secretaria' && !(Auth.esSecretaria(rolPerfil) || isAdmin || rolPerfil === 'preceptor')) tabId = 'trayectos';
     if (tabId === 'estadisticas' && !isAdmin) tabId = 'trayectos';
     if (tabId === 'observaciones' && rolPerfil === 'estudiante') tabId = 'trayectos';
@@ -236,6 +238,7 @@ const UI = {
         'estadisticas': 'Estadísticas de trayectos',
         'observaciones': 'Observaciones',
         'cooperadora': 'Cooperadora Escolar',
+        'ayuda': 'Ayuda y guía',
         'novedades': 'Novedades y calendario',
         'trayectos': (isAdmin || rolActual === 'preceptor') ? 'Trayectos Formativos' : 'Mis Trayectos Formativos',
         'actas': 'Fichas de Curso / Actas de Examen',
@@ -294,6 +297,11 @@ const UI = {
 
     if (tabId === 'secretaria' && window.SecretariaModulo) {
       window.SecretariaModulo.cargar();
+    }
+
+    if (window.AyudaModulo) AyudaModulo.tabActual = tabId;
+    if (tabId === 'ayuda' && window.AyudaModulo) {
+      window.AyudaModulo.cargar();
     }
 
     if (tabId === 'cooperadora' && window.CooperadoraModulo) {
