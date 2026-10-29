@@ -1,5 +1,5 @@
 /* ==========================================================================
-   AYUDA Y GUÍA DE USO · CFP N.º 403
+   AYUDA Y GUÍA DE USO
    Archivo: js/ayuda.js
    Tres cosas, todas según el rol de quien entra:
      1) Sección «Ayuda y guía»: temas por rol (desplegables) + guía en PDF.
@@ -9,6 +9,9 @@
    Para cambiar un texto basta con editar el bloque TEMAS de abajo.
    ========================================================================== */
 const AyudaModulo = {
+  // ▼ Lo único institucional: cambiar estas dos líneas al copiar el módulo a otra escuela.
+  NOMBRE_CORTO: 'CFP N.º 403',
+  NOMBRE_PDF: 'CFP N.º 403 "Oscar Smith" - Luján',
   tabActual: 'trayectos',
 
   ROLES: {
@@ -415,7 +418,7 @@ const AyudaModulo = {
   armarPasos() {
     const rol = this.rol();
     const pasos = [{
-      titulo: '¡Bienvenido/a a la plataforma del CFP N.º 403!',
+      titulo: '¡Bienvenido/a a la plataforma del ' + this.NOMBRE_CORTO + '!',
       texto: `Te mostramos rápido lo que podés hacer como <strong>${this.esc(this.ROLES[rol])}</strong>. Podés salir cuando quieras y volver a verlo desde «Ayuda y guía».`
     }];
     document.querySelectorAll('.sidebar-nav .nav-item-btn').forEach(b => {
@@ -552,7 +555,7 @@ const AyudaModulo = {
       nueva();
       if (logo) { const s = logo.scaleToFit(48, 48); pag.drawImage(logo, { x: W - M - s.width, y: H - M - s.height + 6, width: s.width, height: s.height }); }
       pag.drawText('Guía de uso de la plataforma', { x: M, y: y - 10, size: 20, font: fB, color: AZUL }); y -= 32;
-      escribir('CFP N.º 403 "Oscar Smith" - Luján', { size: 11, color: GRIS });
+      escribir(this.NOMBRE_PDF, { size: 11, color: GRIS });
       escribir('Rol: ' + this.ROLES[rol], { font: fB, size: 11 });
       y -= 8;
       temas.forEach(t => {
