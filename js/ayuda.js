@@ -226,11 +226,17 @@ const AyudaModulo = {
       corto: 'Fichas de curso y actas de examen.',
       que: 'Documentos de cierre de cada trayecto.',
       pasos: [
-        'Elegí el trayecto. La nota de cada módulo sale de las actividades y la asistencia.',
-        'Si hace falta, escribí otra nota en la casilla (queda marcada en amarillo); borrala para volver a la calculada.',
-        '«Descargar acta (Excel)» y «Ficha de Curso (Excel)» sacan los archivos. EQ indica equivalencia.'
+        'La pantalla tiene dos botones: «Fichas de curso» y «Actas de examen». Elegí el ciclo y el trayecto.',
+        'Fichas de curso: nómina de estudiantes con su situación (cursando o baja) y el N.º de egresado. «Ficha de Curso (Excel)» descarga la planilla.',
+        'Actas de examen: la nota de cada módulo sale de las actividades y la asistencia. Podés escribir otra nota en la casilla (queda en amarillo); borrala para volver a la calculada.',
+        '«Descargar acta (Excel)» saca el acta oficial. EQ indica equivalencia.'
       ],
-      porRol: { secretaria: { pasos: ['Podés ver e imprimir las fichas y actas; la carga y los ajustes los hacen Dirección y Regencia.'] } }
+      ojo: ['El N.º de egresado lo asignan solo Director, Regente y Secretaría. Lo ven ellos y Preceptoría (en la ficha del estudiante).'],
+      porRol: { secretaria: { pasos: [
+        'La pantalla tiene dos botones: «Fichas de curso» y «Actas de examen».',
+        'En Fichas de curso asignás el N.º de egresado de cada estudiante: escribilo y se guarda al salir de la casilla. Si el número ya existe, te avisa.',
+        'Las actas las podés ver e imprimir; la carga y los ajustes los hacen Dirección y Regencia.'
+      ] } }
     },
 
     dashboard: {
