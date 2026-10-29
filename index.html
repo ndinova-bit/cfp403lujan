@@ -354,14 +354,11 @@
 
   <!-- NUEVO BOTÓN: FICHAS DE CURSO / ACTAS DE EXAMEN -->
   <button id="btn-actas" class="nav-item-btn" style="display:none" onclick="UI.showTab('actas')">
-    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 11h6M9 15h6"/></svg></span> Fichas / Actas de Examen
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 11h6M9 15h6"/></svg></span> Fichas, Actas y Certificados
   </button>
 
   <button id="btn-nuevo-trayecto" class="nav-item-btn admin-only" onclick="Trayectos.nuevo()">
     <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg></span> Cargar Trayecto
-  </button>
-  <button id="btn-certificados" class="nav-item-btn admin-only" onclick="UI.showTab('certificados')">
-    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h9a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V8z"/><path d="M8 3v5H5M9 13h6M9 17h4"/></svg></span> Emitir Certificados
   </button>
   <button id="btn-novedades" class="nav-item-btn" style="display:none" onclick="UI.showTab('novedades')">
     <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg></span> Novedades
@@ -500,7 +497,7 @@
                 <button type="button" class="btn btn-secondary" style="text-align: left; justify-content: flex-start;" onclick="UI.showTab('trayectos')">
                   📚 Gestionar Trayectos Formativos
                 </button>
-                <button type="button" class="btn btn-gold" style="text-align: left; justify-content: flex-start;" onclick="UI.showTab('certificados')">
+                <button type="button" class="btn btn-gold" style="text-align: left; justify-content: flex-start;" onclick="UI.showTab('actas').then(() => window.ActasModulo && ActasModulo.cambiarModo('cert'))">
                   📜 Emitir Certificados PDF
                 </button>
               </div>
@@ -687,43 +684,32 @@
         </section>
 
 <!-- VISTA 4: CERTIFICADOS POR TRAYECTO (ADMIN) -->
-        <section id="certificados" class="section-tab admin-only" style="display: none;">
-          <div class="card-panel">
-            <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
-              <div>
-                <h3 style="margin: 0;">Emisión de Certificados de Egresados</h3>
-                <p style="font-size: 0.85rem; color: var(--cfp-muted); margin-top: 0.25rem;">
-                  Solo aprobados en el acta de examen. Formato según Circular DFP 4/2020 · hoja A5.
-                </p>
-              </div>
-              <button class="btn btn-secondary" onclick="CertificadosAdmin.cargarNominaCertificados()">
-                🔄 Actualizar Nómina
-              </button>
-            </div>
 
-           <!-- Contenedor donde se renderizan las tarjetas/tablas por Trayecto -->
-            <div id="contenedor-certificados-trayectos">
-              <!-- Carga dinámica desde js/certificados.js -->
-            </div>
-          </div>
-        </section>
 
         <!-- VISTA NUEVA: FICHAS DE CURSO / ACTAS DE EXAMEN -->
         <section id="actas" class="section-tab" style="display: none;">
           <div class="card-panel">
             <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
               <div>
-                <h3 style="margin: 0; font-size: 1.25rem;">📋 Fichas de Curso / Actas de Examen</h3>
+                <h3 style="margin: 0; font-size: 1.25rem;">📋 Fichas, Actas y Certificados</h3>
                 <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #94a3b8;">
-                  Consolidado de calificaciones por módulo y actas oficiales de examen.
+                  Fichas de curso, actas oficiales de examen y certificados de egresados.
                 </p>
               </div>
-              <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <div id="actas-ciclo-wrap" style="display: flex; gap: 0.5rem; align-items: center;">
                 <label for="filtro-ciclo-actas" style="font-size: 0.85rem; font-weight: 600; color: #94a3b8;">Ciclo Lectivo:</label>
                 <select id="filtro-ciclo-actas" class="form-control custom-select" style="width: auto; padding: 0.4rem 0.8rem;" onchange="ActasModulo.cargarTrayectosActas()">
                   <!-- Se completa dinámicamente desde js/actas.js -->
                 </select>
               </div>
+            </div>
+
+            <!-- Botones: Fichas de curso / Actas de examen / Certificados (según el rol) -->
+            <div id="actas-modos" class="acta-modos" role="tablist" aria-label="Qué querés ver" style="margin-top: 1.25rem;"></div>
+
+            <!-- Certificados: la nómina de egresados y la impresión (js/certificados.js) -->
+            <div id="panel-certificados" style="display: none;">
+              <div id="contenedor-certificados-trayectos"></div>
             </div>
 
             <!-- Contenedor dinámico donde se renderizan las solapas por trayecto y la planilla del acta -->
@@ -943,7 +929,7 @@
   <script src="js/supabase-config.js?v=70007" defer></script>
   <script src="js/avisos.js?v=70008" defer></script>
   <script src="js/reglas.js?v=70024" defer></script>
-  <script src="js/ui.js?v=70078" defer></script>
+  <script src="js/ui.js?v=70083" defer></script>
   <script src="js/auth.js?v=70074" defer></script>
   <script src="js/trayectos.js?v=70050" defer></script>
   <script src="js/usuarios.js?v=70075" defer></script>
@@ -959,7 +945,7 @@
   <script src="js/asistencias.js?v=70029" defer></script>
   <script src="js/reportes.js?v=70025" defer></script>
   <script src="js/notificaciones.js?v=70007" defer></script>
-  <script src="js/actas.js?v=70080" defer></script>
+  <script src="js/actas.js?v=70084" defer></script>
   <script src="js/usobase.js?v=70020" defer></script>
   <script src="js/secretaria.js?v=70051" defer></script>
   <script src="js/matricula_escolar.js?v=70051" defer></script>
@@ -971,12 +957,12 @@
   <script src="js/observaciones.js?v=70050" defer></script>
   <script src="js/cooperadora.js?v=70072" defer></script>
   <script src="js/nomina_cooperadora.js?v=70071" defer></script>
-  <script src="js/ayuda.js?v=70082" defer></script>
+  <script src="js/ayuda.js?v=70086" defer></script>
   <script src="js/planilla.js?v=70050" defer></script>
   <script src="js/sedes.js?v=70050" defer></script>
   <script src="js/constancias.js?v=70050" defer></script>
   <script src="js/fichacurso.js?v=70017" defer></script>
-  <script src="js/certificados.js?v=70016" defer></script>
+  <script src="js/certificados.js?v=70085" defer></script>
   <script src="js/libro-temas.js?v=70050" defer></script>
   <script src="js/planificacion.js?v=70050" defer></script>
 </body>

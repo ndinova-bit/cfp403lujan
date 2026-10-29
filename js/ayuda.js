@@ -222,21 +222,26 @@ const AyudaModulo = {
     },
 
     actas: {
-      t: 'Fichas de curso y actas de examen', roles: ['secretaria', 'regente', 'admin'],
-      corto: 'Fichas de curso y actas de examen.',
-      que: 'Documentos de cierre de cada trayecto.',
+      t: 'Fichas, actas y certificados', roles: ['secretaria', 'preceptor', 'regente', 'admin'],
+      corto: 'Fichas de curso, actas de examen y certificados.',
+      que: 'Documentos de cierre de cada trayecto, en tres botones dentro de la misma pantalla.',
       pasos: [
-        'La pantalla tiene dos botones: «Fichas de curso» y «Actas de examen». Elegí el ciclo y el trayecto.',
-        'Fichas de curso: nómina de estudiantes con su situación (cursando o baja) y el N.º de egresado. «Ficha de Curso (Excel)» descarga la planilla.',
-        'Actas de examen: la nota de cada módulo sale de las actividades y la asistencia. Podés escribir otra nota en la casilla (queda en amarillo); borrala para volver a la calculada.',
-        '«Descargar acta (Excel)» saca el acta oficial. EQ indica equivalencia.'
+        'Fichas de curso: nómina de estudiantes con su situación (cursando o baja). «Ficha de Curso (Excel)» descarga la planilla.',
+        'Actas de examen: la nota de cada módulo sale de las actividades y la asistencia. Podés escribir otra nota en la casilla (queda en amarillo); borrala para volver a la calculada. «Descargar acta (Excel)» saca el acta oficial; EQ indica equivalencia.',
+        'Certificados: lista de aprobados con su N.º de egresado. Revisá la «Vista previa» y descargá los frentes; después, los reversos (mismo orden alfabético, con las hojas vueltas a poner en la bandeja).'
       ],
-      ojo: ['El N.º de egresado lo asignan solo Director, Regente y Secretaría. Lo ven ellos y Preceptoría (en la ficha del estudiante).'],
-      porRol: { secretaria: { pasos: [
-        'La pantalla tiene dos botones: «Fichas de curso» y «Actas de examen».',
-        'En Fichas de curso asignás el N.º de egresado de cada estudiante: escribilo y se guarda al salir de la casilla. Si el número ya existe, te avisa.',
-        'Las actas las podés ver e imprimir; la carga y los ajustes los hacen Dirección y Regencia.'
-      ] } }
+      ojo: ['El N.º de egresado lo asignan solo Director, Regente y Secretaría; lo ven ellos y Preceptoría.'],
+      porRol: {
+        secretaria: { pasos: [
+          'Fichas de curso y Actas de examen: podés ver e imprimir; la carga y los ajustes los hacen Dirección y Regencia.',
+          'Certificados: asignás el N.º de egresado de cada aprobado. Escribilo y se guarda al salir de la casilla; si el número ya existe, te avisa. La impresión de certificados la hacen Dirección y Regencia.'
+        ] },
+        preceptor: {
+          que: 'Podés ver los N.º de egresado de los estudiantes aprobados de cada trayecto.',
+          pasos: ['Elegí el ciclo y el trayecto en «Certificados» para ver la lista de aprobados con su N.º de egresado.'],
+          ojo: ['Los N.º de egresado los asignan Director, Regente y Secretaría.']
+        }
+      }
     },
 
     dashboard: {
@@ -249,12 +254,6 @@ const AyudaModulo = {
       t: 'Cargar trayecto', roles: ['regente', 'admin'], corto: 'Dar de alta un trayecto formativo.',
       que: 'Alta de un trayecto nuevo.',
       pasos: ['Completá nombre, ciclo lectivo, sede, docente, fechas y horario.', 'Si tiene módulos, definilos con sus fechas: de eso dependen las bajas automáticas.']
-    },
-
-    certificados: {
-      t: 'Emitir certificados', roles: ['regente', 'admin'], corto: 'Certificados en PDF para imprimir.',
-      que: 'Impresión de certificados de los estudiantes que aprobaron.',
-      pasos: ['Elegí el trayecto, revisá la «Vista previa» y cargá los datos que falten.', 'Imprimí primero los frentes; después volvé a poner las hojas en la bandeja e imprimí los reversos (mismo orden alfabético).']
     },
 
     novedades: {
@@ -306,7 +305,7 @@ const AyudaModulo = {
     'btn-secretaria': 'secretaria', 'btn-preinscripciones': 'preinscripciones', 'btn-cuentas': 'cuentas',
     'btn-observaciones': 'observaciones', 'btn-cooperadora': 'cooperadora', 'btn-planilla': 'planilla',
     'btn-constancias': 'constancias', 'btn-trayectos': 'trayectos', 'btn-actas': 'actas',
-    'btn-nuevo-trayecto': 'nuevo-trayecto', 'btn-certificados': 'certificados', 'btn-novedades': 'novedades',
+    'btn-nuevo-trayecto': 'nuevo-trayecto', 'btn-novedades': 'novedades',
     'btn-usuarios': 'usuarios', 'btn-backups': 'backups', 'btn-estadisticas': 'estadisticas', 'btn-auditoria': 'auditoria'
   },
 

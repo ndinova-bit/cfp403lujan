@@ -235,11 +235,14 @@ const CertificadosAdmin = {
   esc(t) { return window.escHtml ? window.escHtml(t) : String(t ?? ''); },
   fechaAR(iso) { return iso ? String(iso).slice(0, 10).split('-').reverse().join('/') : ''; },
 
+  rolModo: 'completo',   // 'completo' (Director/Regente) · 'secretaria' (asigna N.º de egresado) · 'lectura' (Preceptoría: solo ve)
+
   async cargarNominaCertificados() {
     const cont = document.getElementById('contenedor-certificados-trayectos');
     if (!cont) return;
     const anio = new Date().getFullYear();
     cont.innerHTML = `
+      <p class="acta-ayuda" style="margin-top:0;">${this.rolModo === 'completo' ? 'Solo aprobados en el acta de examen. Formato según Circular DFP 4/2020 · hoja A5.' : 'N.º de egresado de los estudiantes aprobados en el acta de examen.'}</p>
       <div class="cert-filtro">
         <label for="cert-ciclo">Ciclo lectivo</label>
         <select id="cert-ciclo" class="form-control" onchange="CertificadosAdmin.listarTrayectos()">
@@ -319,7 +322,9 @@ const CertificadosAdmin = {
     const { trayecto: t, modulos, alumnos, fechaEgreso, fechaEntrega } = this.datos;
     const aprobados = alumnos.filter(a => a.resultado === 'APROBADO');
     const otros = alumnos.filter(a => a.resultado !== 'APROBADO');
-    const problemas = this.problemasTrayecto();
+    const completo = this.rolModo === 'completo';
+    const puedeAsignar = completo || this.rolModo === 'secretaria';
+    const problemas = completo ? this.problemasTrayecto() : [];
     const nums = aprobados.map(a => String(a.numEgresado).trim()).filter(Boolean);
     const repetidos = new Set(nums.filter((n, i) => nums.indexOf(n) !== i));
     const listos = aprobados.filter(a => String(a.numEgresado).trim());
@@ -331,29 +336,29 @@ const CertificadosAdmin = {
         <div><span>Horas</span><strong>${this.esc(t.horas || '—')}</strong></div>
         <div><span>Módulos</span><strong>${modulos.length}</strong></div>
         <div><span>Fecha de egreso (acta)</span><strong>${fechaEgreso ? this.fechaAR(fechaEgreso) : '—'}</strong></div>
-        <div class="form-group"><label for="cert-entrega">Fecha de entrega (frente)</label>
-          <input type="date" id="cert-entrega" class="form-control" value="${this.esc(fechaEntrega)}" ${fechaEgreso ? `min="${this.esc(fechaEgreso)}"` : ''} max="2099-12-31" onblur="CertificadosAdmin.guardarEntrega(this.value)" onkeydown="if(event.key==='Enter'){this.blur();}"></div>
+        ${completo ? `        <div class="form-group"><label for="cert-entrega">Fecha de entrega (frente)</label>
+          <input type="date" id="cert-entrega" class="form-control" value="${this.esc(fechaEntrega)}" ${fechaEgreso ? `min="${this.esc(fechaEgreso)}"` : ''} max="2099-12-31" onblur="CertificadosAdmin.guardarEntrega(this.value)" onkeydown="if(event.key==='Enter'){this.blur();}"></div>` : ''}
         <div><span>C.F.P. N.º / Distrito</span><strong>${CERT_CONFIG.cfp} · ${this.esc(CERT_CONFIG.distrito)}</strong></div>
-        <div><button type="button" class="btn btn-outline" onclick="Trayectos.editarTrayecto(${Number(t.id)})">Editar datos del trayecto</button></div>
+        ${completo ? `        <div><button type="button" class="btn btn-outline" onclick="Trayectos.editarTrayecto(${Number(t.id)})">Editar datos del trayecto</button></div>` : ''}
       </div>
       ${problemas.length ? `<div class="asis-aviso"><ul class="cert-problemas">${problemas.map(p => `<li>${p}</li>`).join('')}</ul></div>` : ''}
       <div id="cert-avisos-texto"></div>
 
       <div class="acta-tabla-wrap">
         <table class="acta-tabla">
-          <thead><tr><th>N.º</th><th>Nombre y apellido (como en el certificado)</th><th>D.U.</th><th>N.º de egresado</th><th></th></tr></thead>
+          <thead><tr><th>N.º</th><th>Nombre y apellido (como en el certificado)</th><th>D.U.</th><th>N.º de egresado</th>${completo ? '<th></th>' : ''}</tr></thead>
           <tbody>
           ${aprobados.length ? aprobados.map((a, i) => `
             <tr>
               <td>${i + 1}</td>
               <td><strong>${this.esc(a.nombreCert)}</strong></td>
               <td>${this.esc(CertFormato.dni(a.dni))}</td>
-              <td><input class="form-control cert-egresado ${repetidos.has(String(a.numEgresado).trim()) ? 'repetido' : ''}" value="${this.esc(a.numEgresado)}"
+              <td>${puedeAsignar ? `<input class="form-control cert-egresado ${repetidos.has(String(a.numEgresado).trim()) ? 'repetido' : ''}" value="${this.esc(a.numEgresado)}"
                      aria-label="N.º de egresado de ${this.esc(a.nombreCert)}" placeholder="Sin asignar"
                      onchange="CertificadosAdmin.guardarNumEgresado('${this.esc(a.inscripcionId)}', this.value)">
-                  ${repetidos.has(String(a.numEgresado).trim()) ? '<small class="cert-rep">Repetido</small>' : ''}</td>
-              <td><button type="button" class="btn-ficha" onclick="CertificadosAdmin.vistaPrevia('${this.esc(a.dni)}')">Vista previa</button></td>
-            </tr>`).join('') : '<tr><td colspan="5">Todavía no hay alumnos aprobados en el acta de este trayecto.</td></tr>'}
+                  ${repetidos.has(String(a.numEgresado).trim()) ? '<small class="cert-rep">Repetido</small>' : ''}` : (this.esc(a.numEgresado) || '—')}</td>
+              ${completo ? `<td><button type="button" class="btn-ficha" onclick="CertificadosAdmin.vistaPrevia('${this.esc(a.dni)}')">Vista previa</button></td>` : ''}
+            </tr>`).join('') : '<tr><td colspan="${completo ? 5 : 4}">Todavía no hay alumnos aprobados en el acta de este trayecto.</td></tr>'}
           </tbody>
         </table>
       </div>
@@ -363,11 +368,11 @@ const CertificadosAdmin = {
 
       <div class="acta-acciones">
         <span class="cert-resumen">${listos.length} de ${aprobados.length} aprobado(s) con N.º de egresado</span>
-        <button type="button" class="btn btn-gold" ${listos.length && !problemas.length ? '' : 'disabled'} onclick="CertificadosAdmin.descargarLote('frentes')">Descargar frentes (PDF)</button>
-        <button type="button" class="btn btn-gold" ${listos.length && !problemas.length ? '' : 'disabled'} onclick="CertificadosAdmin.descargarLote('reversos')">Descargar reversos (PDF)</button>
+        ${completo ? `<button type="button" class="btn btn-gold" ${listos.length && !problemas.length ? '' : 'disabled'} onclick="CertificadosAdmin.descargarLote('frentes')">Descargar frentes (PDF)</button>
+        <button type="button" class="btn btn-gold" ${listos.length && !problemas.length ? '' : 'disabled'} onclick="CertificadosAdmin.descargarLote('reversos')">Descargar reversos (PDF)</button>` : ''}
       </div>
-      <p class="acta-ayuda">Imprimí primero los frentes; después volvé a poner las hojas en la bandeja e imprimí los reversos. Están en el mismo orden (alfabético).</p>`;
-    this.revisarTextos();
+      <p class="acta-ayuda">${completo ? 'Imprimí primero los frentes; después volvé a poner las hojas en la bandeja e imprimí los reversos. Están en el mismo orden (alfabético).' : (puedeAsignar ? 'El N.º de egresado lo asignan Director, Regente y Secretaría. Escribilo y se guarda al salir de la casilla; si el número ya existe, te avisa.' : 'Los N.º de egresado los asignan Director, Regente y Secretaría. Acá podés verlos.')}</p>`;
+    if (completo) this.revisarTextos();
   },
 
   // Mide los textos del trayecto con la letra reglamentaria y avisa si algo no entra
@@ -422,23 +427,24 @@ const CertificadosAdmin = {
   },
 
   async guardarNumEgresado(inscripcionId, valor) {
+    if (this.rolModo === 'lectura') return;
     const v = String(valor || '').trim();
     try {
-      if (v) {
-        const { data: otros } = await supabase.from('inscripciones').select('id, trayecto_id, estudiante_user').eq('num_egresado', v).neq('id', inscripcionId);
-        if (otros && otros.length) {
-          const ok = confirm(`El N.º de egresado ${v} ya está asignado a otra inscripción (DNI ${otros[0].estudiante_user}). ¿Guardarlo igual?`);
-          if (!ok) { this.render(); return; }
-        }
-      }
-      const { error } = await supabase.from('inscripciones').update({ num_egresado: v || null }).eq('id', inscripcionId);
+      let { data, error } = await supabase.rpc('asignar_num_egresado', { p_inscripcion: Number(inscripcionId), p_num: v, p_forzar: false });
       if (error) throw error;
+      if (typeof data === 'string' && data.startsWith('duplicado:')) {
+        const ok = confirm(`El N.º de egresado ${v} ya está asignado a otra inscripción (DNI ${data.slice(10)}). ¿Guardarlo igual?`);
+        if (!ok) { this.render(); return; }
+        ({ data, error } = await supabase.rpc('asignar_num_egresado', { p_inscripcion: Number(inscripcionId), p_num: v, p_forzar: true }));
+        if (error) throw error;
+      }
       const a = this.datos.alumnos.find(x => String(x.inscripcionId) === String(inscripcionId));
       if (a) a.numEgresado = v;
       if (typeof Swal !== 'undefined') Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'N.º de egresado guardado', showConfirmButton: false, timer: 1800 });
       this.render();
     } catch (err) {
-      alert('Error al guardar el N.º de egresado: ' + (err.message || ''));
+      alert('Error al guardar el N.º de egresado: ' + (/asignar_num_egresado/i.test(err.message || '') ? 'falta ejecutar sql/54 en Supabase.' : (err.message || '')));
+      this.render();
     }
   },
 

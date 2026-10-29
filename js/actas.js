@@ -11,7 +11,7 @@
 const ActasModulo = {
   trayectoSeleccionado: null,
   modo: 'ficha',       // 'ficha' (Fichas de curso) | 'acta' (Actas de examen)
-  puedeAsignarEgreso: false,
+  modos: ['ficha', 'acta'],
   datos: null,        // { trayecto, modulos, alumnos[], acreditados[], acta }
   ROMANOS: ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV'],
   MESES: ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'],
@@ -25,10 +25,36 @@ const ActasModulo = {
     // equivalencias ni los datos de la mesa examinadora (eso sigue siendo de dirección,
     // regencia, preceptoría o el/la docente del trayecto).
     this.soloLectura = Auth.esSecretaria(rol) && !Auth.esPersonal(rol);
-    // N.º de egresado: lo asignan solo Director, Regente y Secretaría
-    this.puedeAsignarEgreso = Auth.esDireccion(rol) || Auth.esSecretaria(rol);
+    // Botones de la pantalla según el rol:
+    //   Director y Regente: fichas, actas y certificados · Secretaría: lo mismo (certificados solo para N.º de egresado)
+    //   Preceptoría: solo certificados, para ver los N.º de egresado.
+    const esDir = Auth.esDireccion(rol), esSec = Auth.esSecretaria(rol);
+    this.modos = (esDir || esSec) ? ['ficha', 'acta', 'cert'] : ['cert'];
+    if (window.CertificadosAdmin) CertificadosAdmin.rolModo = esDir ? 'completo' : (esSec ? 'secretaria' : 'lectura');
+    if (!this.modos.includes(this.modo)) this.modo = this.modos[0];
+    this.dibujarModos();
     this.poblarCiclos();
-    await this.cargarTrayectosActas();
+    await this.mostrarModo();
+  },
+
+  ETIQUETA_MODO: { ficha: '📋 Fichas de curso', acta: '📝 Actas de examen', cert: '🎓 Certificados' },
+
+  dibujarModos() {
+    const cont = document.getElementById('actas-modos');
+    if (!cont) return;
+    cont.innerHTML = this.modos.map(m => `<button type="button" role="tab" class="acta-modo ${this.modo === m ? 'activo' : ''}" data-modo="${m}" onclick="ActasModulo.cambiarModo('${m}')">${this.ETIQUETA_MODO[m]}</button>`).join('');
+  },
+
+  // Muestra el panel que corresponde al botón elegido
+  async mostrarModo() {
+    const cert = this.modo === 'cert';
+    const pc = document.getElementById('panel-certificados'), ca = document.getElementById('contenedor-modulo-actas'), cw = document.getElementById('actas-ciclo-wrap');
+    if (pc) pc.style.display = cert ? '' : 'none';
+    if (ca) ca.style.display = cert ? 'none' : '';
+    if (cw) cw.style.display = cert ? 'none' : 'flex';
+    if (cert) { if (window.CertificadosAdmin) await CertificadosAdmin.cargarNominaCertificados(); }
+    else if (this.datos && ca && ca.querySelector('.acta-tab')) this.renderizarVistaPrevia();
+    else await this.cargarTrayectosActas();
   },
 
   poblarCiclos() {
@@ -57,10 +83,6 @@ const ActasModulo = {
         return;
       }
       contenedor.innerHTML = `
-        <div class="acta-modos" role="tablist" aria-label="Qué querés ver">
-          <button type="button" role="tab" class="acta-modo ${this.modo === 'ficha' ? 'activo' : ''}" data-modo="ficha" onclick="ActasModulo.cambiarModo('ficha')">📋 Fichas de curso</button>
-          <button type="button" role="tab" class="acta-modo ${this.modo === 'acta' ? 'activo' : ''}" data-modo="acta" onclick="ActasModulo.cambiarModo('acta')">📝 Actas de examen</button>
-        </div>
         <div class="acta-tabs" role="tablist">
           ${trayectos.map((t, i) => `<button type="button" role="tab" class="acta-tab ${i === 0 ? 'activo' : ''}" onclick="ActasModulo.seleccionarTrayecto(${Number(t.id)}, this)">${this.esc(t.nombre)}</button>`).join('')}
         </div>
@@ -72,10 +94,11 @@ const ActasModulo = {
     }
   },
 
-  cambiarModo(modo) {
-    this.modo = modo === 'acta' ? 'acta' : 'ficha';
-    document.querySelectorAll('.acta-modo').forEach(b => b.classList.toggle('activo', b.dataset.modo === this.modo));
-    this.renderizarVistaPrevia();
+  async cambiarModo(modo) {
+    if (!this.modos.includes(modo)) return;
+    this.modo = modo;
+    this.dibujarModos();
+    await this.mostrarModo();
   },
 
   /* ---------- Fichas de curso: nómina del curso y N.º de egresado ---------- */
@@ -94,12 +117,9 @@ const ActasModulo = {
           <span class="bad"><b>${bajas}</b> bajas</span>
         </div>
       </div>
-      <p class="acta-ayuda">${this.puedeAsignarEgreso
-        ? 'El <b>N.º de egresado</b> lo asignan Director, Regente y Secretaría: escribilo y se guarda al salir de la casilla. Lo ven también Preceptoría (en la ficha del estudiante).'
-        : 'El N.º de egresado lo asignan Director, Regente y Secretaría.'}</p>
       <div class="acta-tabla-wrap">
         <table class="acta-tabla">
-          <thead><tr><th>N.º</th><th>Apellido y nombres</th><th>Situación</th><th>N.º de egresado</th></tr></thead>
+          <thead><tr><th>N.º</th><th>Apellido y nombres</th><th>Situación</th></tr></thead>
           <tbody>
             ${alumnos.length ? alumnos.map((al, idx) => `
               <tr>
@@ -108,40 +128,13 @@ const ActasModulo = {
                 <td>${al.baja
                   ? `<span class="acta-res desaprobado">BAJA</span><span>${al.fechaBaja ? fechaAr(al.fechaBaja) : ''}${al.motivoBaja ? ' · ' + this.esc(al.motivoBaja) : ''}</span>`
                   : '<span class="acta-res aprobado" style="background:rgba(148,163,184,.18);color:inherit;">CURSANDO</span>'}</td>
-                <td>${this.puedeAsignarEgreso
-                  ? `<input class="form-control" style="max-width:9rem;" maxlength="30" value="${this.esc(al.numEgresado)}" placeholder="—" data-ins="${this.esc(al.inscripcionId)}" data-prev="${this.esc(al.numEgresado)}" onchange="ActasModulo.guardarNumEgresado(this)">`
-                  : this.esc(al.numEgresado || '—')}</td>
-              </tr>`).join('') : '<tr><td colspan="4">No hay estudiantes inscriptos.</td></tr>'}
+              </tr>`).join('') : '<tr><td colspan="3">No hay estudiantes inscriptos.</td></tr>'}
           </tbody>
         </table>
       </div>
       <div class="acta-acciones">
         <button type="button" class="btn btn-secondary" onclick="FichaCurso.descargar(${Number(trayecto.id)})">Ficha de Curso (Excel)</button>
       </div>`;
-  },
-
-  async guardarNumEgresado(input) {
-    if (!this.puedeAsignarEgreso) return;
-    const id = Number(input.dataset.ins), prev = input.dataset.prev || '', v = input.value.trim();
-    if (v === prev) return;
-    const avisar = (icon, title) => { if (typeof Swal !== 'undefined') Swal.fire({ toast: true, position: 'top-end', icon, title, showConfirmButton: false, timer: 2200 }); else alert(title); };
-    try {
-      let { data, error } = await supabase.rpc('asignar_num_egresado', { p_inscripcion: id, p_num: v, p_forzar: false });
-      if (error) throw error;
-      if (typeof data === 'string' && data.startsWith('duplicado:')) {
-        const ok = confirm(`El N.º de egresado ${v} ya está asignado a otra inscripción (DNI ${data.slice(10)}). ¿Guardarlo igual?`);
-        if (!ok) { input.value = prev; return; }
-        ({ data, error } = await supabase.rpc('asignar_num_egresado', { p_inscripcion: id, p_num: v, p_forzar: true }));
-        if (error) throw error;
-      }
-      input.dataset.prev = v;
-      const al = this.datos.alumnos.find(x => String(x.inscripcionId) === String(id));
-      if (al) al.numEgresado = v;
-      avisar('success', 'N.º de egresado guardado');
-    } catch (err) {
-      input.value = prev;
-      avisar('error', 'No se pudo guardar: ' + (/asignar_num_egresado/i.test(err.message || '') ? 'falta ejecutar sql/54 en Supabase.' : (err.message || '')));
-    }
   },
 
   async seleccionarTrayecto(trayectoId, boton) {

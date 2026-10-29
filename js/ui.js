@@ -99,16 +99,14 @@ const UI = {
     // Filtrar visibilidad de botones en la barra lateral
     const btnDashboard = document.getElementById('btn-dashboard');
     const btnNuevoTrayecto = document.getElementById('btn-nuevo-trayecto');
-    const btnCertificados = document.getElementById('btn-certificados');
     const btnUsuarios = document.getElementById('btn-usuarios');
     const btnActas = document.getElementById('btn-actas');
 
     if (btnDashboard) btnDashboard.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
     if (btnNuevoTrayecto) btnNuevoTrayecto.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
-    if (btnCertificados) btnCertificados.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
     if (btnUsuarios) btnUsuarios.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
-    // Fichas / Actas de Examen: carga para dirección; Secretaría solo ve e imprime (sin editar).
-    if (btnActas) btnActas.style.setProperty('display', (isAdmin || esSecretaria) ? 'flex' : 'none', 'important');
+    // Fichas, Actas y Certificados: dirección y regencia completo; Secretaría ve fichas y actas y asigna N.º de egresado; Preceptoría solo ve los N.º de egresado.
+    if (btnActas) btnActas.style.setProperty('display', (isAdmin || esSecretaria || rolNorm === 'preceptor') ? 'flex' : 'none', 'important');
 
     document.querySelectorAll('.admin-only').forEach(el => {
       el.style.setProperty('display', isAdmin ? (el.tagName === 'BUTTON' ? 'inline-flex' : 'block') : 'none', 'important');
@@ -200,8 +198,8 @@ const UI = {
 
     if (tabId === 'novedades' && !(isAdmin || rolPerfil === 'docente' || rolPerfil === 'preceptor')) tabId = isAdmin ? 'dashboard' : 'trayectos';
     // Fichas / Actas de Examen: dirección edita; Secretaría solo ve e imprime (ver showTab de más abajo).
-    if (tabId === 'actas' && !(isAdmin || Auth.esSecretaria(rolPerfil))) tabId = isAdmin ? 'dashboard' : 'trayectos';
-    if (!isAdmin && (tabId === 'dashboard' || tabId === 'nuevo-trayecto' || tabId === 'certificados' || tabId === 'usuarios' || tabId === 'backups' || tabId === 'auditoria')) {
+    if (tabId === 'actas' && !(isAdmin || Auth.esSecretaria(rolPerfil) || rolPerfil === 'preceptor')) tabId = isAdmin ? 'dashboard' : 'trayectos';
+    if (!isAdmin && (tabId === 'dashboard' || tabId === 'nuevo-trayecto' || tabId === 'usuarios' || tabId === 'backups' || tabId === 'auditoria')) {
       tabId = 'trayectos';
     }
 
@@ -241,9 +239,8 @@ const UI = {
         'ayuda': 'Ayuda y guía',
         'novedades': 'Novedades y calendario',
         'trayectos': (isAdmin || rolActual === 'preceptor') ? 'Trayectos Formativos' : 'Mis Trayectos Formativos',
-        'actas': 'Fichas de Curso / Actas de Examen',
+        'actas': 'Fichas, Actas y Certificados',
         'nuevo-trayecto': 'Cargar Trayecto',
-        'certificados': 'Emitir Certificados',
         'usuarios': 'Usuarios y Roles',
         'backups': 'Base de Datos',
         'auditoria': 'Auditoría de cambios'
@@ -257,10 +254,6 @@ const UI = {
 
     if (tabId === 'backups' && window.UsoBase) {
       window.UsoBase.cargar();
-    }
-
-    if (tabId === 'certificados' && window.CertificadosAdmin) {
-      window.CertificadosAdmin.cargarNominaCertificados();
     }
 
     if (tabId === 'novedades' && window.NovedadesModulo) {
