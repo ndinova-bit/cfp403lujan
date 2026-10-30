@@ -6,7 +6,7 @@
      rápido y para que funcione sin conexión (con la última versión descargada).
    Al cambiar este archivo, subir VERSION para que todos reciban la nueva.
    ========================================================================== */
-const VERSION = 'cfp403-app-v55';
+const VERSION = 'cfp403-app-v56';
 const BASICOS = ['./', './index.html', './manifest.json', './img/app/icono-192.png', './img/app/icono-512.png', './logo.png'];
 const EXTERNOS_OK = ['cdn.jsdelivr.net', 'unpkg.com', 'cdnjs.cloudflare.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
