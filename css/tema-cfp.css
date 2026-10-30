@@ -1193,6 +1193,8 @@ textarea.act-in { resize: vertical; }
 /* ==========================================================================
    20. OFERTA PÚBLICA: buscador y tarjetas compactas
    ========================================================================== */
+/* Buscador, sub-grilla y botón deben ocupar todo el ancho de features-grid */
+.pub-barra, .trayectos-grid, .pub-mas { grid-column: 1 / -1; }
 .pub-barra { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .pub-buscar { flex: 1; min-width: 220px; padding: .7rem 1rem; border: 1px solid #C9D6E8; border-radius: 12px; font: inherit; font-size: .95rem; background: #fff; color: var(--cfp-ink); }
 .pub-cuenta { font-size: .85rem; font-weight: 600; color: var(--cfp-muted); }
