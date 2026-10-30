@@ -167,26 +167,24 @@ const UsuariosAdmin = {
               ${estadoRaw}
             </span>
           </td>
-          <td style="padding: 0.85rem 0.75rem; text-align: right; display: flex; gap: 0.4rem; justify-content: flex-end; align-items: center;">
-            ${!esActivo ? `
-              <button class="btn btn-gold" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;" onclick="UsuariosAdmin.cambiarEstado('${idPrimario}', 'ACTIVO')">
-                ${(estadoRaw === 'INHABILITADO' || estadoRaw === 'INACTIVO') ? '↩ Reactivar' : '✓ Aprobar'}
-              </button>
-            ` : `
-              <button class="btn btn-danger" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171;" onclick="UsuariosAdmin.cambiarEstado('${idPrimario}', 'INHABILITADO')">
-                🔒 Inhabilitar
-              </button>
-            `}
-            ${u.rol === 'estudiante' ? `<button title="Ver ficha de cursada" class="btn-ficha" onclick="FichaAlumno.abrir('${Trayectos.esc(String(u.dni || u.usuario || '').replace(/\D/g, ''))}')">Ficha</button>` : ''}
-            <button title="Corregir apellido, nombre o correo" style="padding: 0.35rem 0.6rem; font-size: 0.8rem; background: rgba(148, 163, 184, 0.15); border: 1px solid rgba(148, 163, 184, 0.3); color: #cbd5e1; border-radius: 6px; cursor: pointer;" onclick="UsuariosAdmin.editarDatos('${idPrimario}')">
-              ✏️
-            </button>
-            <button title="Restablecer contraseña" style="padding: 0.35rem 0.6rem; font-size: 0.8rem; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; border-radius: 6px; cursor: pointer;" onclick="UsuariosAdmin.restablecerClave('${idPrimario}')">
-              🔑
-            </button>
-            <button title="Eliminar definitivamente" style="padding: 0.35rem 0.6rem; font-size: 0.8rem; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; border-radius: 6px; cursor: pointer;" onclick="UsuariosAdmin.eliminarUsuario('${idPrimario}')">
-              🗑️
-            </button>
+          <td class="usr-acciones">
+            <div class="usr-acc-principales">
+              ${!esActivo ? `
+                <button class="btn btn-gold btn-acc-sm" onclick="UsuariosAdmin.cambiarEstado('${idPrimario}', 'ACTIVO')">
+                  ${(estadoRaw === 'INHABILITADO' || estadoRaw === 'INACTIVO') ? '↩ Reactivar' : '✓ Aprobar'}
+                </button>
+              ` : `
+                <button class="btn btn-acc-sm btn-acc-danger" onclick="UsuariosAdmin.cambiarEstado('${idPrimario}', 'INHABILITADO')">
+                  🔒 Inhabilitar
+                </button>
+              `}
+              ${u.rol === 'estudiante' ? `<button title="Ver ficha de cursada" class="btn-ficha" onclick="FichaAlumno.abrir('${Trayectos.esc(String(u.dni || u.usuario || '').replace(/\D/g, ''))}')">Ficha</button>` : ''}
+            </div>
+            <div class="usr-acc-iconos">
+              <button title="Corregir apellido, nombre o correo" class="btn-acc-ico" onclick="UsuariosAdmin.editarDatos('${idPrimario}')">✏️</button>
+              <button title="Restablecer contraseña" class="btn-acc-ico btn-acc-ico-azul" onclick="UsuariosAdmin.restablecerClave('${idPrimario}')">🔑</button>
+              <button title="Eliminar definitivamente" class="btn-acc-ico btn-acc-ico-rojo" onclick="UsuariosAdmin.eliminarUsuario('${idPrimario}')">🗑️</button>
+            </div>
           </td>
         </tr>
       `;

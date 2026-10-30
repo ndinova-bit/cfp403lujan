@@ -1271,6 +1271,37 @@ details.seg-grupo > .seg-item { margin: .5rem .7rem; }
 .cuentas-acc .btn { padding: .35rem .7rem; font-size: .8rem; }
 #cuentas-buscar { min-width: 260px; }
 
+/* Acciones por usuario en la tabla */
+.usr-acciones {
+  padding: .85rem .75rem;
+  text-align: right;
+  display: flex; gap: .5rem; flex-wrap: wrap;
+  justify-content: flex-end; align-items: center;
+}
+.usr-acc-principales { display: flex; gap: .35rem; align-items: center; }
+.usr-acc-iconos { display: flex; gap: .25rem; align-items: center; }
+.btn-acc-sm {
+  padding: .35rem .75rem; font-size: .8rem;
+  border-radius: 6px; cursor: pointer; font-weight: 600;
+  border: 1px solid transparent;
+}
+.btn-acc-danger {
+  background: rgba(239, 68, 68, .15); border-color: rgba(239, 68, 68, .35);
+  color: #ef4444;
+}
+.btn-acc-ico {
+  padding: .3rem .5rem; font-size: .8rem;
+  background: rgba(148, 163, 184, .12); border: 1px solid rgba(148, 163, 184, .25);
+  color: #94a3b8; border-radius: 6px; cursor: pointer;
+  line-height: 1;
+}
+.btn-acc-ico-azul { background: rgba(59, 130, 246, .12); border-color: rgba(59, 130, 246, .25); color: #3b82f6; }
+.btn-acc-ico-rojo { background: rgba(239, 68, 68, .12); border-color: rgba(239, 68, 68, .25); color: #ef4444; }
+.btn-acc-ico:hover { filter: brightness(1.2); }
+@media (max-width: 900px) {
+  .usr-acciones { justify-content: flex-start; }
+}
+
 /* Estadísticas */
 .est-ranks { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: .8rem; margin-bottom: 1rem; }
 .est-rank { background: #fff; border: 1px solid var(--cfp-line); border-radius: 14px; padding: .8rem .9rem; }
