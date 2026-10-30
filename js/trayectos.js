@@ -329,31 +329,19 @@ const Trayectos = {
 
       contenedor.appendChild(grid);
 
-      // Vista pública: con muchos trayectos, buscador y "Ver todos" para que la página no se haga eterna
+      // Vista pública en celular: limitar a LIMITE_PUBLICO con botón "Ver todos"
+      // En desktop se muestran todos (CSS oculta .pub-oculta solo en ≤900px)
       if (esVistaPublica && this.listaTrayectos.length > this.LIMITE_PUBLICO) {
-        const barra = document.createElement('div');
-        barra.className = 'pub-barra';
-        barra.innerHTML = `<input type="search" class="pub-buscar" placeholder="🔎 Buscar un curso (ej.: electricista, gas, soldadura)" aria-label="Buscar un curso">
-          <span class="pub-cuenta"></span>`;
         const mas = document.createElement('button');
         mas.type = 'button'; mas.className = 'btn btn-outline pub-mas';
-        contenedor.insertBefore(barra, grid);
         grid.after(mas);
         let abierto = false;
-        const norm = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
         const aplicar = () => {
-          const q = norm(barra.querySelector('.pub-buscar').value);
           const cards = [...grid.querySelectorAll('.pub-card')];
-          const coinciden = cards.filter(c => !q || c.dataset.busca.includes(q));
-          const limite = (q || abierto) ? Infinity : this.LIMITE_PUBLICO;
-          cards.forEach(c => { c.style.display = 'none'; });
-          coinciden.forEach((c, i) => { c.style.display = i < limite ? 'flex' : 'none'; });
-          barra.querySelector('.pub-cuenta').textContent = q ? `${coinciden.length} resultado(s)` : `${cards.length} cursos`;
-          mas.style.display = (!q && coinciden.length > this.LIMITE_PUBLICO) ? 'block' : 'none';
+          cards.forEach((c, i) => { c.classList.toggle('pub-oculta', !abierto && i >= this.LIMITE_PUBLICO); });
           mas.textContent = abierto ? 'Ver menos' : `Ver los ${cards.length} cursos`;
         };
-        barra.querySelector('.pub-buscar').addEventListener('input', aplicar);
-        mas.addEventListener('click', () => { abierto = !abierto; aplicar(); if (!abierto) barra.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+        mas.addEventListener('click', () => { abierto = !abierto; aplicar(); if (!abierto) grid.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
         aplicar();
       }
     });
