@@ -13,6 +13,7 @@ const UI = {
     if (landing) landing.style.setProperty('display', 'block', 'important');
     if (login) login.style.setProperty('display', 'none', 'important');
     if (app) app.style.setProperty('display', 'none', 'important');
+    document.body.classList.remove('app-activa');
 
     // Sin sesión activa, la web pública recarga solo la oferta del ciclo vigente
     if (window.Trayectos && !(window.Auth && Auth.usuarioActual)) {
@@ -72,7 +73,8 @@ const UI = {
 
     if (landing) landing.style.setProperty('display', 'none', 'important');
     if (login) login.style.setProperty('display', 'none', 'important');
-    if (app) app.style.setProperty('display', 'flex', 'important'); 
+    if (app) app.style.setProperty('display', 'flex', 'important');
+    document.body.classList.add('app-activa');
 
     const displayUsername = document.getElementById('display-username');
     const displayRole = document.getElementById('display-role');
@@ -320,6 +322,7 @@ const UI = {
       window.SecretariaModulo.cargar();
     }
 
+    this.bnavActualizar(tabId);
     if (window.AyudaModulo) AyudaModulo.tabActual = tabId;
     if (tabId === 'ayuda' && window.AyudaModulo) {
       window.AyudaModulo.cargar();
@@ -357,6 +360,25 @@ const UI = {
       modal.style.display = 'none';
       document.getElementById('form-alta-usuario')?.reset();
     }
+  },
+
+  // ====== BOTTOM NAV (móvil) ======
+  bnavIr(tabId) {
+    // "inicio" va a dashboard o trayectos según el rol
+    if (tabId === 'inicio') {
+      const app = document.getElementById('app-screen');
+      const rol = app ? (app.getAttribute('data-rol') || '') : '';
+      tabId = Auth.esDireccion(rol) ? 'dashboard' : 'trayectos';
+    }
+    this.showTab(tabId);
+  },
+  bnavActualizar(tabId) {
+    document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
+    // mapear tab a botón del bottom nav
+    const map = { dashboard: 'inicio', trayectos: 'trayectos', progreso: 'trayectos', ayuda: 'ayuda' };
+    const bnId = map[tabId] || '';
+    const btn = document.getElementById('bnav-' + bnId);
+    if (btn) btn.classList.add('active');
   },
 
   // Agrega una fila de módulo en el formulario
@@ -503,3 +525,51 @@ const DashboardAdmin = {
 };
 
 window.DashboardAdmin = DashboardAdmin;
+
+/* ==========================================================================
+   PULL-TO-REFRESH (indicador visual en móvil)
+   ========================================================================== */
+(function () {
+  let startY = 0, pulling = false;
+  const UMBRAL = 80; // px de deslizamiento para activar
+
+  document.addEventListener('touchstart', function (e) {
+    // Solo si estamos arriba de todo del scroll
+    if (window.scrollY > 5) return;
+    const main = document.querySelector('.main-content-body');
+    if (main && main.scrollTop > 5) return;
+    startY = e.touches[0].clientY;
+    pulling = true;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function (e) {
+    if (!pulling) return;
+    const diff = e.touches[0].clientY - startY;
+    const ind = document.getElementById('pull-indicator');
+    if (diff > 40 && ind) ind.classList.add('visible');
+  }, { passive: true });
+
+  document.addEventListener('touchend', function () {
+    if (!pulling) return;
+    pulling = false;
+    const ind = document.getElementById('pull-indicator');
+    if (ind && ind.classList.contains('visible')) {
+      // Recargar datos sin recargar la página
+      setTimeout(() => {
+        ind.classList.remove('visible');
+        const app = document.getElementById('app-screen');
+        if (app && app.style.display !== 'none') {
+          // Recargar la sección actual
+          const secActiva = document.querySelector('.section-tab.active');
+          if (secActiva) {
+            const tabId = secActiva.id === 'sec-dashboard' ? 'dashboard' : secActiva.id;
+            UI.showTab(tabId);
+          }
+        } else {
+          // En landing, recargar trayectos públicos
+          if (window.Trayectos) Trayectos.cargarTrayectos();
+        }
+      }, 400);
+    }
+  }, { passive: true });
+})();

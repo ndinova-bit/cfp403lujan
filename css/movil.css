@@ -1,0 +1,190 @@
+/* ==========================================================================
+   MEJORAS MÓVILES · CFP 403
+   Archivo: css/movil.css
+   Safe area, bottom nav, scroll en tablas, targets táctiles, pull-to-refresh
+   ========================================================================== */
+
+/* ==========================================================================
+   1. SAFE AREA (iPhone notch / Dynamic Island)
+   ========================================================================== */
+body {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+}
+
+/* El sidebar y overlay cubren toda la pantalla, incluida safe area */
+@media (max-width: 900px) {
+  #app-screen .sidebar {
+    padding-top: calc(1rem + env(safe-area-inset-top)) !important;
+    padding-left: calc(1rem + env(safe-area-inset-left)) !important;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom)) !important;
+  }
+  .admin-header {
+    padding-left: calc(1rem + env(safe-area-inset-left)) !important;
+    padding-right: calc(1rem + env(safe-area-inset-right)) !important;
+  }
+  .main-content-body {
+    padding-bottom: calc(70px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* ==========================================================================
+   2. NAVEGACIÓN INFERIOR (bottom nav)
+   Solo visible en pantallas ≤ 900px cuando el panel está activo.
+   Muestra 4 botones: las 2 secciones más usadas del rol + Menú + Ayuda.
+   ========================================================================== */
+#bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 99998;
+  background: var(--cfp-navy-deep, #071B38);
+  border-top: 1px solid rgba(255, 255, 255, .10);
+  padding: .45rem .5rem calc(.45rem + env(safe-area-inset-bottom));
+  justify-content: space-around;
+  align-items: center;
+  gap: .25rem;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+@media (max-width: 900px) {
+  #app-screen:not([style*="display: none"]):not([style*="display:none"]) ~ #bottom-nav,
+  #app-screen.dashboard-layout ~ #bottom-nav {
+    display: flex;
+  }
+  /* Fallback: mostrar cuando app-screen está visible */
+  body.app-activa #bottom-nav { display: flex; }
+}
+
+.bnav-btn {
+  display: flex; flex-direction: column; align-items: center; gap: .15rem;
+  background: none; border: none; color: #9CC3EA;
+  font: inherit; font-size: .65rem; font-weight: 600;
+  padding: .35rem .5rem; border-radius: 10px;
+  cursor: pointer; min-width: 56px;
+  -webkit-tap-highlight-color: transparent;
+  transition: color .15s, background .15s;
+}
+.bnav-btn svg {
+  width: 22px; height: 22px; stroke-width: 2;
+  fill: none; stroke: currentColor;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.bnav-btn.active {
+  color: var(--cfp-yellow, #F6B81A);
+  background: rgba(246, 184, 26, .12);
+}
+.bnav-btn:active { transform: scale(.92); }
+
+/* ==========================================================================
+   3. SCROLL HORIZONTAL EN TABLAS
+   ========================================================================== */
+@media (max-width: 900px) {
+  /* Envolver tablas anchas automáticamente */
+  .main-content-body table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+  /* Indicador visual de que se puede scrollear */
+  .tabla-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -.5rem;
+    padding: 0 .5rem;
+  }
+  .tabla-scroll table { min-width: 600px; }
+
+  /* Tablas dentro de card-panel */
+  .card-panel table, .seg-panel table,
+  [class*="tabla"] table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ==========================================================================
+   4. TARGETS TÁCTILES MÍNIMOS (44px)
+   ========================================================================== */
+@media (max-width: 900px) {
+  /* Botones pequeños de seguimiento y fichas */
+  .seg-ver, .btn-ficha {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: .55rem .85rem !important;
+  }
+
+  /* Botones de acciones en cuentas */
+  .cuentas-acc .btn {
+    min-height: 44px;
+    padding: .55rem .85rem !important;
+    font-size: .82rem !important;
+  }
+
+  /* Botones del menú de novedades */
+  .nov-admin-acciones .btn {
+    min-height: 44px;
+    padding: .55rem .85rem !important;
+  }
+
+  /* Chips de estado de seguimiento */
+  .seg-chip {
+    min-height: 32px;
+    padding: .35rem .7rem;
+  }
+
+  /* Select y inputs: mínimo 44px */
+  .form-control, select.form-control, .custom-select {
+    min-height: 44px;
+  }
+
+  /* Botones generales que sean muy chicos */
+  .btn {
+    min-height: 44px;
+  }
+
+  /* Plegar/desplegar de seguimiento */
+  .seg-plegar button {
+    min-height: 40px;
+    padding: .4rem .85rem;
+  }
+
+  /* Botones de demo-cab (estadísticas) */
+  .demo-cab button {
+    min-height: 44px;
+    padding: .5rem 1rem;
+  }
+}
+
+/* ==========================================================================
+   5. PULL-TO-REFRESH INDICADOR
+   ========================================================================== */
+#pull-indicator {
+  position: fixed;
+  top: 0; left: 50%;
+  transform: translateX(-50%) translateY(-100%);
+  z-index: 100001;
+  background: var(--cfp-navy-deep, #071B38);
+  color: #fff;
+  padding: .5rem 1.2rem;
+  border-radius: 0 0 14px 14px;
+  font-size: .82rem;
+  font-weight: 700;
+  box-shadow: 0 4px 16px rgba(0,0,0,.25);
+  transition: transform .25s ease;
+  pointer-events: none;
+  display: flex; align-items: center; gap: .5rem;
+}
+#pull-indicator.visible {
+  transform: translateX(-50%) translateY(env(safe-area-inset-top, 0px));
+}
+#pull-indicator svg {
+  width: 18px; height: 18px;
+  animation: pull-spin .8s linear infinite;
+}
+@keyframes pull-spin { to { transform: rotate(360deg); } }

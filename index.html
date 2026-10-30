@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>CFP N° 403 - Plataforma</title>
 
   <!-- Soporte App Móvil PWA -->
@@ -13,7 +13,19 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="CFP 403">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <!-- Splash screens iOS -->
+  <link rel="apple-touch-startup-image" media="(device-width:375px) and (device-height:812px) and (-webkit-device-pixel-ratio:3)" href="img/app/splash-1125x2436.png">
+  <link rel="apple-touch-startup-image" media="(device-width:414px) and (device-height:896px) and (-webkit-device-pixel-ratio:2)" href="img/app/splash-828x1792.png">
+  <link rel="apple-touch-startup-image" media="(device-width:414px) and (device-height:896px) and (-webkit-device-pixel-ratio:3)" href="img/app/splash-1242x2688.png">
+  <link rel="apple-touch-startup-image" media="(device-width:390px) and (device-height:844px) and (-webkit-device-pixel-ratio:3)" href="img/app/splash-1170x2532.png">
+  <link rel="apple-touch-startup-image" media="(device-width:393px) and (device-height:852px) and (-webkit-device-pixel-ratio:3)" href="img/app/splash-1179x2556.png">
+  <link rel="apple-touch-startup-image" media="(device-width:430px) and (device-height:932px) and (-webkit-device-pixel-ratio:3)" href="img/app/splash-1290x2796.png">
+  <link rel="apple-touch-startup-image" media="(device-width:428px) and (device-height:926px) and (-webkit-device-pixel-ratio:3)" href="img/app/splash-1284x2778.png">
+  <link rel="apple-touch-startup-image" media="(device-width:375px) and (device-height:667px) and (-webkit-device-pixel-ratio:2)" href="img/app/splash-750x1334.png">
+  <link rel="apple-touch-startup-image" media="(device-width:402px) and (device-height:874px) and (-webkit-device-pixel-ratio:3)" href="img/app/splash-1206x2622.png">
+  <link rel="apple-touch-startup-image" media="(device-width:440px) and (device-height:956px) and (-webkit-device-pixel-ratio:3)" href="img/app/splash-1320x2868.png">
 
   <!-- Fuente Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -42,6 +54,7 @@
   <link rel="stylesheet" href="css/tema-cfp.css?v=70081">
   <link rel="stylesheet" href="css/ficha-inscripcion.css?v=70065">
   <link rel="stylesheet" href="css/ayuda.css?v=70077">
+  <link rel="stylesheet" href="css/movil.css?v=70090">
   <style>
     /* Los avisos de SweetAlert (progreso, resúmenes, errores) tienen que verse por encima de los paneles de la plataforma */
     .swal2-container { z-index: 20000 !important; }
@@ -842,6 +855,32 @@
     </div>
   </div>
 
+  <!-- PULL-TO-REFRESH INDICATOR -->
+  <div id="pull-indicator">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.2-8.6"/><polyline points="21 3 21 9 15 9"/></svg>
+    Actualizando…
+  </div>
+
+  <!-- BOTTOM NAV MÓVIL -->
+  <nav id="bottom-nav" aria-label="Navegación rápida">
+    <button type="button" class="bnav-btn" id="bnav-inicio" onclick="UI.bnavIr('inicio')">
+      <svg viewBox="0 0 24 24"><path d="M3 12l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
+      <span>Inicio</span>
+    </button>
+    <button type="button" class="bnav-btn" id="bnav-trayectos" onclick="UI.bnavIr('trayectos')">
+      <svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2z"/><path d="M8 7h6"/></svg>
+      <span>Trayectos</span>
+    </button>
+    <button type="button" class="bnav-btn" id="bnav-menu" onclick="UI.toggleMenu()">
+      <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      <span>Menú</span>
+    </button>
+    <button type="button" class="bnav-btn" id="bnav-ayuda" onclick="UI.bnavIr('ayuda')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7"/><circle cx="12" cy="17" r=".6"/></svg>
+      <span>Ayuda</span>
+    </button>
+  </nav>
+
   <!-- MODAL PARA ALTA MANUAL DE USUARIO -->
   <div id="modal-alta-usuario" class="modal-overlay" style="display: none;">
     <div class="card-panel" style="max-width: 650px; width: 100%; max-height: 90vh; overflow-y: auto; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem;">
@@ -941,7 +980,7 @@
   <script src="js/supabase-config.js?v=70007" defer></script>
   <script src="js/avisos.js?v=70008" defer></script>
   <script src="js/reglas.js?v=70024" defer></script>
-  <script src="js/ui.js?v=70084" defer></script>
+  <script src="js/ui.js?v=70091" defer></script>
   <script src="js/auth.js?v=70074" defer></script>
   <script src="js/trayectos.js?v=70050" defer></script>
   <script src="js/usuarios.js?v=70075" defer></script>
