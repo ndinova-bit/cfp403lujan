@@ -28,3 +28,20 @@
 .ayuda-tour-sig { background: #2563eb; color: #fff; }
 .ayuda-tour-ant { background: #e2e8f0; color: #14213d; margin-right: .4rem; }
 .ayuda-tour-x { position: absolute; top: .45rem; right: .6rem; border: 0; background: none; font-size: 1.5rem; line-height: 1; cursor: pointer; color: #64748b; }
+
+/* Menú lateral: grupos desplegables */
+.sidebar-nav .nav-grupo { display: flex; flex-direction: column; gap: .35rem; width: 100%; }
+.sidebar-nav .nav-grupo-cab { display: flex; align-items: center; gap: .6rem; width: 100%; background: transparent; border: none; color: #CFE2F5; font: inherit; font-weight: 600; border-radius: 10px; padding: .75rem .85rem; cursor: pointer; text-align: left; }
+.sidebar-nav .nav-grupo-cab:hover { background: rgba(255,255,255,.08); color: #fff; }
+.sidebar-nav .nav-grupo-cab .icon { display: inline-flex; width: 20px; height: 20px; align-items: center; justify-content: center; }
+.sidebar-nav .nav-grupo-cab .icon svg { width: 20px; height: 20px; }
+.sidebar-nav .nav-grupo-flecha { margin-left: auto; transition: transform .15s; font-size: .8rem; opacity: .8; }
+.sidebar-nav .nav-grupo.abierto .nav-grupo-flecha { transform: rotate(90deg); }
+.sidebar-nav .nav-grupo.tiene-activo > .nav-grupo-cab { color: #fff; }
+.sidebar-nav .nav-grupo-items { display: none; flex-direction: column; gap: .25rem; padding-left: .9rem; margin-left: .55rem; border-left: 1px solid rgba(255,255,255,.18); }
+.sidebar-nav .nav-grupo.abierto .nav-grupo-items { display: flex; }
+.sidebar-nav .nav-grupo.sin-items { display: none; }
+/* con un solo botón visible el grupo no se muestra como grupo */
+.sidebar-nav .nav-grupo.un-item > .nav-grupo-cab { display: none; }
+.sidebar-nav .nav-grupo.un-item .nav-grupo-items { display: flex; padding-left: 0; margin-left: 0; border-left: none; }
+.sidebar-nav .nav-grupo-items .nav-item-btn { width: 100% !important; }

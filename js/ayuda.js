@@ -422,7 +422,7 @@ const AyudaModulo = {
       texto: `Te mostramos rápido lo que podés hacer como <strong>${this.esc(this.ROLES[rol])}</strong>. Podés salir cuando quieras y volver a verlo desde «Ayuda y guía».`
     }];
     document.querySelectorAll('.sidebar-nav .nav-item-btn').forEach(b => {
-      if (!this.visible(b)) return;
+      if (getComputedStyle(b).display === 'none') return;
       const tema = this.tema(this.BOTON_TEMA[b.id], rol);
       if (b.id === 'btn-ayuda') {
         pasos.push({ el: b, lateral: true, titulo: 'Ayuda y guía', texto: 'Acá está la guía completa de tu rol, este recorrido y la guía en PDF para descargar.' });
@@ -466,6 +466,7 @@ const AyudaModulo = {
     if (this._teclas) document.removeEventListener('keydown', this._teclas);
     if (this._resize) window.removeEventListener('resize', this._resize);
     if (this._celular && window.UI && UI.toggleMenu) UI.toggleMenu(false);
+    if (window.UI && UI.actualizarGrupos) UI.actualizarGrupos(true);
     this._corriendo = false;
     if (marcar) this.marcarVisto();
   },
@@ -476,6 +477,7 @@ const AyudaModulo = {
     const p = this._pasos[this._i], total = this._pasos.length;
     const foco = v.querySelector('.ayuda-tour-foco'), card = v.querySelector('.ayuda-tour-card');
     if (this._celular && window.UI && UI.toggleMenu) UI.toggleMenu(!!(p.el && p.lateral));
+    if (p.el && window.UI && UI.abrirGrupoDe) UI.abrirGrupoDe(p.el);
     card.innerHTML = `
       <button type="button" class="ayuda-tour-x" aria-label="Cerrar recorrido">×</button>
       <h4>${p.titulo}</h4>

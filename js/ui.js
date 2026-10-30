@@ -165,6 +165,33 @@ const UI = {
     if (window.AyudaModulo) setTimeout(() => AyudaModulo.iniciarSiPrimeraVez(), 1500);
   },
 
+// Grupos del menú lateral (Documentos, Trayectos, Sistema): se muestran según los botones que le correspondan a cada rol
+  actualizarGrupos(cerrarTodos) {
+    document.querySelectorAll('.sidebar-nav .nav-grupo').forEach(g => {
+      const hijos = [...g.querySelectorAll('.nav-grupo-items .nav-item-btn')];
+      const visibles = hijos.filter(b => getComputedStyle(b).display !== 'none');
+      g.classList.toggle('sin-items', visibles.length === 0);
+      g.classList.toggle('un-item', visibles.length === 1);
+      const activo = hijos.some(b => b.classList.contains('active'));
+      g.classList.toggle('tiene-activo', activo);
+      if (cerrarTodos) g.classList.remove('abierto');
+      if (activo) g.classList.add('abierto');
+      const cab = g.querySelector('.nav-grupo-cab');
+      if (cab) cab.setAttribute('aria-expanded', g.classList.contains('abierto') ? 'true' : 'false');
+    });
+  },
+  toggleGrupo(id) {
+    const g = document.getElementById('grp-' + id);
+    if (!g) return;
+    g.classList.toggle('abierto');
+    const cab = g.querySelector('.nav-grupo-cab');
+    if (cab) cab.setAttribute('aria-expanded', g.classList.contains('abierto') ? 'true' : 'false');
+  },
+  abrirGrupoDe(el) {
+    const g = el && el.closest ? el.closest('.nav-grupo') : null;
+    if (g) g.classList.add('abierto');
+  },
+
 // Menú lateral en celulares: se abre con el botón ☰ y se cierra al elegir una opción
   toggleMenu(abrir) {
     const sb = document.querySelector('#app-screen .sidebar');
@@ -223,6 +250,7 @@ const UI = {
 
     const activeBtn = document.getElementById(`btn-${tabId}`);
     if (activeBtn) activeBtn.classList.add('active');
+    if (window.UI) UI.actualizarGrupos();
 
     const titleEl = document.getElementById('current-section-title');
     if (titleEl) {
