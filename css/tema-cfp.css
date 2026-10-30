@@ -1364,3 +1364,14 @@ details.seg-grupo > .seg-item { margin: .5rem .7rem; }
 /* Fechas de inicio y fin bajo cada módulo en la sábana: solo visual (no se exporta ni se imprime) */
 .sabana-fechas::after { content: attr(data-fechas); display: block; margin-top: .2rem; font-size: .68rem; font-weight: 500; opacity: .75; white-space: nowrap; }
 @media print { .sabana-fechas::after { display: none !important; } }
+
+/* Escritorio con pantallas de poca altura: el menú lateral tiene scroll propio
+   para que todas sus opciones (incluida "Cerrar sesión") sean alcanzables. */
+@media (min-width: 901px) {
+  #app-screen .sidebar {
+    height: 100vh;
+    height: 100dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
