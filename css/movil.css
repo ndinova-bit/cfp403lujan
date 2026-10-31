@@ -188,3 +188,23 @@ body {
   animation: pull-spin .8s linear infinite;
 }
 @keyframes pull-spin { to { transform: rotate(360deg); } }
+
+/* ==========================================================================
+   7. BARRAS SUPERIORES EN APP INSTALADA (iPhone, black-translucent)
+   La barra de estado queda encima del contenido: cada encabezado reserva su
+   área segura. Las filas de encabezado (título + filtro + botón) pueden
+   bajar de línea en pantallas angostas en lugar de salirse a la derecha.
+   ========================================================================== */
+.main-header {
+  padding-top: calc(1rem + env(safe-area-inset-top)) !important;
+}
+.admin-header {
+  height: auto !important;
+  min-height: calc(65px + env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top) !important;
+  box-sizing: border-box;
+}
+.card-panel-header {
+  flex-wrap: wrap;
+  gap: .75rem;
+}
