@@ -169,6 +169,27 @@ const Trayectos = {
 
   LIMITE_PUBLICO: 6,
 
+  // Texto informativo con los días de cursada de un trayecto (solo lectura).
+  // Sale de «Horario por día» (horario_dias); si no está cargado, usa el texto libre «Horario».
+  // Es solo para mostrar: no interviene en notas, asistencia ni planillas.
+  diasCursadaTexto(t) {
+    const NOMBRES = { L: 'Lun', M: 'Mar', X: 'Mié', J: 'Jue', V: 'Vie', S: 'Sáb' };
+    const dias = (t && t.horario_dias) || {};
+    const grupos = [];   // [{ hora, dias: [] }] en el orden de la semana
+    ['L', 'M', 'X', 'J', 'V', 'S'].forEach(k => {
+      const hora = String(dias[k] || '').trim();
+      if (!hora) return;
+      let g = grupos.find(x => x.hora === hora);
+      if (!g) { g = { hora, dias: [] }; grupos.push(g); }
+      g.dias.push(NOMBRES[k]);
+    });
+    if (grupos.length) {
+      const unir = a => a.length > 1 ? a.slice(0, -1).join(', ') + ' y ' + a[a.length - 1] : a[0];
+      return grupos.map(g => `${unir(g.dias)} ${g.hora.replace(/\s+A\s+/i, ' a ')} hs`).join(' · ');
+    }
+    return String((t && t.horario) || '').trim() || 'Sin cargar';
+  },
+
   async renderizarTrayectos() {
     const contenedores = [
       document.getElementById('lista-trayectos-cards'),
@@ -311,6 +332,7 @@ const Trayectos = {
               <div class="trayecto-ficha">
                 <span><strong>N° de curso:</strong> ${Trayectos.esc(numCursoMostrado)}</span>
                 <span><strong>Resolución:</strong> ${Trayectos.esc(trayecto.resolucion || 'S/D')}</span>
+                ${(isAdmin || esPreceptor || esDocente) ? `<span class="trayecto-dias-cursada"><strong>Días de cursada:</strong> ${Trayectos.esc(Trayectos.diasCursadaTexto(trayecto))}</span>` : ''}
               </div>
 
               <p style="color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.75rem; line-height: 1.4;">
