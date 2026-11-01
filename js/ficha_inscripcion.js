@@ -114,25 +114,25 @@ const FichaInscripcion = {
       { id: 'emergencia', titulo: 'En caso de emergencia', campos: [
         { k: 'emerg_contacto', l: 'Avisar a', t: 'text', w: 0.6, req: true, max: 100 },
         { k: 'emerg_tel', l: 'Tel./cel.', t: 'tel', w: 0.4, req: true, max: 40 },
-        { k: 'emerg_recurrir', l: 'Recurrir a', t: 'radio', op: [['hospital', 'Hospital local'], ['clinica', 'Clínica privada']], w: 0.5 },
-        { k: 'emerg_clinica', l: 'Clínica', t: 'text', w: 0.5, max: 100, si: { k: 'emerg_recurrir', v: 'clinica' } }
+        { k: 'emerg_recurrir', l: 'Recurrir a', t: 'radio', op: [['hospital', 'Hospital local'], ['clinica', 'Clínica privada']], w: 0.5, req: true },
+        { k: 'emerg_clinica', l: 'Clínica', t: 'text', w: 0.5, max: 100, req: true, si: { k: 'emerg_recurrir', v: 'clinica' } }
       ] },
       { id: 'salud', titulo: 'Información de salud', campos: [
-        { k: 'discapacidad', l: '¿Tiene algún tipo de discapacidad?', t: 'radio', op: SN, w: 0.4 },
-        { k: 'discapacidad_cual', l: '¿Cuál?', t: 'text', w: 0.6, max: 160, si: { k: 'discapacidad', v: 'si' } },
-        { k: 'cud', l: '¿Tiene Certificado Único de Discapacidad (CUD)?', t: 'radio', op: SN, w: 0.5, si: { k: 'discapacidad', v: 'si' } },
-        { k: 'apoyo_inclusion', l: 'Apoyo a la inclusión que recibe', t: 'radio', op: [['docente', 'Apoyo docente'], ['no_docente', 'Apoyo no docente'], ['sin_apoyo', 'Sin apoyo']], w: 0.5, si: { k: 'discapacidad', v: 'si' } },
-        { k: 'enfermedad', l: '¿Padece alguna enfermedad que requiera tratamiento o control médico?', t: 'radio', op: SN, w: 0.4 },
-        { k: 'enfermedad_cual', l: '¿Cuál?', t: 'text', w: 0.6, max: 160, si: { k: 'enfermedad', v: 'si' } },
-        { k: 'alergia', l: '¿Tiene algún tipo de alergia?', t: 'radio', op: SN, w: 0.4 },
-        { k: 'alergia_como', l: '¿Cómo se manifiesta?', t: 'text', w: 0.6, max: 160, si: { k: 'alergia', v: 'si' } },
+        { k: 'discapacidad', l: '¿Tiene algún tipo de discapacidad?', t: 'radio', op: SN, w: 0.4, req: true },
+        { k: 'discapacidad_cual', l: '¿Cuál?', t: 'text', w: 0.6, max: 160, req: true, si: { k: 'discapacidad', v: 'si' } },
+        { k: 'cud', l: '¿Tiene Certificado Único de Discapacidad (CUD)?', t: 'radio', op: SN, w: 0.5, req: true, si: { k: 'discapacidad', v: 'si' } },
+        { k: 'apoyo_inclusion', l: 'Apoyo a la inclusión que recibe', t: 'radio', op: [['docente', 'Apoyo docente'], ['no_docente', 'Apoyo no docente'], ['sin_apoyo', 'Sin apoyo']], w: 0.5, req: true, si: { k: 'discapacidad', v: 'si' } },
+        { k: 'enfermedad', l: '¿Padece alguna enfermedad que requiera tratamiento o control médico?', t: 'radio', op: SN, w: 0.4, req: true },
+        { k: 'enfermedad_cual', l: '¿Cuál?', t: 'text', w: 0.6, max: 160, req: true, si: { k: 'enfermedad', v: 'si' } },
+        { k: 'alergia', l: '¿Tiene algún tipo de alergia?', t: 'radio', op: SN, w: 0.4, req: true },
+        { k: 'alergia_como', l: '¿Cómo se manifiesta?', t: 'text', w: 0.6, max: 160, req: true, si: { k: 'alergia', v: 'si' } },
         { k: 'condiciones', l: '¿Padece o ha padecido alguna de las siguientes condiciones de salud?', t: 'checks', w: 1, op: [
           ['asma', 'Asma / broncoespasmos a repetición'], ['celiaquia', 'Celiaquía'], ['cardiacas', 'Condiciones cardíacas'], ['diabetes', 'Diabetes'],
           ['presion', 'Presión arterial'], ['convulsiones', 'Convulsiones'], ['sangre', 'Alteraciones sanguíneas'], ['organo', 'Falta o no funcionamiento de algún órgano'],
           ['onco', 'Enfermedades onco-hematológicas'], ['inmuno', 'Inmunodeficiencias'], ['fracturas', 'Fracturas, luxaciones, lesiones'], ['craneo', 'Traumatismos de cráneo'],
           ['quemaduras', 'Quemaduras moderadas o severas'], ['piel', 'Problemas de piel'], ['alergias_graves', 'Alergias graves'], ['internado', '¿Fue internado/a alguna vez?'],
           ['operado', '¿Fue operado/a alguna vez?'], ['medicacion', '¿Recibe habitualmente algún tipo de medicación?']] },
-        { k: 'medicacion_cual', l: 'Si recibe medicación, ¿cuál?', t: 'text', w: 1, max: 160 }
+        { k: 'medicacion_cual', l: 'Si recibe medicación, ¿cuál?', t: 'text', w: 1, max: 160, req: true, reqSi: d => (d.condiciones || []).includes('medicacion') }
       ] },
       { id: 'judicial', titulo: 'Restricción judicial', campos: [
         { k: 'restriccion_judicial', l: '¿Tiene restricciones judiciales?', t: 'radio', op: SN, w: 1 }
@@ -225,7 +225,8 @@ const FichaInscripcion = {
   validar(datos) {
     const faltan = [];
     this.secciones().forEach(s => s.campos.forEach(c => {
-      if (c.req && !(datos[c.k] && String(datos[c.k]).length)) faltan.push(c.l);
+      const aplica = (!c.si || datos[c.si.k] === c.si.v) && (!c.reqSi || c.reqSi(datos));
+      if (c.req && aplica && !(datos[c.k] && String(datos[c.k]).length)) faltan.push(c.l);
     }));
     const prob = faltan.map(l => `Falta completar: ${l}`);
     const dni = String(datos.dni || '').replace(/\D/g, '');
