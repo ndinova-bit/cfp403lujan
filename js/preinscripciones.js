@@ -22,9 +22,10 @@ const PreinscripcionesModulo = {
     try {
       const perfil = await Auth.obtenerPerfilSesion();
       this.admin = !!perfil && Auth.esPersonal(String(perfil.rol || '').toLowerCase().trim());
+      this.director = !!perfil && Auth.esDireccion(String(perfil.rol || '').toLowerCase().trim());
       const [{ data, error }, cfg] = await Promise.all([
         supabase.from('preinscripciones').select('*, trayecto:trayectos(id, nombre, horario, sede, lugar_dictado)').order('created_at', { ascending: false }).limit(1000),
-        this.admin ? supabase.from('inscripcion_config').select('*').eq('id', 1).maybeSingle() : Promise.resolve({ data: null })
+        this.director ? supabase.from('inscripcion_config').select('*').eq('id', 1).maybeSingle() : Promise.resolve({ data: null })
       ]);
       if (error) throw error;
       this.lista = data || [];
@@ -56,7 +57,7 @@ const PreinscripcionesModulo = {
     else if (enTrayecto) cuerpo = this.htmlTrayecto();
     else cuerpo = this.htmlTarjetas();
     this.raiz().innerHTML = `
-      ${this.admin && !enTrayecto && !q ? this.htmlConfig() : ''}
+      ${this.director && !enTrayecto && !q ? this.htmlConfig() : ''}
       <div style="display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;margin-bottom:1rem">
         <input class="form-control" style="max-width:300px" placeholder="Buscar por nombre, DNI o N.º en todos los trayectos" value="${this.esc(f.q)}" onchange="PreinscripcionesModulo.filtro.q=this.value;PreinscripcionesModulo.dibujar()">
         ${q ? '<button class="btn-secondary" onclick="PreinscripcionesModulo.filtro.q=\'\';PreinscripcionesModulo.dibujar()">Limpiar búsqueda</button>' : ''}
@@ -149,6 +150,7 @@ const PreinscripcionesModulo = {
   },
 
   async guardarConfig() {
+    if (!this.director) return;
     const reg = { id: 1, ciclo: Number(document.getElementById('pc-ciclo').value), abierta: document.getElementById('pc-abierta').value === '1', mensaje: document.getElementById('pc-mensaje').value.trim() || null, actualizado: new Date().toISOString() };
     if (!reg.ciclo || reg.ciclo < 2000) { Swal.fire('Revisá el ciclo', 'Indicá un año válido.', 'warning'); return; }
     const { id: _id, ...cambios } = reg;
