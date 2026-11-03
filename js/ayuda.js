@@ -186,7 +186,7 @@ const AyudaModulo = {
       corto: 'Socios, caja, balance, PIA y nómina de la comisión.',
       que: 'Gestión de la Cooperadora Escolar.',
       pasos: [
-        'Socios: padrón con categoría, contacto y cobro de cuota social.',
+        'Socios: padrón con N.º de socio, categoría, domicilio, contacto y cobro de cuota social. Se busca por apellido, DNI o número; se puede editar, dar de baja o eliminar (solo si se cargó por error y no tiene cobros).',
         'Ingresos y Egresos: cada movimiento lleva fecha, rubro, monto y comprobante.',
         'Balance: mensual y anual, igual al cuadro 8 del PIA.',
         'Ejercicio / PIA: cada ejercicio va del 01/05 al 30/04. Ahí se cargan sus datos, la comisión (cuadros 4, 5 y 6) y se genera el PIA en PDF.',

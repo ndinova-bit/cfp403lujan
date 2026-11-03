@@ -150,6 +150,29 @@ const CooperadoraModulo = {
     };
   },
 
+  // El padrón supera los 1000 registros que devuelve Supabase por consulta: se trae por tandas.
+  async traerSocios() {
+    const paso = 1000;
+    let todos = [];
+    for (let desde = 0; ; desde += paso) {
+      const { data, error } = await supabase.from('cooperadora_socios').select('*')
+        .order('apellido').order('nombre').order('id').range(desde, desde + paso - 1);
+      if (error) return { data: null, error };
+      todos = todos.concat(data || []);
+      if (!data || data.length < paso) break;
+    }
+    return { data: todos, error: null };
+  },
+
+  // Texto de un socio para listas de búsqueda ("N.º 12 · Apellido, Nombre — DNI 123")
+  etiquetaSocio(s) {
+    return `N.º ${s.numero_socio ?? '–'} · ${s.apellido}, ${s.nombre} — DNI ${s.dni}`;
+  },
+
+  normBusqueda(t) {
+    return String(t ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+  },
+
   async cargar() {
     const cont = document.getElementById('cooperadora-contenido');
     if (!cont) return;
@@ -179,7 +202,7 @@ const CooperadoraModulo = {
     }
     try {
       const [rSocios, rMov, rEjer, rCom] = await Promise.all([
-        supabase.from('cooperadora_socios').select('*').order('apellido'),
+        this.traerSocios(),
         supabase.from('cooperadora_movimientos').select('*').order('fecha', { ascending: false }),
         supabase.from('cooperadora_ejercicios').select('*').order('ciclo_desde', { ascending: false }),
         supabase.from('cooperadora_comision').select('*').order('orden')
@@ -215,7 +238,7 @@ const CooperadoraModulo = {
       <div id="coop-panel"></div>
     `;
     const panel = document.getElementById('coop-panel');
-    if (this.tab === 'socios') panel.innerHTML = this.vistaSocios();
+    if (this.tab === 'socios') { panel.innerHTML = this.vistaSocios(); this.pintarSocios(); }
     else if (this.tab === 'movimientos') panel.innerHTML = this.vistaMovimientos();
     else if (this.tab === 'balance') panel.innerHTML = this.vistaBalance();
     else if (this.tab === 'ejercicio') panel.innerHTML = this.vistaEjercicio();
@@ -228,28 +251,74 @@ const CooperadoraModulo = {
     const activos = this.socios.filter(s => s.estado === 'ACTIVO');
     return `
       ${this.puedeEditar ? `<div style="margin-bottom:0.8rem;"><button class="act-btn" onclick="CooperadoraModulo.formSocio()">➕ Nuevo socio</button></div>` : ''}
-      <p class="plan-meta">${activos.length} socio${activos.length === 1 ? '' : 's'} activo${activos.length === 1 ? '' : 's'} de ${this.socios.length} en total.</p>
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.6rem;">
+        <input id="coop-socios-buscar" class="form-control" style="max-width:22rem;" type="search" autocomplete="off"
+          placeholder="Buscar por apellido, nombre, DNI, N.º de socio o domicilio…"
+          value="${this.esc(this.busquedaSocios || '')}" oninput="CooperadoraModulo.filtrarSocios(this.value)">
+        <select id="coop-socios-estado" class="form-control" style="max-width:11rem;" onchange="CooperadoraModulo.filtroEstadoSocios=this.value; CooperadoraModulo.pintarSocios();">
+          <option value="todos" ${(this.filtroEstadoSocios || 'todos') === 'todos' ? 'selected' : ''}>Todos</option>
+          <option value="ACTIVO" ${this.filtroEstadoSocios === 'ACTIVO' ? 'selected' : ''}>Solo activos</option>
+          <option value="BAJA" ${this.filtroEstadoSocios === 'BAJA' ? 'selected' : ''}>Solo bajas</option>
+        </select>
+      </div>
+      <p class="plan-meta" id="coop-socios-info">${activos.length} socio${activos.length === 1 ? '' : 's'} activo${activos.length === 1 ? '' : 's'} de ${this.socios.length} en total.</p>
       <div class="sec-tabla-wrap"><table class="sec-tabla">
-        <thead><tr><th>Apellido y nombre</th><th>DNI</th><th>Categoría</th><th>Contacto</th><th>Estado</th><th></th></tr></thead>
-        <tbody>
-          ${this.socios.map(s => `
-            <tr>
-              <td>${this.esc(s.apellido)}, ${this.esc(s.nombre)}</td>
-              <td>${this.esc(s.dni)}</td>
-              <td>${this.esc(s.categoria)}</td>
-              <td>${this.esc(s.email || '')}${s.telefono ? ' · ' + this.esc(s.telefono) : ''}</td>
-              <td>${s.estado === 'ACTIVO' ? '🟢 Activo' : '🔴 Baja'}</td>
-              <td>
-                ${this.puedeEditar ? `
-                  <button style="padding: 0.3rem 0.55rem; font-size: 0.85rem; background: rgba(148, 163, 184, 0.15); border: 1px solid rgba(148, 163, 184, 0.3); color: #cbd5e1; border-radius: 6px; cursor: pointer; margin-right:0.25rem;" title="Editar" onclick="CooperadoraModulo.formSocio(${s.id})">✏️</button>
-                  <button style="padding: 0.3rem 0.55rem; font-size: 0.85rem; background: rgba(148, 163, 184, 0.15); border: 1px solid rgba(148, 163, 184, 0.3); color: #cbd5e1; border-radius: 6px; cursor: pointer; margin-right:0.25rem;" title="Historial / constancia" onclick="CooperadoraModulo.irA('constancias'); CooperadoraModulo.socioConstancia=${s.id}; CooperadoraModulo.render();">🧾</button>
-                ` : ''}
-              </td>
-            </tr>
-          `).join('') || '<tr><td colspan="6">Todavía no hay socios cargados.</td></tr>'}
-        </tbody>
+        <thead><tr><th>N.º</th><th>Apellido y nombre</th><th>DNI</th><th>Categoría</th><th>Contacto</th><th>Estado</th><th></th></tr></thead>
+        <tbody id="coop-socios-body"></tbody>
       </table></div>
+      <p class="plan-meta" id="coop-socios-mas"></p>
     `;
+  },
+
+  filtrarSocios(texto) {
+    this.busquedaSocios = texto;
+    this.limiteSocios = 100;
+    this.pintarSocios();
+  },
+
+  filaSocio(s) {
+    const btn = 'padding: 0.3rem 0.55rem; font-size: 0.85rem; background: rgba(148, 163, 184, 0.15); border: 1px solid rgba(148, 163, 184, 0.3); color: #cbd5e1; border-radius: 6px; cursor: pointer; margin-right:0.25rem;';
+    const contacto = [s.email, s.telefono].filter(Boolean).map(x => this.esc(x)).join(' · ');
+    return `
+      <tr>
+        <td>${s.numero_socio ?? '–'}</td>
+        <td>${this.esc(s.apellido)}, ${this.esc(s.nombre)}${s.domicilio ? `<br><small style="opacity:.7;">${this.esc(s.domicilio)}</small>` : ''}</td>
+        <td>${this.esc(s.dni)}</td>
+        <td>${this.esc(s.categoria)}</td>
+        <td>${contacto}</td>
+        <td>${s.estado === 'ACTIVO' ? '🟢 Activo' : '🔴 Baja'}</td>
+        <td style="white-space:nowrap;">
+          ${this.puedeEditar ? `
+            <button style="${btn}" title="Editar" onclick="CooperadoraModulo.formSocio(${s.id})">✏️</button>
+            <button style="${btn}" title="Historial / constancia" onclick="CooperadoraModulo.irA('constancias'); CooperadoraModulo.socioConstancia=${s.id}; CooperadoraModulo.render();">🧾</button>
+            <button style="${btn}" title="Eliminar (solo si se cargó por error)" onclick="CooperadoraModulo.eliminarSocio(${s.id})">🗑️</button>
+          ` : ''}
+        </td>
+      </tr>`;
+  },
+
+  pintarSocios() {
+    const body = document.getElementById('coop-socios-body');
+    if (!body) return;
+    const q = this.normBusqueda(this.busquedaSocios);
+    const est = this.filtroEstadoSocios || 'todos';
+    const lista = this.socios.filter(s => {
+      if (est !== 'todos' && s.estado !== est) return false;
+      if (!q) return true;
+      const hay = this.normBusqueda(`${s.apellido} ${s.nombre} ${s.dni} ${String(s.dni).replace(/\D/g, '')} ${s.numero_socio ?? ''} ${s.domicilio || ''}`);
+      return q.split(' ').every(t => hay.includes(t));
+    });
+    const lim = this.limiteSocios || 100;
+    body.innerHTML = lista.slice(0, lim).map(s => this.filaSocio(s)).join('') || '<tr><td colspan="7">No hay socios que coincidan.</td></tr>';
+    const activos = this.socios.filter(s => s.estado === 'ACTIVO').length;
+    const info = document.getElementById('coop-socios-info');
+    if (info) info.textContent = `${activos} socio${activos === 1 ? '' : 's'} activo${activos === 1 ? '' : 's'} de ${this.socios.length} en total.` + ((q || est !== 'todos') ? ` Coinciden con la búsqueda: ${lista.length}.` : '');
+    const mas = document.getElementById('coop-socios-mas');
+    if (mas) {
+      mas.innerHTML = lista.length > lim
+        ? `Se muestran ${lim} de ${lista.length}. <a href="#" onclick="CooperadoraModulo.limiteSocios=(CooperadoraModulo.limiteSocios||100)+200; CooperadoraModulo.pintarSocios(); return false;">Ver 200 más</a> · <a href="#" onclick="CooperadoraModulo.limiteSocios=999999; CooperadoraModulo.pintarSocios(); return false;">Ver todos</a>`
+        : '';
+    }
   },
 
   // Trae una vez (y cachea) a todas las personas ya cargadas en la plataforma
@@ -273,6 +342,7 @@ const CooperadoraModulo = {
     const s = id ? this.socios.find(x => x.id === id) : null;
     const personas = s ? [] : await this.cargarPersonasCache();
     const etiqueta = p => `${p.apellido}, ${p.nombre} — DNI ${p.dni}${p.rol ? ' (' + p.rol + ')' : ''}`;
+    const siguienteNumero = this.socios.reduce((m, x) => Math.max(m, Number(x.numero_socio) || 0), 0) + 1;
     const { value } = await Swal.fire({
       title: s ? 'Editar socio' : 'Nuevo socio',
       html: `
@@ -284,6 +354,8 @@ const CooperadoraModulo = {
         <input id="sw-apellido" class="swal2-input" placeholder="Apellido" value="${this.esc(s?.apellido || '')}">
         <input id="sw-nombre" class="swal2-input" placeholder="Nombre" value="${this.esc(s?.nombre || '')}">
         <input id="sw-dni" class="swal2-input" placeholder="DNI" value="${this.esc(s?.dni || '')}">
+        <input id="sw-numero" type="number" min="1" step="1" class="swal2-input" placeholder="N.º de socio (vacío = el siguiente: ${siguienteNumero})" value="${s?.numero_socio ?? ''}">
+        <input id="sw-domicilio" class="swal2-input" placeholder="Domicilio (opcional)" value="${this.esc(s?.domicilio || '')}">
         <select id="sw-categoria" class="swal2-input">
           <option value="activo" ${s?.categoria === 'activo' ? 'selected' : ''}>Activo</option>
           <option value="honorario" ${s?.categoria === 'honorario' ? 'selected' : ''}>Honorario</option>
@@ -313,18 +385,28 @@ const CooperadoraModulo = {
         const nombre = document.getElementById('sw-nombre').value.trim();
         const dni = document.getElementById('sw-dni').value.trim();
         if (!apellido || !nombre || !dni) { Swal.showValidationMessage('Apellido, nombre y DNI son obligatorios.'); return false; }
+        const numTxt = document.getElementById('sw-numero').value.trim();
+        const numero = numTxt === '' ? null : Number(numTxt);
+        if (numero !== null && (!Number.isInteger(numero) || numero < 1)) { Swal.showValidationMessage('El N.º de socio debe ser un entero positivo (o dejalo vacío para que se asigne solo).'); return false; }
+        if (s && numero === null) { Swal.showValidationMessage('Un socio ya cargado necesita su N.º de socio.'); return false; }
+        const estado = document.getElementById('sw-estado').value;
         return {
           apellido, nombre, dni,
+          numero_socio: numero,
+          domicilio: document.getElementById('sw-domicilio').value.trim() || null,
           categoria: document.getElementById('sw-categoria').value,
           email: document.getElementById('sw-email').value.trim() || null,
           telefono: document.getElementById('sw-tel').value.trim() || null,
-          estado: document.getElementById('sw-estado').value,
-          fecha_baja: document.getElementById('sw-estado').value === 'BAJA' ? new Date().toISOString().slice(0, 10) : null
+          estado,
+          // si ya estaba de baja y sigue de baja, se conserva la fecha original
+          fecha_baja: estado === 'BAJA' ? ((s && s.estado === 'BAJA' && s.fecha_baja) || new Date().toISOString().slice(0, 10)) : null
         };
       }
     });
     if (!value) return;
     try {
+      // En el alta, si no se indicó número, se omite el campo y la base asigna el siguiente.
+      if (!s && value.numero_socio === null) delete value.numero_socio;
       const { error } = s
         ? await supabase.from('cooperadora_socios').update(value).eq('id', s.id)
         : await supabase.from('cooperadora_socios').insert([value]);
@@ -332,7 +414,48 @@ const CooperadoraModulo = {
       Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Guardado', showConfirmButton: false, timer: 1800 });
       await this.cargar();
     } catch (err) {
-      Swal.fire('No se pudo guardar', err.message || '', 'error');
+      const msg = String(err.message || '');
+      let texto = msg;
+      if (/cooperadora_socios_numero_uq|numero_socio/i.test(msg) && /duplicate|unique/i.test(msg)) texto = 'Ese N.º de socio ya lo tiene otra persona. Elegí otro o dejalo vacío para asignar el siguiente.';
+      else if (/dni/i.test(msg) && /duplicate|unique/i.test(msg)) texto = 'Ya existe un socio cargado con ese DNI. Buscalo en la lista para editarlo.';
+      Swal.fire('No se pudo guardar', texto, 'error');
+    }
+  },
+
+  // Eliminar sirve para altas cargadas por error. Si el socio ya tiene cobros registrados
+  // no se borra (se perdería el historial): se lo pasa a "Baja" desde Editar.
+  async eliminarSocio(id) {
+    const s = this.socios.find(x => x.id === id);
+    if (!s) return;
+    let cobros = 0;
+    try {
+      const { count, error } = await supabase.from('cooperadora_movimientos').select('id', { count: 'exact', head: true }).eq('socio_id', id);
+      if (error) throw error;
+      cobros = count || 0;
+    } catch (err) {
+      Swal.fire('No se pudo comprobar', 'No pude verificar si el socio tiene cobros cargados, así que no lo eliminé. ' + (err.message || ''), 'error');
+      return;
+    }
+    if (cobros > 0) {
+      Swal.fire({
+        icon: 'info', title: 'No se puede eliminar',
+        html: `<b>${this.esc(s.apellido)}, ${this.esc(s.nombre)}</b> tiene ${cobros} movimiento${cobros === 1 ? '' : 's'} registrado${cobros === 1 ? '' : 's'} en el libro. Para no perder ese historial, pasalo a <b>Baja</b> desde ✏️ Editar.`
+      });
+      return;
+    }
+    const ok = await Swal.fire({
+      icon: 'warning', title: '¿Eliminar este socio?',
+      html: `<b>N.º ${s.numero_socio ?? '–'} · ${this.esc(s.apellido)}, ${this.esc(s.nombre)}</b><br>DNI ${this.esc(s.dni)}<br><small>Usalo solo si se cargó por error. Si dejó de ser socio, mejor pasalo a Baja.</small>`,
+      showCancelButton: true, confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar', confirmButtonColor: '#b91c1c'
+    });
+    if (!ok.isConfirmed) return;
+    try {
+      const { error } = await supabase.from('cooperadora_socios').delete().eq('id', id);
+      if (error) throw error;
+      Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Socio eliminado', showConfirmButton: false, timer: 1800 });
+      await this.cargar();
+    } catch (err) {
+      Swal.fire('No se pudo eliminar', err.message || '', 'error');
     }
   },
 
@@ -386,10 +509,8 @@ const CooperadoraModulo = {
           <option value="plazo_fijo">Plazo fijo</option>
         </select>
         ${tipo === 'entrada' ? `
-        <select id="sw-socio" class="swal2-input">
-          <option value="">(no corresponde a cuota de un socio)</option>
-          ${socios.map(s => `<option value="${s.id}">${this.esc(s.apellido)}, ${this.esc(s.nombre)} — DNI ${this.esc(s.dni)}</option>`).join('')}
-        </select>
+        <input id="sw-socio" class="swal2-input" list="sw-socio-list" autocomplete="off" placeholder="Socio de la cuota: buscá por apellido, DNI o N.º (vacío = no corresponde)">
+        <datalist id="sw-socio-list">${socios.map(s => `<option value="${this.esc(this.etiquetaSocio(s))}">`).join('')}</datalist>
         <input id="sw-periodo" class="swal2-input" placeholder="Período de la cuota (AAAA-MM o AAAA, opcional)">
         ` : ''}
         <input id="sw-comprobante" class="swal2-input" placeholder="N.º de comprobante (opcional)">
@@ -412,8 +533,17 @@ const CooperadoraModulo = {
           if (!libre) { Swal.showValidationMessage('Describí el rubro "Otro…" elegido.'); return false; }
           rubroNombre = libre;
         }
+        let socioId = null;
+        if (tipo === 'entrada') {
+          const txt = document.getElementById('sw-socio').value.trim();
+          if (txt) {
+            const sel = socios.find(x => this.etiquetaSocio(x) === txt);
+            if (!sel) { Swal.showValidationMessage('Elegí el socio de la lista que se despliega al escribir (o dejá el campo vacío).'); return false; }
+            socioId = sel.id;
+          }
+        }
         const f = document.getElementById('sw-fecha').value;
-        const dentro = this.ejercicios.some(e => f >= `${e.ciclo_desde}-05-01` && f <= `${e.ciclo_hasta}-04-30`);
+        const dentro =this.ejercicios.some(e => f >= `${e.ciclo_desde}-05-01` && f <= `${e.ciclo_hasta}-04-30`);
         if (!f || !dentro) {
           Swal.showValidationMessage(this.ejercicios.length
             ? 'La fecha debe estar dentro de un ejercicio cargado (' + this.ejercicios.map(e => `01/05/${e.ciclo_desde} al 30/04/${e.ciclo_hasta}`).join(' · ') + '). Para otras fechas, creá antes el ejercicio en «Ejercicio / PIA».'
@@ -430,7 +560,7 @@ const CooperadoraModulo = {
           monto,
           medio: document.getElementById('sw-medio').value,
           nro_comprobante: document.getElementById('sw-comprobante').value.trim() || null,
-          socio_id: tipo === 'entrada' ? (Number(document.getElementById('sw-socio')?.value) || null) : null,
+          socio_id: tipo === 'entrada' ? socioId : null,
           periodo: tipo === 'entrada' ? (document.getElementById('sw-periodo')?.value.trim() || null) : null
         };
       }
@@ -878,10 +1008,11 @@ const CooperadoraModulo = {
     const total = historial.reduce((a, m) => a + Number(m.monto || 0), 0);
     return `
       <div style="margin-bottom:0.8rem;">
-        <select class="form-control" style="max-width:20rem;" onchange="CooperadoraModulo.socioConstancia=Number(this.value)||null; CooperadoraModulo.render();">
-          <option value="">(elegir socio)</option>
-          ${this.socios.map(s => `<option value="${s.id}" ${s.id === socioId ? 'selected' : ''}>${this.esc(s.apellido)}, ${this.esc(s.nombre)} — DNI ${this.esc(s.dni)}</option>`).join('')}
-        </select>
+        <input class="form-control" style="max-width:32rem;" list="coop-constancia-list" autocomplete="off"
+          placeholder="Elegir socio: escribí apellido, DNI o N.º y elegilo de la lista"
+          value="${socio ? this.esc(this.etiquetaSocio(socio)) : ''}"
+          onchange="const s = CooperadoraModulo.socios.find(x => CooperadoraModulo.etiquetaSocio(x) === this.value); CooperadoraModulo.socioConstancia = s ? s.id : null; CooperadoraModulo.render();">
+        <datalist id="coop-constancia-list">${this.socios.map(s => `<option value="${this.esc(this.etiquetaSocio(s))}">`).join('')}</datalist>
       </div>
       ${!socio ? '<div class="prog-vacio">Elegí un socio para ver su historial y emitir la constancia.</div>' : `
         <div class="sec-tabla-wrap"><table class="sec-tabla">
@@ -914,7 +1045,7 @@ const CooperadoraModulo = {
       </style></head><body>
       <h1>Cooperadora Escolar — CFP N.º 403 "Oscar Smith"</h1>
       <h2>Constancia de pago de cuota social</h2>
-      <p><b>Socio:</b> ${this.esc(socio.apellido)}, ${this.esc(socio.nombre)} &nbsp; <b>DNI:</b> ${this.esc(socio.dni)}</p>
+      <p><b>Socio N.º ${socio.numero_socio ?? '–'}:</b> ${this.esc(socio.apellido)}, ${this.esc(socio.nombre)} &nbsp; <b>DNI:</b> ${this.esc(socio.dni)}</p>
       ${ultimo ? `<p><b>Último pago:</b> período ${this.esc(ultimo.periodo || '–')}, por ${this.money(ultimo.monto)} el ${this.fecha(ultimo.fecha)}.</p>` : ''}
       <table><thead><tr><th>Período</th><th>Fecha de pago</th><th>Monto pagado</th></tr></thead>
         <tbody>${historial.map(m => `<tr><td>${this.esc(m.periodo || '–')}</td><td>${this.fecha(m.fecha)}</td><td>${this.money(m.monto)}</td></tr>`).join('') || '<tr><td colspan="3">Sin pagos registrados.</td></tr>'}</tbody>
