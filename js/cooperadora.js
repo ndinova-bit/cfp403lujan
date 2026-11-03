@@ -628,22 +628,31 @@ const CooperadoraModulo = {
     if (this.soloBalance) {
       const v = this.balVigente || { mes: '', anio: '', movs_mes: [], movs_anio: [] };
       return `${this.bloqueBalance('Balance mensual — ' + v.mes, this.balanceDe(v.movs_mes || []))}
-        ${this.bloqueBalance('Balance anual — ' + v.anio, this.balanceDe(v.movs_anio || []))}`;
+        ${this.bloqueBalance('Balance anual — Ejercicio ' + v.anio + ' (01/05 al 30/04)', this.balanceDe(v.movs_anio || []))}`;
     }
     if (!this.balMes) this.balMes = new Date().toISOString().slice(0, 7);
-    if (!this.balAnio) this.balAnio = new Date().getFullYear();
+    // El "balance anual" es el del ejercicio: del 01/05 de un año al 30/04 del siguiente.
+    if (!this.balEjercicio) {
+      const hoy = new Date().toISOString().slice(0, 10);
+      const en = this.ejercicios.find(e => hoy >= `${e.ciclo_desde}-05-01` && hoy <= `${e.ciclo_hasta}-04-30`) || this.ejercicios[0];
+      this.balEjercicio = en ? en.id : null;
+    }
+    const ej = this.ejercicios.find(e => e.id === this.balEjercicio);
     const movsMes = this.movimientos.filter(m => String(m.fecha || '').slice(0, 7) === this.balMes);
-    const movsAnio = this.movimientos.filter(m => String(m.fecha || '').slice(0, 4) === String(this.balAnio));
+    const movsAnio = ej ? this.movimientos.filter(m => { const f = String(m.fecha || '').slice(0, 10); return f >= `${ej.ciclo_desde}-05-01` && f <= `${ej.ciclo_hasta}-04-30`; }) : [];
     const bMes = this.balanceDe(movsMes);
     const bAnio = this.balanceDe(movsAnio);
     const bloque = (t, b) => this.bloqueBalance(t, b);
+    const etiquetaEj = ej ? `Ejercicio ${ej.ciclo_desde}/${ej.ciclo_hasta} (01/05/${ej.ciclo_desde} al 30/04/${ej.ciclo_hasta})` : 'sin ejercicio cargado';
     return `
       <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:0.5rem;">
         <label>Balance mensual: <input type="month" class="form-control" value="${this.balMes}" onchange="CooperadoraModulo.balMes=this.value; CooperadoraModulo.render();"></label>
-        <label>Balance anual: <input type="number" class="form-control" style="width:7rem;" value="${this.balAnio}" onchange="CooperadoraModulo.balAnio=this.value; CooperadoraModulo.render();"></label>
+        <label>Balance anual (ejercicio): <select class="form-control" onchange="CooperadoraModulo.balEjercicio=Number(this.value)||null; CooperadoraModulo.render();">
+          ${this.ejercicios.map(e => `<option value="${e.id}" ${e.id === this.balEjercicio ? 'selected' : ''}>${e.ciclo_desde}/${e.ciclo_hasta}</option>`).join('') || '<option value="">(creá un ejercicio)</option>'}
+        </select></label>
       </div>
       ${bloque('Balance mensual — ' + this.balMes, bMes)}
-      ${bloque('Balance anual — ' + this.balAnio, bAnio)}
+      ${bloque('Balance anual — ' + etiquetaEj, bAnio)}
     `;
   },
 
@@ -948,8 +957,8 @@ const CooperadoraModulo = {
 
       // Cuadro 8: recursos y gastos del ejercicio completo (todos los movimientos del rango de años del ejercicio)
       const movsEjercicio = this.movimientos.filter(m => {
-        const anio = Number(String(m.fecha || '').slice(0, 4));
-        return anio >= ej.ciclo_desde && anio <= ej.ciclo_hasta;
+        const f = String(m.fecha || '').slice(0, 10);
+        return f >= `${ej.ciclo_desde}-05-01` && f <= `${ej.ciclo_hasta}-04-30`;
       });
       const bal = this.balanceDe(movsEjercicio);
       Object.entries(PIA_PDF.entradaMonto).forEach(([clave, campo]) => { const r = bal.entradas[clave]; setTx(campo, r && r.monto ? montoStr(r.monto) : ''); });
