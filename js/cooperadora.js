@@ -281,7 +281,7 @@ const CooperadoraModulo = {
     const contacto = [s.email, s.telefono].filter(Boolean).map(x => this.esc(x)).join(' · ');
     return `
       <tr>
-        <td>${s.numero_socio ?? '–'}</td>
+        <td>${s.numero_socio ?? '–'}${s.numero_anterior && s.numero_anterior !== s.numero_socio ? `<br><small style="opacity:.7;" title="N.º que tenía en la planilla anterior">(antes ${s.numero_anterior})</small>` : ''}</td>
         <td>${this.esc(s.apellido)}, ${this.esc(s.nombre)}${s.domicilio ? `<br><small style="opacity:.7;">${this.esc(s.domicilio)}</small>` : ''}</td>
         <td>${this.esc(s.dni)}</td>
         <td>${this.esc(s.categoria)}</td>
@@ -305,7 +305,7 @@ const CooperadoraModulo = {
     const lista = this.socios.filter(s => {
       if (est !== 'todos' && s.estado !== est) return false;
       if (!q) return true;
-      const hay = this.normBusqueda(`${s.apellido} ${s.nombre} ${s.dni} ${String(s.dni).replace(/\D/g, '')} ${s.numero_socio ?? ''} ${s.domicilio || ''}`);
+      const hay = this.normBusqueda(`${s.apellido} ${s.nombre} ${s.dni} ${String(s.dni).replace(/\D/g, '')} ${s.numero_socio ?? ''} ${s.numero_anterior ?? ''} ${s.domicilio || ''}`);
       return q.split(' ').every(t => hay.includes(t));
     });
     const lim = this.limiteSocios || 100;
