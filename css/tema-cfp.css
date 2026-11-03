@@ -829,6 +829,20 @@ textarea.act-in { resize: vertical; }
 .act-check input { width: 1.05rem; height: 1.05rem; accent-color: var(--cfp-blue); }
 .act-check-alto { align-self: end; padding-bottom: .6rem; }
 
+/* Recuperatorio / refuerzo: elegir varios estudiantes de una vez */
+.para-panel { border: 1px solid var(--cfp-line-2); background: #f6faff; border-radius: 12px; padding: .8rem .9rem; margin: .2rem 0 .8rem; }
+.para-cab { display: flex; justify-content: space-between; align-items: center; gap: .5rem; flex-wrap: wrap; color: var(--cfp-ink-2); }
+.para-contador { font-size: .8rem; font-weight: 700; color: var(--cfp-blue); }
+.para-ayuda { margin: .25rem 0 .6rem; font-size: .8rem; color: var(--cfp-muted); }
+.para-herr { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: .6rem; }
+.para-herr .act-in { flex: 1 1 200px; min-width: 0; }
+.para-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: .3rem .8rem; max-height: 240px; overflow-y: auto; padding: .2rem; }
+.para-item { display: flex; align-items: center; gap: .5rem; padding: .35rem .5rem; border-radius: 8px; font-size: .85rem; color: var(--cfp-ink-2); cursor: pointer; min-height: 44px; }
+.para-item:hover { background: #e8f1fc; }
+.para-item input { width: 1.1rem; height: 1.1rem; accent-color: var(--cfp-blue); flex: none; }
+.para-item em { color: var(--cfp-muted); font-size: .75rem; }
+.para-vacio { color: var(--cfp-muted); font-size: .85rem; }
+
 /* Formulario de publicación */
 .act-form-wrap { background: #fff; border: 1px solid var(--cfp-line); border-radius: 16px; padding: .9rem 1.1rem; margin-bottom: 1.25rem; }
 .act-form-wrap > summary { cursor: pointer; font-weight: 800; color: var(--cfp-blue); font-size: .95rem; }
