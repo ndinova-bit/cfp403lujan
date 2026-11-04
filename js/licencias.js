@@ -17,7 +17,7 @@ const LicenciasModulo = {
   feriados: [],
   ciclo: null,            // { anio, inicio, fin } del año elegido, o null si no está cargado
   anio: new Date().getFullYear(),
-  vista: 'resumen',       // 'resumen' | 'licencias' | 'feriados' | 'ciclo'
+  vista: 'resumen',       // 'resumen' | 'licencias' | 'feriados'
   periodo: 'ciclo',       // 'ciclo' | 'continuidad' | 'interinos' | 'otro'
   periodos: [],           // períodos de calificación del año (tabla periodos_calificacion)
   filtro: { desde: '', hasta: '', dni: '' },
@@ -132,7 +132,7 @@ const LicenciasModulo = {
   dibujar() {
     const cont = document.getElementById('licencias-contenido');
     if (!cont) return;
-    const tabs = [['resumen', '📊 Resumen por docente'], ['licencias', '📝 Licencias y paros'], ['feriados', '📅 Feriados'], ['ciclo', '🗓️ Ciclo y períodos']];
+    const tabs = [['resumen', '📊 Resumen por docente'], ['licencias', '📝 Licencias y paros'], ['feriados', '📅 Feriados']];
     const anios = []; for (let a = new Date().getFullYear() + 1; a >= 2024; a--) anios.push(a);
     cont.innerHTML = `
       <div class="sec-cab">
@@ -141,7 +141,7 @@ const LicenciasModulo = {
         <label class="lic-anio">Ciclo lectivo <select onchange="LicenciasModulo.cambiarAnio(this.value)">${anios.map(a => `<option value="${a}"${a === this.anio ? ' selected' : ''}>${a}</option>`).join('')}</select></label>
       </div>
       <div class="lic-tabs">${tabs.map(t => `<button type="button" class="btn ${this.vista === t[0] ? 'btn-gold' : 'btn-outline'}" onclick="LicenciasModulo.cambiarVista('${t[0]}')">${t[1]}</button>`).join('')}</div>
-      <div id="lic-vista">${this.vista === 'resumen' ? this.htmlResumen() : this.vista === 'licencias' ? this.htmlLicencias() : this.vista === 'ciclo' ? this.htmlCiclo() : this.htmlFeriados()}</div>`;
+      <div id="lic-vista">${this.vista === 'resumen' ? this.htmlResumen() : this.vista === 'licencias' ? this.htmlLicencias() : this.htmlFeriados()}</div>`;
     if (this.vista === 'resumen') this.calcularResumen();
     if (this.vista === 'licencias') this.vistaPreviaDias();
   },
@@ -159,40 +159,53 @@ const LicenciasModulo = {
     return p ? { desde: p.desde, hasta: p.hasta, oficiales: p.dias_oficiales } : null;
   },
 
+  /* Al elegir un período se usan las fechas guardadas de ese año; si todavía no hay, se editan acá mismo */
   elegirPeriodo(clave) {
+    this.periodo = clave;
     if (clave !== 'otro') {
       const p = this.datosPeriodo(clave);
-      if (!p) {
-        alert(`Todavía no cargaste las fechas de «${this.PERIODOS[clave]}» ${this.anio}. Hacelo en la pestaña «Ciclo y períodos».`);
-        const sel = document.getElementById('lic-r-periodo'); if (sel) sel.value = this.periodo;
-        return;
-      }
-      this.filtro.desde = p.desde; this.filtro.hasta = p.hasta;
+      if (p) { this.filtro.desde = p.desde; this.filtro.hasta = p.hasta; }
+      else if (clave === 'ciclo') { this.filtro.desde = `${this.anio}-03-01`; this.filtro.hasta = `${this.anio}-12-31`; }
     }
-    this.periodo = clave;
     this.dibujar();
   },
 
-  /* Si se tocan las fechas a mano, el período pasa a ser «Otro período» */
-  fechaManual() {
-    if (this.periodo !== 'otro') {
-      this.periodo = 'otro';
-      const sel = document.getElementById('lic-r-periodo'); if (sel) sel.value = 'otro';
-    }
+  /* Cambiar fechas de un período guardado las actualiza para ese año; en «Otro período» no se guarda nada */
+  async fechaManual() {
     this.calcularResumen();
+    if (this.periodo === 'otro') return;
+    const { desde, hasta } = this.filtro;
+    if (desde && hasta && desde <= hasta) await this.guardarPeriodoActual();
   },
 
+  /* «Hasta hoy» es un corte parcial: pasa a «Otro período» para no pisar las fechas del período */
   hastaHoy() {
     document.getElementById('lic-r-hasta').value = this.hoyISO();
-    this.fechaManual();
+    this.periodo = 'otro';
+    this.dibujar();
   },
 
-  cicloCompleto() {
-    const p = this.datosPeriodo('ciclo');
-    if (!p) { alert(`Primero cargá el inicio y el fin del ciclo ${this.anio} en «Ciclo y períodos».`); return; }
-    this.periodo = 'ciclo';
-    this.filtro.desde = p.desde; this.filtro.hasta = p.hasta;
-    this.dibujar();
+  cicloCompleto() { this.elegirPeriodo('ciclo'); },
+
+  /* Guarda fechas y total oficial del período elegido (ciclo o calificación anual) para el año */
+  async guardarPeriodoActual(oficial) {
+    const clave = this.periodo;
+    if (clave === 'otro') return;
+    const { desde, hasta } = this.filtro;
+    const actual = this.datosPeriodo(clave);
+    const n = oficial !== undefined ? oficial : (actual && actual.oficiales !== undefined ? actual.oficiales : null);
+    const ahora = new Date().toISOString();
+    const { error } = clave === 'ciclo'
+      ? await supabase.from('ciclo_lectivo_config').upsert({ anio: this.anio, inicio: desde, fin: hasta, dias_oficiales: n, updated_at: ahora })
+      : await supabase.from('periodos_calificacion').upsert({ anio: this.anio, tipo: clave, desde, hasta, dias_oficiales: n, updated_at: ahora });
+    if (error) { alert('No se pudo guardar. ' + (error.message || '')); return false; }
+    if (clave === 'ciclo') {
+      this.ciclos = (this.ciclos || []).filter(x => Number(x.anio) !== this.anio).concat({ anio: this.anio, inicio: desde, fin: hasta, dias_oficiales: n });
+      this.ciclo = this.ciclos.find(x => Number(x.anio) === this.anio);
+    } else {
+      this.periodos = (this.periodos || []).filter(x => !(Number(x.anio) === this.anio && x.tipo === clave)).concat({ anio: this.anio, tipo: clave, desde, hasta, dias_oficiales: n });
+    }
+    return true;
   },
 
   htmlResumen() {
@@ -225,7 +238,8 @@ const LicenciasModulo = {
     const corte = hoy < desde ? null : (hoy > hasta ? hasta : hoy);
     const trans = corte ? this.calcular(desde, corte, mf).total : 0;
     // Total oficial de días de asistencia (Pautas DGCYE): si está cargado, reemplaza al del calendario
-    const pd = this.periodo !== 'otro' ? this.datosPeriodo(this.periodo) : null;
+    const conTotal = this.periodo !== 'otro';
+    const pd = conTotal ? this.datosPeriodo(this.periodo) : null;
     const oficial = pd && pd.oficiales !== null && pd.oficiales !== undefined ? Number(pd.oficiales) : null;
     const base = oficial !== null ? oficial : hab.total;
     const lista = (dni ? this.docentes.filter(d => d.dni === dni) : this.docentes).map(d => this.resumenDocente(d.dni, desde, hasta, hab, base));
@@ -237,18 +251,18 @@ const LicenciasModulo = {
     this._ultimo = { desde, hasta, base, lista };
     const fer = hab.feriadosEnHabiles;
     const nFer = new Set(fer.map(x => x.fecha)).size;   // un día con feriado nacional y provincial cuenta una vez
-    const tarjetaTotal = pd
+    const tarjetaTotal = conTotal
       ? `<div class="stat-card"><div class="stat-info"><h4>Días de asistencia (total oficial, editable)</h4>
           <p class="stat-value"><input type="number" min="0" max="366" class="lic-oficial" value="${oficial !== null ? oficial : ''}" placeholder="${hab.total}" onchange="LicenciasModulo.guardarOficiales(this.value)"></p>
           <small>${oficial !== null && oficial !== hab.total ? `el calendario cargado daría ${hab.total}` : `${this.fmt(desde)} al ${this.fmt(hasta)}`}</small></div></div>`
       : `<div class="stat-card"><div class="stat-info"><h4>Período analizado</h4><p class="stat-value">${hab.total}</p><small>${this.fmt(desde)} al ${this.fmt(hasta)}</small></div></div>`;
     out.innerHTML = `
       <div class="lic-cifras">
-        <div class="stat-card"><div class="stat-info"><h4>Días hábiles del ciclo ${this.anio}</h4><p class="stat-value">${cic ? cic.total : '–'}</p><small>${cic ? `${this.fmt(this.ciclo.inicio)} al ${this.fmt(this.ciclo.fin)}` : 'Falta cargar inicio y fin del ciclo'}</small></div></div>
+        <div class="stat-card"><div class="stat-info"><h4>Días hábiles del ciclo ${this.anio}</h4><p class="stat-value">${cic ? cic.total : '–'}</p><small>${cic ? `${this.fmt(this.ciclo.inicio)} al ${this.fmt(this.ciclo.fin)}` : 'Elegí «Ciclo lectivo» para cargar sus fechas'}</small></div></div>
         <div class="stat-card"><div class="stat-info"><h4>Transcurridos hasta hoy</h4><p class="stat-value">${trans}</p><small>días hábiles</small></div></div>
         ${tarjetaTotal}
       </div>
-      <p class="acta-ayuda">${pd ? 'Total oficial según las Pautas de Orientación para la Calificación Anual Docente de cada año (las fechas del período se editan en «Ciclo y períodos»). Los días trabajados = total oficial menos las faltas cargadas. ' : ''}Días hábiles = lunes a viernes sin feriados ni asuetos cargados. Las faltas son los días de licencia o paro que caen en día hábil.</p>
+      <p class="acta-ayuda">${conTotal ? 'Cargá las fechas y el total de días de asistencia que fijan las Pautas de Orientación para la Calificación Anual Docente de este año: quedan guardados. Los días trabajados = total oficial menos las faltas cargadas. ' : ''}Días hábiles = lunes a viernes sin feriados ni asuetos cargados. Las faltas son los días de licencia o paro que caen en día hábil.</p>
       ${nFer ? `<details class="lic-det"><summary>Ver feriados descontados (${nFer} día${nFer === 1 ? '' : 's'})</summary><ul>${fer.sort((a, b) => a.fecha.localeCompare(b.fecha)).map(x => `<li>${this.fmt(x.fecha)} · ${this.esc(x.nombre)} <em>(${this.AMBITOS[x.ambito] || x.ambito})</em></li>`).join('')}</ul></details>` : ''}
       <div class="lic-scroll"><table class="demo-tabla lic-tabla">
         <thead><tr><th>Docente</th><th>Días hábiles del período</th><th>Días trabajados</th><th>Faltas totales</th><th>Administrativas</th><th>Médicas</th><th>Paros</th><th>% asistencia</th></tr></thead>
@@ -263,15 +277,9 @@ const LicenciasModulo = {
   async guardarOficiales(v) {
     const n = String(v).trim() === '' ? null : parseInt(v, 10);
     if (n !== null && (isNaN(n) || n < 0 || n > 366)) { alert('Ingresá un número de días entre 0 y 366.'); this.calcularResumen(); return; }
-    const clave = this.periodo, ahora = new Date().toISOString();
-    const q = clave === 'ciclo'
-      ? supabase.from('ciclo_lectivo_config').update({ dias_oficiales: n, updated_at: ahora }).eq('anio', this.anio)
-      : supabase.from('periodos_calificacion').update({ dias_oficiales: n, updated_at: ahora }).eq('anio', this.anio).eq('tipo', clave);
-    const { error } = await q;
-    if (error) { alert('No se pudo guardar el total. ' + (error.message || '')); return; }
-    if (clave === 'ciclo' && this.ciclo) this.ciclo.dias_oficiales = n;
-    else { const p = this.periodos.find(x => Number(x.anio) === this.anio && x.tipo === clave); if (p) p.dias_oficiales = n; }
-    this.calcularResumen();
+    const { desde, hasta } = this.filtro;
+    if (!desde || !hasta || desde > hasta) { alert('Revisá las fechas del período antes de cargar el total.'); this.calcularResumen(); return; }
+    if (await this.guardarPeriodoActual(n)) this.calcularResumen();
   },
 
   htmlDetalle(r) {
@@ -384,47 +392,6 @@ const LicenciasModulo = {
         <tbody>${delAnio.length ? delAnio.map(f => `<tr><td>${this.fmt(f.fecha)}</td><td>${this.esc(f.nombre)}</td><td>${this.AMBITOS[f.ambito] || f.ambito}</td>
           <td><button type="button" class="btn btn-outline" onclick="LicenciasModulo.eliminarFeriado(${f.id})">🗑️</button></td></tr>`).join('') : `<tr><td colspan="4" class="demo-vacio">No hay feriados cargados para ${this.anio}.</td></tr>`}</tbody>
       </table></div>`;
-  },
-
-  /* ---- CICLO Y PERÍODOS ---- */
-  htmlCiclo() {
-    const fila = (clave, titulo, ayuda) => {
-      const p = this.datosPeriodo(clave) || {};
-      return `<form class="lic-form lic-periodo" onsubmit="LicenciasModulo.guardarPeriodo(event, '${clave}')">
-        <div class="lic-ancho"><b>${titulo}</b><br><span class="acta-ayuda">${ayuda}</span></div>
-        <label>Desde <input type="date" id="per-${clave}-d" value="${p.desde || ''}" required></label>
-        <label>Hasta <input type="date" id="per-${clave}-h" value="${p.hasta || ''}" required></label>
-        <label>Días de asistencia (total oficial) <input type="number" min="0" max="366" id="per-${clave}-o" value="${p.oficiales !== null && p.oficiales !== undefined ? p.oficiales : ''}" placeholder="Opcional"></label>
-        <button type="submit" class="btn btn-gold">💾 Guardar</button>
-      </form>`;
-    };
-    return `<p class="acta-ayuda">Cada año las Pautas de Orientación para la Calificación Anual Docente de la DGCYE traen fechas y un total de días de asistencia distintos. Cargalos acá para el ciclo ${this.anio}. Si dejás el total vacío, se usan los días hábiles del calendario (lunes a viernes, sin feriados cargados).</p>`
-      + fila('ciclo', `Ciclo lectivo ${this.anio}`, 'Inicio y fin del ciclo.')
-      + fila('continuidad', 'Calificación anual · docentes con continuidad', 'Período que fija la normativa del año.')
-      + fila('interinos', 'Calificación anual · titulares interinos', 'Período que fija la normativa del año.');
-  },
-
-  async guardarPeriodo(ev, clave) {
-    ev.preventDefault();
-    const d = document.getElementById(`per-${clave}-d`).value, h = document.getElementById(`per-${clave}-h`).value;
-    const o = document.getElementById(`per-${clave}-o`).value.trim();
-    const n = o === '' ? null : parseInt(o, 10);
-    if (d > h) { alert('«Desde» no puede ser posterior a «Hasta».'); return; }
-    if (n !== null && (isNaN(n) || n < 0 || n > 366)) { alert('El total de días debe estar entre 0 y 366.'); return; }
-    const ahora = new Date().toISOString();
-    const { error } = clave === 'ciclo'
-      ? await supabase.from('ciclo_lectivo_config').upsert({ anio: this.anio, inicio: d, fin: h, dias_oficiales: n, updated_at: ahora })
-      : await supabase.from('periodos_calificacion').upsert({ anio: this.anio, tipo: clave, desde: d, hasta: h, dias_oficiales: n, updated_at: ahora });
-    if (error) { alert('No se pudo guardar. ' + (error.message || '')); return; }
-    if (clave === 'ciclo') {
-      this.ciclos = (this.ciclos || []).filter(x => Number(x.anio) !== this.anio).concat({ anio: this.anio, inicio: d, fin: h, dias_oficiales: n });
-      this.ciclo = this.ciclos.find(x => Number(x.anio) === this.anio);
-    } else {
-      this.periodos = (this.periodos || []).filter(x => !(Number(x.anio) === this.anio && x.tipo === clave)).concat({ anio: this.anio, tipo: clave, desde: d, hasta: h, dias_oficiales: n });
-    }
-    if (this.periodo === clave) { this.filtro.desde = d; this.filtro.hasta = h; }
-    this.dibujar();
-    alert('Guardado.');
   },
 
   async insertarFeriados(filas) {
