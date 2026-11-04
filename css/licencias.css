@@ -1,0 +1,15 @@
+/* Licencias docentes (Director, Regente, Secretaría) */
+.lic-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 16px; }
+.lic-anio { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; }
+.lic-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin: 12px 0; }
+.lic-form label { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; min-width: 150px; }
+.lic-form input, .lic-form select { padding: 8px; border: 1px solid #c9ced6; border-radius: 6px; font: inherit; }
+.lic-form .lic-ancho { flex: 1 1 280px; }
+.lic-cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 12px 0; }
+.lic-cifras small { color: #5b6470; }
+.lic-scroll { overflow-x: auto; margin: 12px 0; }
+.lic-tabla th, .lic-tabla td { padding: 8px 10px; text-align: left; white-space: nowrap; }
+.lic-tabla td:nth-child(n+2) { text-align: center; }
+.lic-det { margin: 8px 0; }
+.lic-lista { padding-left: 18px; line-height: 1.6; }
+@media (max-width: 640px) { .lic-form label { min-width: 100%; } }

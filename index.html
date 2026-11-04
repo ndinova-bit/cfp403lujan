@@ -55,6 +55,7 @@
   <link rel="stylesheet" href="css/ficha-inscripcion.css?v=70065">
   <link rel="stylesheet" href="css/ayuda.css?v=70077">
   <link rel="stylesheet" href="css/movil.css?v=70091">
+  <link rel="stylesheet" href="css/licencias.css?v=70100">
   <style>
     /* Los avisos de SweetAlert (progreso, resúmenes, errores) tienen que verse por encima de los paneles de la plataforma */
     .swal2-container { z-index: 20000 !important; }
@@ -352,6 +353,9 @@
   <button id="btn-observaciones" class="nav-item-btn" style="display:none" onclick="UI.showTab('observaciones')">
     <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg></span> Observaciones
   </button>
+  <button id="btn-licencias" class="nav-item-btn" style="display:none" onclick="UI.showTab('licencias')">
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/></svg></span> Licencias docentes
+  </button>
   <button id="btn-cooperadora" class="nav-item-btn" style="display:none" onclick="UI.showTab('cooperadora')">
     <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.400-7-10a4.800 4.800 0 0 1 7-4.200A4.800 4.800 0 0 1 19 11c0 5.600-7 10-7 10z"/><path d="M8 11h3M11 9v4"/></svg></span> Cooperadora
   </button>
@@ -538,6 +542,7 @@
         <section id="cuentas" class="section-tab" style="display: none;"><div id="cuentas-contenido"></div></section>
         <section id="estadisticas" class="section-tab admin-only" style="display: none;"><div id="estadisticas-contenido"></div></section>
         <section id="observaciones" class="section-tab" style="display: none;"><div id="observaciones-contenido"></div></section>
+        <section id="licencias" class="section-tab" style="display: none;"><div id="licencias-contenido"></div></section>
         <section id="ayuda" class="section-tab" style="display: none;"><div id="ayuda-contenido"></div></section>
         <section id="cooperadora" class="section-tab" style="display: none;"><div id="cooperadora-contenido"></div></section>
         <section id="seguimiento" class="section-tab" style="display: none;"><div id="seguimiento-contenido"></div></section>
@@ -1006,6 +1011,7 @@
   <script src="js/cuentas.js?v=70050" defer></script>
   <script src="js/estadisticas.js?v=70050" defer></script>
   <script src="js/observaciones.js?v=70050" defer></script>
+  <script src="js/licencias.js?v=70100" defer></script>
   <script src="js/cooperadora.js?v=70075" defer></script>
   <script src="js/nomina_cooperadora.js?v=70071" defer></script>
   <script src="js/ayuda.js?v=70089" defer></script>

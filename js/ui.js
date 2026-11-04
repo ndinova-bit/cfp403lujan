@@ -139,6 +139,8 @@ const UI = {
     const btnObs = document.getElementById('btn-observaciones');   // todo el personal (no estudiantes)
     if (btnObs) btnObs.style.setProperty('display', rolNorm !== 'estudiante' ? 'flex' : 'none', 'important');
     if (rolNorm !== 'estudiante' && window.ObservacionesModulo) setTimeout(() => ObservacionesModulo.contarPendientes(), 1000);
+    const btnLic = document.getElementById('btn-licencias');   // licencias docentes: Director, Regente y Secretaría
+    if (btnLic) btnLic.style.setProperty('display', (isAdmin || esSecretaria) ? 'flex' : 'none', 'important');
     const btnSec = document.getElementById('btn-secretaria');
     if (btnSec) btnSec.style.setProperty('display', (esSecretaria || isAdmin || rolNorm === 'preceptor') ? 'flex' : 'none', 'important');
     // Cooperadora: carga (director, regente, preceptoría); secretaría ve balance; docentes solo ven la nómina; estudiantes no la ven.
@@ -216,9 +218,11 @@ const UI = {
     const isAdmin = Auth.esDireccion(perfil.rol);
     const rolPerfil = String(perfil.rol || '').toLowerCase().trim();
     if (tabId === 'cooperadora' && rolPerfil === 'estudiante') tabId = 'trayectos';
-    if (Auth.esSecretaria(rolPerfil) && !['secretaria', 'observaciones', 'cooperadora', 'actas', 'ayuda'].includes(tabId)) tabId = 'secretaria';
+    if (Auth.esSecretaria(rolPerfil) && !['secretaria', 'observaciones', 'cooperadora', 'actas', 'licencias', 'ayuda'].includes(tabId)) tabId = 'secretaria';
     if (tabId === 'secretaria' && !(Auth.esSecretaria(rolPerfil) || isAdmin || rolPerfil === 'preceptor')) tabId = 'trayectos';
     if (tabId === 'estadisticas' && !isAdmin) tabId = 'trayectos';
+    // Licencias docentes: solo Director, Regente y Secretaría
+    if (tabId === 'licencias' && !(isAdmin || Auth.esSecretaria(rolPerfil))) tabId = 'trayectos';
     if (tabId === 'observaciones' && rolPerfil === 'estudiante') tabId = 'trayectos';
     if (tabId === 'preinscripciones' && !(Auth.esPersonal(rolPerfil) || rolPerfil === 'docente')) tabId = isAdmin ? 'dashboard' : 'trayectos';
     if (tabId === 'cuentas' && !(rolPerfil === 'regente' || rolPerfil === 'preceptor')) tabId = isAdmin ? 'dashboard' : 'trayectos';
@@ -265,6 +269,7 @@ const UI = {
         'cuentas': 'Cuentas y claves',
         'estadisticas': 'Estadísticas de trayectos',
         'observaciones': 'Observaciones',
+        'licencias': 'Licencias docentes',
         'cooperadora': 'Cooperadora Escolar',
         'ayuda': 'Ayuda y guía',
         'novedades': 'Novedades y calendario',
@@ -304,6 +309,10 @@ const UI = {
 
     if (tabId === 'observaciones' && window.ObservacionesModulo) {
       window.ObservacionesModulo.cargar();
+    }
+
+    if (tabId === 'licencias' && window.LicenciasModulo) {
+      window.LicenciasModulo.cargar();
     }
 
     if (tabId === 'estadisticas' && window.EstadisticasModulo) {
