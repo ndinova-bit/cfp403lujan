@@ -607,9 +607,12 @@ const CooperadoraModulo = {
     return res;
   },
 
-  bloqueBalance(titulo, b) {
+  // saldoAnt: saldo con que arranca el período (null = no mostrar). Etiquetas distintas para mes y ejercicio.
+  bloqueBalance(titulo, b, saldoAnt = null, etqAnt = 'SALDO DEL EJERCICIO ANTERIOR', etqCierre = 'SALDO AL CIERRE', extra = '') {
+    const conSaldo = saldoAnt !== null && saldoAnt !== undefined;
+    const totalGeneral = b.totalEntradas + Number(saldoAnt || 0);
     return `
-      <h4 style="margin:1rem 0 0.4rem;">${titulo}</h4>
+      <h4 style="margin:1rem 0 0.4rem;">${titulo}</h4>${extra}
       <div class="sec-tabla-wrap"><table class="sec-tabla">
         <thead><tr><th>Entradas</th><th style="text-align:right;">Monto</th><th>Salidas</th><th style="text-align:right;">Monto</th></tr></thead>
         <tbody>
@@ -618,17 +621,41 @@ const CooperadoraModulo = {
             return `<tr><td>${e ? this.esc(e.nombre) : ''}</td><td style="text-align:right;">${e && e.monto ? this.money(e.monto) : ''}</td><td>${s ? this.esc(s.nombre) : ''}</td><td style="text-align:right;">${s && s.monto ? this.money(s.monto) : ''}</td></tr>`;
           }).join('')}
           <tr style="font-weight:700;"><td>TOTAL ENTRADAS</td><td style="text-align:right;">${this.money(b.totalEntradas)}</td><td>TOTAL SALIDAS</td><td style="text-align:right;">${this.money(b.totalSalidas)}</td></tr>
-          <tr style="font-weight:700;"><td colspan="3">SALDO DEL PERÍODO</td><td style="text-align:right;">${this.money(b.totalEntradas - b.totalSalidas)}</td></tr>
+          <tr style="font-weight:700;"><td colspan="3">SALDO DEL PERÍODO (entradas − salidas)</td><td style="text-align:right;">${this.money(b.totalEntradas - b.totalSalidas)}</td></tr>
+          ${conSaldo ? `
+          <tr style="font-weight:700;"><td colspan="3">${etqAnt}</td><td style="text-align:right;">${this.money(saldoAnt)}</td></tr>
+          <tr style="font-weight:700;"><td colspan="3">TOTAL GENERAL (entradas + saldo anterior)</td><td style="text-align:right;">${this.money(totalGeneral)}</td></tr>
+          <tr style="font-weight:700;"><td colspan="3">${etqCierre} (total general − salidas)</td><td style="text-align:right;">${this.money(totalGeneral - b.totalSalidas)}</td></tr>` : ''}
         </tbody>
       </table></div>
     `;
   },
 
+  // Saldos iniciales cargados en el ejercicio (banco cta. cte. + plazo fijo + caja chica).
+  saldoInicialEj(ej) {
+    return ej ? Number(ej.saldo_inicial_banco_cc || 0) + Number(ej.saldo_inicial_plazo_fijo || 0) + Number(ej.saldo_inicial_caja_chica || 0) : 0;
+  },
+
+  // Saldo con que arranca un mes: saldo inicial del ejercicio + resultado de los meses previos del ejercicio.
+  saldoInicialMes(mes) {
+    const [y, m] = String(mes).split('-').map(Number);
+    if (!y || !m) return 0;
+    const desde = m >= 5 ? y : y - 1;
+    const ej = this.ejercicios.find(e => Number(e.ciclo_desde) === desde);
+    const ini = `${desde}-05-01`, finMes = `${mes}-01`;
+    const previo = this.movimientos.reduce((a, mv) => {
+      const f = String(mv.fecha || '').slice(0, 10);
+      if (f < ini || f >= finMes) return a;
+      return a + (mv.tipo === 'entrada' ? 1 : -1) * Number(mv.monto || 0);
+    }, 0);
+    return this.saldoInicialEj(ej) + previo;
+  },
+
   vistaBalance() {
     if (this.soloBalance) {
       const v = this.balVigente || { mes: '', anio: '', movs_mes: [], movs_anio: [] };
-      return `${this.bloqueBalance('Balance mensual — ' + v.mes, this.balanceDe(v.movs_mes || []))}
-        ${this.bloqueBalance('Balance anual — Ejercicio ' + v.anio + ' (01/05 al 30/04)', this.balanceDe(v.movs_anio || []))}`;
+      return `${this.bloqueBalance('Balance mensual — ' + v.mes, this.balanceDe(v.movs_mes || []), Number(v.saldo_inicial_mes || 0), 'SALDO DEL MES ANTERIOR', 'SALDO AL CIERRE DEL MES')}
+        ${this.bloqueBalance('Balance anual — Ejercicio ' + v.anio + ' (01/05 al 30/04)', this.balanceDe(v.movs_anio || []), Number(v.saldo_inicial_anio || 0), 'SALDO DEL EJERCICIO ANTERIOR', 'SALDO PARA EL PRÓXIMO EJERCICIO')}`;
     }
     if (!this.balMes) this.balMes = new Date().toISOString().slice(0, 7);
     // El "balance anual" es el del ejercicio: del 01/05 de un año al 30/04 del siguiente.
@@ -642,7 +669,9 @@ const CooperadoraModulo = {
     const movsAnio = ej ? this.movimientos.filter(m => { const f = String(m.fecha || '').slice(0, 10); return f >= `${ej.ciclo_desde}-05-01` && f <= `${ej.ciclo_hasta}-04-30`; }) : [];
     const bMes = this.balanceDe(movsMes);
     const bAnio = this.balanceDe(movsAnio);
-    const bloque = (t, b) => this.bloqueBalance(t, b);
+    const btnSaldo = (ej && this.puedeEditar) ? `<p style="margin:0 0 0.4rem; font-size:0.85rem;">El saldo del ejercicio anterior se carga en Ejercicio → Editar datos → «Saldos iniciales del ejercicio». <button class="act-btn" onclick="CooperadoraModulo.ejercicioActual=${ej.id}; CooperadoraModulo.formEjercicio(${ej.id})">✏️ Cargar saldo del ejercicio anterior</button></p>` : '';
+    const saldoMes = this.saldoInicialMes(this.balMes);
+    const saldoAnio = ej ? this.saldoInicialEj(ej) : null;
     const etiquetaEj = ej ? `Ejercicio ${ej.ciclo_desde}/${ej.ciclo_hasta} (01/05/${ej.ciclo_desde} al 30/04/${ej.ciclo_hasta})` : 'sin ejercicio cargado';
     return `
       <div style="display:flex; gap:1rem; flex-wrap:wrap; margin-bottom:0.5rem;">
@@ -651,8 +680,8 @@ const CooperadoraModulo = {
           ${this.ejercicios.map(e => `<option value="${e.id}" ${e.id === this.balEjercicio ? 'selected' : ''}>${e.ciclo_desde}/${e.ciclo_hasta}</option>`).join('') || '<option value="">(creá un ejercicio)</option>'}
         </select></label>
       </div>
-      ${bloque('Balance mensual — ' + this.balMes, bMes)}
-      ${bloque('Balance anual — ' + etiquetaEj, bAnio)}
+      ${this.bloqueBalance('Balance mensual — ' + this.balMes, bMes, saldoMes, 'SALDO DEL MES ANTERIOR (incluye saldo del ejercicio anterior)', 'SALDO AL CIERRE DEL MES')}
+      ${this.bloqueBalance('Balance anual — ' + etiquetaEj, bAnio, saldoAnio, 'SALDO DEL EJERCICIO ANTERIOR', 'SALDO PARA EL PRÓXIMO EJERCICIO', btnSaldo)}
     `;
   },
 
