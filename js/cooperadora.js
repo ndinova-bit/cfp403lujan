@@ -798,6 +798,7 @@ const CooperadoraModulo = {
         const g = id => document.getElementById(id).value.trim();
         const desde = Number(g('e-desde')), hasta = Number(g('e-hasta'));
         if (!desde || !hasta) { Swal.showValidationMessage('Completá los años del ejercicio.'); return false; }
+        if (hasta !== desde + 1) { Swal.showValidationMessage('El ejercicio va del 01/05 de un año al 30/04 del siguiente: «hasta» debe ser «desde» + 1 (ej. 2026 y 2027).'); return false; }
         return {
           ciclo_desde: desde, ciclo_hasta: hasta,
           distrito: g('e-distrito') || null, escuela_nombre: g('e-escuela') || null, escuela_nro: g('e-nro') || null,
