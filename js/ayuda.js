@@ -208,7 +208,7 @@ const AyudaModulo = {
     },
 
     planilla: {
-      t: 'Planilla de matrícula', roles: ['docente', 'preceptor', 'regente', 'admin', 'secretaria'],
+      t: 'Planilla de matrícula', roles: ['preceptor', 'regente', 'admin', 'secretaria'],
       corto: 'Planilla mensual POF/POFA.',
       que: 'Planilla de información básica de matrícula mensual (POF/POFA).',
       pasos: [

@@ -1,0 +1,10 @@
+-- 60. La planilla POF/POFA ya no la pueden ver los docentes
+-- planilla_matricula() queda solo para dirección, regencia, preceptoría y secretaría.
+-- Cambio único respecto de sql/22: se quitó «or public.es_docente()» de la validación inicial:
+--
+--   if not (public.es_personal() or public.es_secretaria()) then
+--     raise exception 'No autorizado';
+--   end if;
+--
+-- Ya aplicada en Supabase como migración «planilla_matricula_sin_docentes»
+-- (el resto de la función es idéntico a sql/22_planilla_mes_en_curso.sql).

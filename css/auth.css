@@ -170,3 +170,43 @@
   background: rgba(255, 255, 255, 0.05);
   color: var(--text-main, #f8fafc);
 }
+
+/* ---------- Ojito para ver la contraseña (js/auth.js → Auth.activarOjitos) ---------- */
+.campo-clave {
+  position: relative;
+  display: block;
+}
+
+.campo-clave > input {
+  width: 100%;
+  box-sizing: border-box;
+  padding-right: 3rem;
+}
+
+.campo-clave-ojo {
+  position: absolute;
+  top: 50%;
+  right: 0.25rem;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.campo-clave-ojo:hover,
+.campo-clave-ojo:focus-visible {
+  color: var(--accent-gold, #eab308);
+}
+
+.campo-clave-ojo:focus-visible {
+  outline: 2px solid var(--accent-gold, #eab308);
+  outline-offset: -2px;
+}

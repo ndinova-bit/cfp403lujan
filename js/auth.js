@@ -268,6 +268,7 @@ const Auth = {
       showCancelButton: true,
       confirmButtonText: 'Guardar',
       cancelButtonText: 'Cancelar',
+      didOpen: (popup) => Auth.activarOjitos(popup),
       preConfirm: () => {
         const actual = document.getElementById('clave-actual').value;
         const nueva = document.getElementById('clave-nueva').value;
@@ -372,6 +373,59 @@ const Auth = {
     }
   }
 };
+
+/* ---------- ojito para ver lo que se escribe en los campos de contraseña ---------- */
+
+const OJITO_ABIERTO = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const OJITO_TACHADO = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C5 20 1 12 1 12a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>';
+
+// Agrega el ojito a cada campo de contraseña que haya dentro de `raiz` (o de toda la página)
+Auth.activarOjitos = function (raiz) {
+  (raiz || document).querySelectorAll('input[type="password"]').forEach((input) => {
+    if (input.dataset.ojito) return;
+    input.dataset.ojito = '1';
+
+    const caja = document.createElement('div');
+    caja.className = 'campo-clave';
+    // La caja toma el margen del campo para que no se mueva nada del diseño
+    caja.style.margin = getComputedStyle(input).margin;
+    input.style.margin = '0';
+    input.parentNode.insertBefore(caja, input);
+    caja.appendChild(input);
+
+    const boton = document.createElement('button');
+    boton.type = 'button';
+    boton.className = 'campo-clave-ojo';
+    boton.setAttribute('aria-label', 'Mostrar contraseña');
+    boton.setAttribute('aria-pressed', 'false');
+    boton.innerHTML = OJITO_ABIERTO;
+    boton.addEventListener('click', () => {
+      const visible = input.type === 'password';
+      input.type = visible ? 'text' : 'password';
+      boton.innerHTML = visible ? OJITO_TACHADO : OJITO_ABIERTO;
+      boton.setAttribute('aria-label', visible ? 'Ocultar contraseña' : 'Mostrar contraseña');
+      boton.setAttribute('aria-pressed', visible ? 'true' : 'false');
+      input.focus();
+    });
+    caja.appendChild(boton);
+
+    // Al enviar el formulario, la clave vuelve a quedar oculta
+    if (input.form) {
+      input.form.addEventListener('submit', () => {
+        input.type = 'password';
+        boton.innerHTML = OJITO_ABIERTO;
+        boton.setAttribute('aria-label', 'Mostrar contraseña');
+        boton.setAttribute('aria-pressed', 'false');
+      });
+    }
+  });
+};
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => Auth.activarOjitos());
+} else {
+  Auth.activarOjitos();
+}
 
 window.Auth = Auth;
 window.AuthModulo = Auth;
