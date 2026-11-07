@@ -436,28 +436,62 @@ const AyudaModulo = {
     return !!(el && getComputedStyle(el).display !== 'none' && el.getClientRects().length);
   },
 
+  // Accesos directos del cierre, según el rol (se muestran solo los que esa persona ve)
+  ATAJOS: {
+    estudiante: ['btn-progreso', 'btn-trayectos'],
+    docente: ['btn-trayectos', 'btn-novedades', 'btn-cooperadora'],
+    preceptor: ['btn-seguimiento', 'btn-trayectos', 'btn-constancias'],
+    regente: ['btn-dashboard', 'btn-trayectos', 'btn-seguimiento', 'btn-licencias'],
+    admin: ['btn-dashboard', 'btn-trayectos', 'btn-seguimiento', 'btn-usuarios'],
+    secretaria: ['btn-secretaria', 'btn-cooperadora', 'btn-licencias']
+  },
+
+  iconoDe(el) {
+    const s = el && el.querySelector('.icon svg');
+    return s ? s.outerHTML : '';
+  },
+
+  nombreDe(el) {
+    return el ? el.textContent.replace(/\s+/g, ' ').replace(/[\u{1F000}-\u{1FAFF}☀-➿️]/gu, '').trim() : '';
+  },
+
+  // Hasta 3 puntos cortos del tema, para que la tarjeta no sea una sola frase
+  puntosDe(tema) {
+    return (tema && tema.pasos || []).filter(x => x.length <= 125).slice(0, 3);
+  },
+
   armarPasos() {
     const rol = this.rol();
-    const pasos = [{
-      titulo: 'Plataforma del ' + this.NOMBRE_CORTO,
-      texto: `Este recorrido presenta las secciones disponibles para tu rol: <strong>${this.esc(this.ROLES[rol])}</strong>. Podés cerrarlo en cualquier momento y volver a verlo desde «Ayuda y guía».`
-    }];
-    document.querySelectorAll('.sidebar-nav .nav-item-btn').forEach(b => {
-      if (getComputedStyle(b).display === 'none') return;
+    const pasos = [];
+    const botones = [...document.querySelectorAll('.sidebar-nav .nav-item-btn')].filter(b => getComputedStyle(b).display !== 'none');
+    const secciones = [];
+    botones.forEach(b => {
       const tema = this.tema(this.BOTON_TEMA[b.id], rol);
       if (b.id === 'btn-ayuda') {
-        pasos.push({ el: b, lateral: true, titulo: 'Ayuda y guía', texto: 'Guía completa del rol, este recorrido y la versión en PDF para descargar.' });
+        secciones.push({ el: b, lateral: true, icono: this.iconoDe(b), titulo: 'Ayuda y guía', texto: 'Guía completa del rol, este recorrido y la versión en PDF para descargar.' });
       } else if (tema) {
-        pasos.push({ el: b, lateral: true, titulo: tema.t, texto: tema.corto || tema.que });
+        secciones.push({ el: b, lateral: true, icono: this.iconoDe(b), titulo: tema.t, texto: tema.corto || tema.que, puntos: this.puntosDe(tema) });
       }
     });
+    pasos.push({
+      tipo: 'bienvenida',
+      titulo: this.NOMBRE_PDF,
+      texto: `Recorrido por las <strong>${secciones.length} secciones</strong> disponibles para tu rol. Dura un par de minutos y podés volver a verlo desde «Ayuda y guía».`
+    });
+    secciones.forEach(x => pasos.push(x));
     const clave = [...document.querySelectorAll('.sidebar button')].find(b => /Cambiar mi contraseña/.test(b.textContent));
-    if (this.visible(clave)) pasos.push({ el: clave, lateral: true, titulo: 'Contraseña', texto: 'Permite reemplazar la clave inicial por una propia. Se recomienda hacerlo en el primer ingreso.' });
+    if (this.visible(clave)) pasos.push({ el: clave, lateral: true, icono: this.iconoDe(clave), titulo: 'Contraseña', texto: 'Permite reemplazar la clave inicial por una propia. Se recomienda hacerlo en el primer ingreso.' });
     const inst = document.querySelector('.sidebar .app-boton-instalar');
-    if (this.visible(inst)) pasos.push({ el: inst, lateral: true, titulo: 'Instalar la app', texto: 'Deja la plataforma como un ícono en el celular o la computadora.' });
+    if (this.visible(inst)) pasos.push({ el: inst, lateral: true, icono: this.iconoDe(inst), titulo: 'Instalar la app', texto: 'Deja la plataforma como un ícono en el celular o la computadora.' });
     const q = document.getElementById('btn-ayuda-pantalla');
     if (this.visible(q)) pasos.push({ el: q, lateral: false, titulo: 'Botón «?»', texto: 'En cualquier pantalla explica para qué sirve y cómo se usa.' });
-    pasos.push({ titulo: 'Fin del recorrido', texto: 'Para consultas, la guía completa de tu rol está en «Ayuda y guía».' });
+    const atajos = (this.ATAJOS[rol] || []).map(id => document.getElementById(id)).filter(b => b && botones.includes(b));
+    pasos.push({
+      tipo: 'cierre',
+      titulo: 'Fin del recorrido',
+      texto: atajos.length ? 'Podés empezar por alguna de estas secciones. La guía completa de tu rol está en «Ayuda y guía».' : 'La guía completa de tu rol está en «Ayuda y guía».',
+      atajos: atajos.map(b => ({ el: b, nombre: this.nombreDe(b), icono: this.iconoDe(b) }))
+    });
     return pasos;
   },
 
@@ -499,23 +533,57 @@ const AyudaModulo = {
     const foco = v.querySelector('.ayuda-tour-foco'), card = v.querySelector('.ayuda-tour-card');
     if (this._celular && window.UI && UI.toggleMenu) UI.toggleMenu(!!(p.el && p.lateral));
     if (p.el && window.UI && UI.abrirGrupoDe) UI.abrirGrupoDe(p.el);
-    const ult = this._i === total - 1;
-    card.innerHTML = `
-      <div class="ayuda-tour-cab">
-        <span class="ayuda-tour-paso">Paso ${this._i + 1} de ${total}</span>
-        <button type="button" class="ayuda-tour-x" aria-label="Cerrar recorrido">×</button>
-      </div>
-      <h4>${p.titulo}</h4>
-      <p>${p.texto}</p>
-      <div class="ayuda-tour-barra"><span style="width:${Math.round(((this._i + 1) / total) * 100)}%"></span></div>
-      <div class="ayuda-tour-pie">
-        ${ult ? '<span></span>' : '<button type="button" class="ayuda-tour-omitir">Omitir</button>'}
-        <span>
-          ${this._i > 0 ? '<button type="button" class="ayuda-tour-ant">Anterior</button>' : ''}
-          <button type="button" class="ayuda-tour-sig">${ult ? 'Finalizar' : 'Siguiente'}</button>
-        </span>
-      </div>`;
-    card.querySelector('.ayuda-tour-x').onclick = () => this.cerrarRecorrido(true);
+    const tipo = p.tipo || 'seccion';
+    const nSecc = this._pasos.filter(x => !x.tipo).length;
+    const nPaso = this._pasos.slice(0, this._i + 1).filter(x => !x.tipo).length;
+    v.classList.toggle('ayuda-tour-pleno', tipo === 'bienvenida');
+    card.classList.toggle('ayuda-tour-central', tipo !== 'seccion');
+    if (tipo === 'bienvenida') {
+      card.innerHTML = `
+        <img class="ayuda-tour-logo" src="logo.png" alt="">
+        <span class="ayuda-tour-rol">${this.esc(this.ROLES[this.rol()])}</span>
+        <h4>${this.esc(p.titulo)}</h4>
+        <p>${p.texto}</p>
+        <div class="ayuda-tour-acciones">
+          <button type="button" class="ayuda-tour-sig">Comenzar recorrido</button>
+          <button type="button" class="ayuda-tour-omitir">Ahora no</button>
+        </div>`;
+    } else if (tipo === 'cierre') {
+      card.innerHTML = `
+        <h4>${p.titulo}</h4>
+        <p>${p.texto}</p>
+        ${p.atajos.length ? `<div class="ayuda-tour-atajos">${p.atajos.map((a, k) => `<button type="button" class="ayuda-tour-atajo" data-k="${k}"><span class="ayuda-tour-ico">${a.icono}</span>${this.esc(a.nombre)}</button>`).join('')}</div>` : ''}
+        <div class="ayuda-tour-acciones">
+          <button type="button" class="ayuda-tour-sig">Finalizar</button>
+          <button type="button" class="ayuda-tour-ant">Anterior</button>
+        </div>`;
+      card.querySelectorAll('.ayuda-tour-atajo').forEach(bt => {
+        bt.onclick = () => { const a = p.atajos[+bt.dataset.k]; this.cerrarRecorrido(true); if (a && a.el) a.el.click(); };
+      });
+    } else {
+      card.innerHTML = `
+        <div class="ayuda-tour-cab">
+          <span class="ayuda-tour-paso">Sección ${nPaso} de ${nSecc}</span>
+          <button type="button" class="ayuda-tour-x" aria-label="Cerrar recorrido">×</button>
+        </div>
+        <div class="ayuda-tour-tit">
+          ${p.icono ? `<span class="ayuda-tour-ico">${p.icono}</span>` : ''}
+          <h4>${p.titulo}</h4>
+        </div>
+        <p>${p.texto}</p>
+        ${p.puntos && p.puntos.length ? `<ul class="ayuda-tour-puntos">${p.puntos.map(x => `<li>${this.esc(x)}</li>`).join('')}</ul>` : ''}
+        <div class="ayuda-tour-barra"><span style="width:${Math.round((this._i / (total - 1)) * 100)}%"></span></div>
+        <div class="ayuda-tour-pie">
+          <button type="button" class="ayuda-tour-omitir">Omitir</button>
+          <span>
+            <button type="button" class="ayuda-tour-ant">Anterior</button>
+            <button type="button" class="ayuda-tour-sig">Siguiente</button>
+          </span>
+        </div>`;
+    }
+    card.style.animation = 'none'; void card.offsetWidth; card.style.animation = '';
+    const bx = card.querySelector('.ayuda-tour-x');
+    if (bx) bx.onclick = () => this.cerrarRecorrido(true);
     card.querySelector('.ayuda-tour-sig').onclick = () => this.siguiente();
     const omitir = card.querySelector('.ayuda-tour-omitir');
     if (omitir) omitir.onclick = () => this.cerrarRecorrido(true);
@@ -523,7 +591,7 @@ const AyudaModulo = {
     if (ant) ant.onclick = () => this.anterior();
 
     const colocar = () => {
-      const m = 12, cw = Math.min(340, window.innerWidth - 2 * m);
+      const m = 12, cw = Math.min(p.tipo ? 440 : 360, window.innerWidth - 2 * m);
       card.style.width = cw + 'px';
       if (!p.el) {
         foco.style.cssText = 'left:50%;top:50%;width:0;height:0;';

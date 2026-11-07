@@ -31,7 +31,7 @@
 .ayuda-tour-card { position: fixed; background: #fff; color: #0f172a; border: 1px solid #e2e8f0; border-radius: 10px; padding: .9rem 1.1rem 1rem; box-shadow: 0 10px 30px rgba(15,23,42,.28); font-family: inherit; }
 .ayuda-tour-cab { display: flex; justify-content: space-between; align-items: center; margin-bottom: .35rem; }
 .ayuda-tour-paso { font-size: .72rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: #64748b; }
-.ayuda-tour-card h4 { margin: 0 0 .35rem; font-size: 1.02rem; font-weight: 700; color: #0f172a; }
+.ayuda-tour-card h4 { margin: 0; font-size: 1.02rem; font-weight: 700; color: #0f172a; }
 .ayuda-tour-card p { margin: 0 0 .9rem; font-size: .9rem; line-height: 1.5; color: #475569; }
 .ayuda-tour-barra { height: 3px; background: #e2e8f0; border-radius: 2px; margin-bottom: .85rem; overflow: hidden; }
 .ayuda-tour-barra span { display: block; height: 100%; background: #2563eb; transition: width .2s ease; }
@@ -45,6 +45,30 @@
 .ayuda-tour-omitir:hover { color: #0f172a; text-decoration: underline; }
 .ayuda-tour-x { border: 0; background: none; font-size: 1.4rem; line-height: 1; cursor: pointer; color: #94a3b8; padding: 0; }
 .ayuda-tour-x:hover { color: #0f172a; }
+
+.ayuda-tour-tit { display: flex; align-items: center; gap: .7rem; margin-bottom: .55rem; }
+.ayuda-tour-ico { flex: 0 0 auto; width: 42px; height: 42px; border-radius: 10px; background: #e8efff; color: #1e3a8a; display: inline-flex; align-items: center; justify-content: center; }
+.ayuda-tour-ico svg { width: 22px; height: 22px; }
+.ayuda-tour-puntos { margin: 0 0 .9rem; padding-left: 1.1rem; font-size: .85rem; line-height: 1.45; color: #475569; }
+.ayuda-tour-puntos li { margin-bottom: .25rem; }
+.ayuda-tour-central { text-align: center; padding: 1.6rem 1.6rem 1.4rem; }
+.ayuda-tour-central h4 { font-size: 1.15rem; margin-bottom: .5rem; }
+.ayuda-tour-central p { margin-bottom: 1.1rem; }
+.ayuda-tour-logo { height: 76px; width: auto; display: block; margin: 0 auto .8rem; }
+.ayuda-tour-rol { display: inline-block; font-size: .72rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: #1e3a8a; background: #e8efff; border-radius: 999px; padding: .2rem .7rem; margin-bottom: .7rem; }
+.ayuda-tour-acciones { display: flex; flex-direction: column; gap: .4rem; align-items: stretch; }
+.ayuda-tour-acciones button { border: 1px solid transparent; border-radius: 6px; padding: .55rem .9rem; font-weight: 600; cursor: pointer; font-size: .9rem; font-family: inherit; }
+.ayuda-tour-acciones .ayuda-tour-omitir { padding-left: .9rem !important; }
+.ayuda-tour-acciones .ayuda-tour-ant { margin-right: 0; }
+.ayuda-tour-atajos { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .5rem; margin-bottom: 1.1rem; }
+.ayuda-tour-atajo { display: flex; align-items: center; gap: .6rem; text-align: left; border: 1px solid #e2e8f0; background: #f8fafc; color: #0f172a; border-radius: 8px; padding: .5rem .6rem; font-size: .85rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+.ayuda-tour-atajo:hover { border-color: #93c5fd; background: #eff6ff; }
+.ayuda-tour-atajo .ayuda-tour-ico { width: 32px; height: 32px; border-radius: 8px; }
+.ayuda-tour-atajo .ayuda-tour-ico svg { width: 18px; height: 18px; }
+.ayuda-tour-pleno .ayuda-tour-foco { box-shadow: 0 0 0 9999px rgba(11,31,66,.9); border-color: transparent; }
+.ayuda-tour-card { animation: ayuda-tour-in .22s ease both; }
+@keyframes ayuda-tour-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .ayuda-tour-card { animation: none; } .ayuda-tour-foco { transition: none; } }
 
 /* Menú lateral: grupos desplegables */
 .sidebar-nav .nav-grupo { display: flex; flex-direction: column; gap: .35rem; width: 100%; }
