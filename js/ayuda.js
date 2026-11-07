@@ -60,7 +60,7 @@ const AyudaModulo = {
       corto: 'Tus cursos: clases, actividades y asistencia.',
       que: 'Lista de trayectos (cursos). Cada uno se abre con «Ver Clases y Actividades».',
       pasos: [
-        'Entrá al trayecto con «📖 Ver Clases y Actividades».',
+        'Entrá al trayecto con «Ver Clases y Actividades».',
         'Ahí están las clases, el material y las actividades, ordenados por módulo.',
         'Entregá cada actividad dentro del plazo que figura en la consigna.'
       ],
@@ -69,7 +69,7 @@ const AyudaModulo = {
         docente: {
           que: 'Tus trayectos asignados (o suplencias) del ciclo.',
           pasos: [
-            'Abrí un trayecto con «📖 Ver Clases y Actividades».',
+            'Abrí un trayecto con «Ver Clases y Actividades».',
             'Dentro del trayecto cargás clases, material y actividades, tomás asistencia, calificás y completás el libro de temas y la planificación.',
             'En los trayectos sin módulos podés registrar bajas manuales; en los que tienen módulos la baja es automática. Reincorporar lo hacen Dirección, Regencia y Preceptoría.'
           ],
@@ -78,7 +78,7 @@ const AyudaModulo = {
         preceptor: {
           que: 'Todos los trayectos del CFP.',
           pasos: [
-            'Entrá a un trayecto con «📖 Ver Clases y Actividades» para ver estudiantes, asistencia y notas.',
+            'Entrá a un trayecto con «Ver Clases y Actividades» para ver estudiantes, asistencia y notas.',
             'Registrá bajas manuales y reincorporaciones.',
             'Podés importar estudiantes a un trayecto desde un archivo CSV o Excel (carga masiva).'
           ],
@@ -87,16 +87,16 @@ const AyudaModulo = {
         regente: {
           que: 'Todos los trayectos del CFP, con edición de sus datos.',
           pasos: [
-            'Con «✏️ Editar» cambiás los datos del trayecto (horarios, docente, sede, fechas).',
-            '«📖 Ver Clases y Actividades» muestra clases, asistencia, notas, libro de temas y planificación.',
+            'Con «Editar» cambiás los datos del trayecto (horarios, docente, sede, fechas).',
+            '«Ver Clases y Actividades» muestra clases, asistencia, notas, libro de temas y planificación.',
             'Podés importar estudiantes de un archivo CSV o Excel y registrar bajas o reincorporaciones.'
           ]
         },
         admin: {
           que: 'Todos los trayectos del CFP, con edición de sus datos.',
           pasos: [
-            'Con «✏️ Editar» cambiás los datos del trayecto (horarios, docente, sede, fechas).',
-            '«📖 Ver Clases y Actividades» muestra clases, asistencia, notas, libro de temas y planificación.',
+            'Con «Editar» cambiás los datos del trayecto (horarios, docente, sede, fechas).',
+            '«Ver Clases y Actividades» muestra clases, asistencia, notas, libro de temas y planificación.',
             'Podés importar estudiantes de un archivo CSV o Excel y registrar bajas o reincorporaciones.'
           ]
         }
@@ -130,10 +130,10 @@ const AyudaModulo = {
       corto: 'Totales por trayecto y matrícula escolar.',
       que: 'Resumen de inscriptos y datos por trayecto para completar planillas y relevamientos.',
       pasos: [
-        'Elegí el ciclo lectivo y revisá los totales por trayecto.',
-        '«📊 Descargar Excel» o «📋 Copiar tabla» sacan los datos para pegarlos donde los necesites.',
-        '«🏫 Matrícula escolar» arma los cuadros del Relevamiento Anual (alumnos por certificado, sexo y edad).',
-        '«📑 Planilla de matrícula (POF/POFA)» abre la planilla mensual lista para imprimir.'
+        'Elegí el ciclo lectivo y revisá los totales por trayecto: inscriptos, bajas, clases, % de asistencia y asistencia media (promedio de presentes por clase).',
+        '«Descargar Excel» o «Copiar tabla» sacan los datos para pegarlos donde los necesites.',
+        '«Matrícula escolar» arma los cuadros del Relevamiento Anual (alumnos por certificado, sexo y edad).',
+        '«Planilla de matrícula (POF/POFA)» abre la planilla mensual lista para imprimir.'
       ]
     },
 
@@ -163,8 +163,8 @@ const AyudaModulo = {
       que: 'Ayuda a estudiantes y docentes que no pueden entrar.',
       pasos: [
         'Buscá a la persona por DNI o apellido.',
-        '«🔑 Restablecer clave» deja la contraseña en CFP403_ seguida del DNI y cierra las sesiones abiertas. Avisale a la persona para que la cambie.',
-        '«✓ Aprobar» habilita a los estudiantes que se registraron por su cuenta.'
+        '«Restablecer clave» deja la contraseña en CFP403_ seguida del DNI y cierra las sesiones abiertas. Avisale a la persona para que la cambie.',
+        '«Aprobar» habilita a los estudiantes que se registraron por su cuenta.'
       ],
       ojo: ['Los roles y las cuentas del personal los gestiona el Director.']
     },
@@ -174,11 +174,32 @@ const AyudaModulo = {
       corto: 'Registro institucional de observaciones.',
       que: 'Registro compartido por el personal de situaciones y seguimientos de estudiantes.',
       pasos: [
-        '«➕ Nueva observación» registra una situación; «➕ Agregar seguimiento» suma novedades a una ya abierta.',
-        'Se puede adjuntar un acta o correo y verlo con «📎 Ver acta o correo».',
-        '«✏️ Corregir» y «🗑️ Eliminar» ajustan lo cargado.'
+        '«Nueva observación» registra una situación; «Agregar seguimiento» suma novedades a una ya abierta.',
+        'Se puede adjuntar un acta o correo y verlo con «Ver acta o correo».',
+        '«Corregir» y «Eliminar» ajustan lo cargado.'
       ],
       ojo: ['Es información interna: no la ven los estudiantes.']
+    },
+
+    licencias: {
+      t: 'Licencias docentes', roles: ['regente', 'admin', 'secretaria'],
+      corto: 'Licencias, paros y días trabajados por docente.',
+      que: 'Registro de licencias y paros del personal docente, con el cálculo de días trabajados en un período.',
+      pasos: [
+        'Resumen por docente: elegí al docente y el período (ciclo lectivo o calificación anual). Muestra días trabajados, inasistencias y el detalle por tipo de licencia.',
+        'En los períodos de calificación anual, cargá las fechas y el total de días que fijan las Pautas de Orientación; ese total reemplaza al cálculo por calendario.',
+        'Licencias y paros: cargá cada licencia con docente, tipo, fechas y observaciones. Se puede corregir o eliminar.',
+        'Feriados: cargá los feriados, asuetos y recesos. Los de fecha fija se importan solos; los trasladables y los puentes se ingresan a mano.',
+        'El resumen se puede descargar en Excel.'
+      ],
+      ojo: ['Los días se cuentan de lunes a viernes sin feriados, y un día con licencias superpuestas cuenta una sola vez.']
+    },
+
+    practicas: {
+      t: 'Resultados de prácticas', roles: ['admin'],
+      corto: 'Abre el panel de la plataforma de prácticas.',
+      que: 'Acceso al panel de resultados de la plataforma de prácticas, que es un sitio aparte.',
+      pasos: ['El botón abre el panel en otra pestaña del navegador.', 'Para volver a esta plataforma, cerrá esa pestaña o cambiá de pestaña.']
     },
 
     cooperadora: {
@@ -188,7 +209,7 @@ const AyudaModulo = {
       pasos: [
         'Socios: padrón con N.º de socio, categoría, domicilio, contacto y cobro de cuota social. Se busca por apellido, DNI o número; se puede editar, dar de baja o eliminar (solo si se cargó por error y no tiene cobros).',
         'Ingresos y Egresos: cada movimiento lleva fecha, rubro, monto y comprobante.',
-        'Balance: mensual y anual, igual al cuadro 8 del PIA.',
+        'Balance: mensual y anual, igual al cuadro 8 del PIA. Incluye el saldo del mes anterior y el del ejercicio anterior.',
         'Ejercicio / PIA: cada ejercicio va del 01/05 al 30/04. Ahí se cargan sus datos, la comisión (cuadros 4, 5 y 6) y se genera el PIA en PDF.',
         'Nómina de autoridades: se arma sola con la comisión del ejercicio y se imprime con firmas.',
         'Constancias: comprobantes de la cooperadora.'
@@ -276,9 +297,9 @@ const AyudaModulo = {
       que: 'Gestión de todas las cuentas de la plataforma (solo Director).',
       pasos: [
         '«+ Crear nuevo usuario» da de alta personal o estudiantes y asigna el rol.',
-        'Con ✏️ corregís apellido, nombre o correo. En el personal, el correo también cambia el de acceso.',
+        'Con corregís apellido, nombre o correo. En el personal, el correo también cambia el de acceso.',
         '«Inhabilitar» bloquea una cuenta a mano; «Reactivar» la vuelve a habilitar.',
-        '«🗓️ Cierre de año» pasa a INACTIVO a los estudiantes sin inscripción vigente en el ciclo siguiente: ves la lista y elegís a quién. No se borra nada, y se reactivan solos al volver a inscribirse.'
+        '«Cierre de año» pasa a INACTIVO a los estudiantes sin inscripción vigente en el ciclo siguiente: ves la lista y elegís a quién. No se borra nada, y se reactivan solos al volver a inscribirse.'
       ],
       ojo: ['INACTIVO es el estado del cierre de año; INHABILITADO es el bloqueo manual y nunca se reactiva solo.']
     },
@@ -306,7 +327,7 @@ const AyudaModulo = {
   BOTON_TEMA: {
     'btn-dashboard': 'dashboard', 'btn-progreso': 'progreso', 'btn-seguimiento': 'seguimiento',
     'btn-secretaria': 'secretaria', 'btn-preinscripciones': 'preinscripciones', 'btn-cuentas': 'cuentas',
-    'btn-observaciones': 'observaciones', 'btn-cooperadora': 'cooperadora', 'btn-planilla': 'planilla',
+    'btn-observaciones': 'observaciones', 'btn-licencias': 'licencias', 'btn-practicas': 'practicas', 'btn-cooperadora': 'cooperadora', 'btn-planilla': 'planilla',
     'btn-constancias': 'constancias', 'btn-trayectos': 'trayectos', 'btn-actas': 'actas',
     'btn-nuevo-trayecto': 'nuevo-trayecto', 'btn-novedades': 'novedades',
     'btn-usuarios': 'usuarios', 'btn-backups': 'backups', 'btn-estadisticas': 'estadisticas', 'btn-auditoria': 'auditoria'
@@ -347,8 +368,8 @@ const AyudaModulo = {
             <p>Esta guía muestra solo lo que corresponde a tu rol: <strong>${this.esc(this.ROLES[rol])}</strong>.</p>
           </div>
           <div class="ayuda-acciones">
-            <button type="button" class="btn btn-gold" onclick="AyudaModulo.iniciarRecorrido()">▶ Ver recorrido guiado</button>
-            <button type="button" class="btn btn-outline" onclick="AyudaModulo.descargarPDF()">📄 Descargar guía en PDF</button>
+            <button type="button" class="btn btn-gold" onclick="AyudaModulo.iniciarRecorrido()">Ver recorrido guiado</button>
+            <button type="button" class="btn btn-outline" onclick="AyudaModulo.descargarPDF()">Descargar guía en PDF</button>
           </div>
         </div>
         ${temas.map((t, i) => `
@@ -364,7 +385,7 @@ const AyudaModulo = {
     return `
       <p class="ayuda-que">${this.esc(t.que)}</p>
       ${t.pasos.length ? `<ol>${t.pasos.map(p => `<li>${this.esc(p)}</li>`).join('')}</ol>` : ''}
-      ${t.ojo && t.ojo.length ? `<div class="ayuda-ojo"><strong>Tené en cuenta</strong><ul>${t.ojo.map(o => `<li>${this.esc(o)}</li>`).join('')}</ul></div>` : ''}`;
+      ${t.ojo && t.ojo.length ? `<div class="ayuda-ojo"><strong>Importante</strong><ul>${t.ojo.map(o => `<li>${this.esc(o)}</li>`).join('')}</ul></div>` : ''}`;
   },
 
   /* ---------- 2) «?» de la pantalla actual ---------- */
@@ -418,25 +439,25 @@ const AyudaModulo = {
   armarPasos() {
     const rol = this.rol();
     const pasos = [{
-      titulo: '¡Bienvenido/a a la plataforma del ' + this.NOMBRE_CORTO + '!',
-      texto: `Te mostramos rápido lo que podés hacer como <strong>${this.esc(this.ROLES[rol])}</strong>. Podés salir cuando quieras y volver a verlo desde «Ayuda y guía».`
+      titulo: 'Plataforma del ' + this.NOMBRE_CORTO,
+      texto: `Este recorrido presenta las secciones disponibles para tu rol: <strong>${this.esc(this.ROLES[rol])}</strong>. Podés cerrarlo en cualquier momento y volver a verlo desde «Ayuda y guía».`
     }];
     document.querySelectorAll('.sidebar-nav .nav-item-btn').forEach(b => {
       if (getComputedStyle(b).display === 'none') return;
       const tema = this.tema(this.BOTON_TEMA[b.id], rol);
       if (b.id === 'btn-ayuda') {
-        pasos.push({ el: b, lateral: true, titulo: 'Ayuda y guía', texto: 'Acá está la guía completa de tu rol, este recorrido y la guía en PDF para descargar.' });
+        pasos.push({ el: b, lateral: true, titulo: 'Ayuda y guía', texto: 'Guía completa del rol, este recorrido y la versión en PDF para descargar.' });
       } else if (tema) {
         pasos.push({ el: b, lateral: true, titulo: tema.t, texto: tema.corto || tema.que });
       }
     });
     const clave = [...document.querySelectorAll('.sidebar button')].find(b => /Cambiar mi contraseña/.test(b.textContent));
-    if (this.visible(clave)) pasos.push({ el: clave, lateral: true, titulo: 'Tu contraseña', texto: 'Cambiala por una propia la primera vez que entres.' });
+    if (this.visible(clave)) pasos.push({ el: clave, lateral: true, titulo: 'Contraseña', texto: 'Permite reemplazar la clave inicial por una propia. Se recomienda hacerlo en el primer ingreso.' });
     const inst = document.querySelector('.sidebar .app-boton-instalar');
-    if (this.visible(inst)) pasos.push({ el: inst, lateral: true, titulo: 'Instalar la app', texto: 'Dejá la plataforma como un ícono en tu celular o computadora.' });
+    if (this.visible(inst)) pasos.push({ el: inst, lateral: true, titulo: 'Instalar la app', texto: 'Deja la plataforma como un ícono en el celular o la computadora.' });
     const q = document.getElementById('btn-ayuda-pantalla');
-    if (this.visible(q)) pasos.push({ el: q, lateral: false, titulo: 'El botón «?»', texto: 'En cualquier pantalla, tocá este botón y te explica para qué sirve y cómo se usa.' });
-    pasos.push({ titulo: '¡Listo!', texto: 'Cualquier duda, entrá en «Ayuda y guía». ¡Que te sea de mucha utilidad!' });
+    if (this.visible(q)) pasos.push({ el: q, lateral: false, titulo: 'Botón «?»', texto: 'En cualquier pantalla explica para qué sirve y cómo se usa.' });
+    pasos.push({ titulo: 'Fin del recorrido', texto: 'Para consultas, la guía completa de tu rol está en «Ayuda y guía».' });
     return pasos;
   },
 
@@ -478,19 +499,26 @@ const AyudaModulo = {
     const foco = v.querySelector('.ayuda-tour-foco'), card = v.querySelector('.ayuda-tour-card');
     if (this._celular && window.UI && UI.toggleMenu) UI.toggleMenu(!!(p.el && p.lateral));
     if (p.el && window.UI && UI.abrirGrupoDe) UI.abrirGrupoDe(p.el);
+    const ult = this._i === total - 1;
     card.innerHTML = `
-      <button type="button" class="ayuda-tour-x" aria-label="Cerrar recorrido">×</button>
+      <div class="ayuda-tour-cab">
+        <span class="ayuda-tour-paso">Paso ${this._i + 1} de ${total}</span>
+        <button type="button" class="ayuda-tour-x" aria-label="Cerrar recorrido">×</button>
+      </div>
       <h4>${p.titulo}</h4>
       <p>${p.texto}</p>
+      <div class="ayuda-tour-barra"><span style="width:${Math.round(((this._i + 1) / total) * 100)}%"></span></div>
       <div class="ayuda-tour-pie">
-        <span>${this._i + 1} / ${total}</span>
+        ${ult ? '<span></span>' : '<button type="button" class="ayuda-tour-omitir">Omitir</button>'}
         <span>
           ${this._i > 0 ? '<button type="button" class="ayuda-tour-ant">Anterior</button>' : ''}
-          <button type="button" class="ayuda-tour-sig">${this._i === total - 1 ? 'Finalizar' : 'Siguiente'}</button>
+          <button type="button" class="ayuda-tour-sig">${ult ? 'Finalizar' : 'Siguiente'}</button>
         </span>
       </div>`;
     card.querySelector('.ayuda-tour-x').onclick = () => this.cerrarRecorrido(true);
     card.querySelector('.ayuda-tour-sig').onclick = () => this.siguiente();
+    const omitir = card.querySelector('.ayuda-tour-omitir');
+    if (omitir) omitir.onclick = () => this.cerrarRecorrido(true);
     const ant = card.querySelector('.ayuda-tour-ant');
     if (ant) ant.onclick = () => this.anterior();
 
