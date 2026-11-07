@@ -120,6 +120,9 @@ const UI = {
       if (b && !esAdminTotal) b.style.setProperty('display', 'none', 'important');
     });
     // Novedades: Director y Regente publican avisos generales; docentes y preceptores, avisos internos de trayectos
+    // Resultados de la plataforma de prácticas (practicas-cfp403): solo el administrador
+    const btnPrac = document.getElementById('btn-practicas');
+    if (btnPrac) btnPrac.style.setProperty('display', esAdminTotal ? 'flex' : 'none', 'important');
     const btnNov = document.getElementById('btn-novedades');
     if (btnNov) btnNov.style.setProperty('display', (isAdmin || rolNorm === 'docente' || rolNorm === 'preceptor') ? 'flex' : 'none', 'important');
     // Crear usuarios y asignar roles: solo el administrador (la regencia no ve esos botones)
