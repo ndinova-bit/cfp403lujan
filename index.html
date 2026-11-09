@@ -345,6 +345,9 @@
   <button id="btn-secretaria" class="nav-item-btn" style="display:none" onclick="UI.showTab('secretaria')">
     <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></span> Cifras por trayecto
   </button>
+  <button id="btn-inteligencia" class="nav-item-btn" style="display:none" onclick="UI.showTab('inteligencia')">
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 4 8-9"/><path d="M3 21h18"/></svg></span> Inteligencia de datos
+  </button>
   <button id="btn-preinscripciones" class="nav-item-btn" style="display:none" onclick="UI.showTab('preinscripciones')">
     <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M9 14h6M9 18h6"/></svg></span> Preinscripciones
   </button>
@@ -543,6 +546,21 @@
 
         <!-- VISTA 2: LISTA DE TRAYECTOS DENTRO DEL DASHBOARD -->
         <section id="novedades" class="section-tab" style="display: none;"><div id="novedades-admin"></div></section>
+
+        <section id="inteligencia" class="section-tab" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+            <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">Vista de solo lectura: cifras y gráficos, sin datos personales.</p>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <label for="filtro-ciclo-intel" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Ciclo Lectivo:</label>
+              <select id="filtro-ciclo-intel" class="form-control custom-select" style="width: auto; padding: 0.4rem 0.8rem; font-size: 0.85rem;" onchange="if(window.DashboardIntel) DashboardIntel.cargar(this.value, { raiz: 'intel-root-sec', soloLectura: true });">
+                <option value="2026" selected>Ciclo Lectivo 2026</option>
+                <option value="2027">Ciclo Lectivo 2027</option>
+                <option value="TODOS">Todos los Ciclos</option>
+              </select>
+            </div>
+          </div>
+          <div id="intel-root-sec"></div>
+        </section>
 
         <section id="secretaria" class="section-tab" style="display: none;"><div id="secretaria-contenido"></div></section>
         <section id="preinscripciones" class="section-tab" style="display: none;"><div id="preinscripciones-contenido"></div></section>
@@ -992,7 +1010,7 @@
   <script src="js/supabase-config.js?v=70007" defer></script>
   <script src="js/avisos.js?v=70008" defer></script>
   <script src="js/reglas.js?v=70024" defer></script>
-  <script src="js/ui.js?v=70103" defer></script>
+  <script src="js/ui.js?v=70104" defer></script>
   <script src="js/auth.js?v=70075" defer></script>
   <script src="js/trayectos.js?v=70096" defer></script>
   <script src="js/usuarios.js?v=70094" defer></script>
@@ -1017,7 +1035,7 @@
   <script src="js/preinscripciones.js?v=70066" defer></script>
   <script src="js/cuentas.js?v=70050" defer></script>
   <script src="js/estadisticas.js?v=70050" defer></script>
-  <script src="js/inteligencia.js?v=70001" defer></script>
+  <script src="js/inteligencia.js?v=70002" defer></script>
   <script src="js/observaciones.js?v=70050" defer></script>
   <script src="js/licencias.js?v=70103" defer></script>
   <script src="js/cooperadora.js?v=70077" defer></script>

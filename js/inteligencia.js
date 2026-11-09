@@ -18,6 +18,8 @@ const DashboardIntel = {
   ciclo: '2026',
   datos: null,
   token: 0,
+  raizId: 'intel-root',    // dónde se dibuja (Dashboard: intel-root · Secretaría: intel-root-sec)
+  soloLectura: false,      // true para Secretaría: se ve todo, sin botones que lleven a acciones
 
   esc(v) {
     return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -46,8 +48,10 @@ const DashboardIntel = {
     return out;
   },
 
-  async cargar(ciclo) {
-    const raiz = document.getElementById('intel-root');
+  async cargar(ciclo, opciones) {
+    this.raizId = (opciones && opciones.raiz) || 'intel-root';
+    this.soloLectura = !!(opciones && opciones.soloLectura);
+    const raiz = document.getElementById(this.raizId);
     if (!raiz) return;
     this.ciclo = String(ciclo || '2026');
     const mio = ++this.token;
@@ -223,7 +227,7 @@ const DashboardIntel = {
   ir(vista) { this.vista = vista; this.dibujar(); },
 
   dibujar() {
-    const raiz = document.getElementById('intel-root');
+    const raiz = document.getElementById(this.raizId);
     if (!raiz) return;
     const d = this.datos;
     const tabs = [['resumen', 'Resumen'], ['prioridades', 'Prioridades'], ['mapa', 'Mapa de riesgo'], ['recorrido', 'Recorrido']];
@@ -266,7 +270,7 @@ const DashboardIntel = {
 
   hallazgos(d) {
     const k = d.kpi, out = [];
-    const ir = (txt, tab) => `<button type="button" class="intel-link" onclick="UI.showTab('${tab}')">${txt}</button>`;
+    const ir = (txt, tab) => this.soloLectura ? '' : `<button type="button" class="intel-link" onclick="UI.showTab('${tab}')">${txt}</button>`;
     const item = (tipo, etiqueta, titulo, sub, accion) => out.push(`<div class="intel-hallazgo"><span class="intel-chip ${tipo}">${etiqueta}</span><b>${titulo}</b><span>${sub}</span>${accion || ''}</div>`);
 
     const cand = d.porTrayecto.filter(p => p.inscriptos >= 5 && p.bajas > 0).sort((a, b) => b.desercion - a.desercion)[0];
@@ -322,7 +326,7 @@ const DashboardIntel = {
     const k = d.kpi;
     const fila = (tipo, etiqueta, titulo, sub, boton, tab) => `<div class="intel-prio">
       <div><span class="intel-chip ${tipo}">${etiqueta}</span><b>${titulo}</b><span>${sub}</span></div>
-      <button type="button" class="btn ${tipo === 'aviso' ? 'btn-gold' : 'btn-secondary'}" onclick="UI.showTab('${tab}')">${boton}</button></div>`;
+      ${this.soloLectura ? '' : `<button type="button" class="btn ${tipo === 'aviso' ? 'btn-gold' : 'btn-secondary'}" onclick="UI.showTab('${tab}')">${boton}</button>`}</div>`;
     const items = [];
     if (k.bajasPendientes) items.push(fila('aviso', 'Urgente', `${k.bajasPendientes} ${this.plural(k.bajasPendientes, 'baja automática sin registrar', 'bajas automáticas sin registrar')}`, 'La planilla de matrícula todavía las cuenta como matriculados.', 'Abrir Seguimiento', 'seguimiento'));
     if (k.riesgo) items.push(fila('aviso', 'Urgente', `${k.riesgo} ${this.plural(k.riesgo, 'estudiante en riesgo', 'estudiantes en riesgo')} de baja`, 'Asistencia menor a 70 %, promedio menor a 70 o sin entregas.', 'Abrir Seguimiento', 'seguimiento'));

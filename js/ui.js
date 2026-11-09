@@ -149,6 +149,9 @@ const UI = {
     // Cooperadora: carga (director, regente, preceptoría); secretaría ve balance; docentes solo ven la nómina; estudiantes no la ven.
     const btnCoop = document.getElementById('btn-cooperadora');
     if (btnCoop) btnCoop.style.setProperty('display', rolNorm !== 'estudiante' ? 'flex' : 'none', 'important');
+    // Inteligencia de datos: administración y regencia la ven en el Dashboard; Secretaría, en su propia pestaña (solo lectura)
+    const btnInt = document.getElementById('btn-inteligencia');
+    if (btnInt) btnInt.style.setProperty('display', esSecretaria ? 'flex' : 'none', 'important');
     if (esSecretaria) {
       const bt = document.getElementById('btn-trayectos');
       if (bt) bt.style.setProperty('display', 'none', 'important');
@@ -221,9 +224,10 @@ const UI = {
     const isAdmin = Auth.esDireccion(perfil.rol);
     const rolPerfil = String(perfil.rol || '').toLowerCase().trim();
     if (tabId === 'cooperadora' && rolPerfil === 'estudiante') tabId = 'trayectos';
-    if (Auth.esSecretaria(rolPerfil) && !['secretaria', 'observaciones', 'cooperadora', 'actas', 'licencias', 'ayuda'].includes(tabId)) tabId = 'secretaria';
+    if (Auth.esSecretaria(rolPerfil) && !['secretaria', 'inteligencia', 'observaciones', 'cooperadora', 'actas', 'licencias', 'ayuda'].includes(tabId)) tabId = 'secretaria';
     if (tabId === 'secretaria' && !(Auth.esSecretaria(rolPerfil) || isAdmin || rolPerfil === 'preceptor')) tabId = 'trayectos';
     if (tabId === 'estadisticas' && !isAdmin) tabId = 'trayectos';
+    if (tabId === 'inteligencia' && !Auth.esSecretaria(rolPerfil)) tabId = isAdmin ? 'dashboard' : 'trayectos';
     // Licencias docentes: solo Director, Regente y Secretaría
     if (tabId === 'licencias' && !(isAdmin || Auth.esSecretaria(rolPerfil))) tabId = 'trayectos';
     if (tabId === 'observaciones' && rolPerfil === 'estudiante') tabId = 'trayectos';
@@ -268,6 +272,7 @@ const UI = {
         'progreso': 'Mi progreso',
         'seguimiento': 'Seguimiento',
         'secretaria': 'Panel de cifras por trayecto',
+        'inteligencia': 'Inteligencia de datos',
         'preinscripciones': 'Preinscripciones',
         'cuentas': 'Cuentas y claves',
         'estadisticas': 'Estadísticas de trayectos',
@@ -284,6 +289,11 @@ const UI = {
         'auditoria': 'Auditoría de cambios'
       };
       titleEl.innerText = titles[tabId] || 'Panel de Control';
+    }
+
+    if (tabId === 'inteligencia' && window.DashboardIntel) {
+      const selInt = document.getElementById('filtro-ciclo-intel');
+      DashboardIntel.cargar(selInt ? selInt.value : '2026', { raiz: 'intel-root-sec', soloLectura: true });
     }
 
     if (tabId === 'usuarios' && window.UsuariosAdmin) {
