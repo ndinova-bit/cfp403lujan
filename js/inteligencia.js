@@ -230,7 +230,11 @@ const DashboardIntel = {
     const raiz = document.getElementById(this.raizId);
     if (!raiz) return;
     const d = this.datos;
-    const tabs = [['resumen', 'Resumen'], ['prioridades', 'Prioridades'], ['mapa', 'Mapa de riesgo'], ['recorrido', 'Recorrido']];
+    const ro = this.soloLectura;
+    if (ro && this.vista === 'mapa') this.vista = 'resumen';
+    const tabs = ro
+      ? [['resumen', 'Resumen'], ['prioridades', 'Bajas y asistencia'], ['recorrido', 'Recorrido']]
+      : [['resumen', 'Resumen'], ['prioridades', 'Prioridades'], ['mapa', 'Mapa de riesgo'], ['recorrido', 'Recorrido']];
     const cabecera = `
       <div class="intel-head">
         <div>
@@ -255,9 +259,9 @@ const DashboardIntel = {
     const kpis = `<div class="intel-kpis">
       ${tarjeta('Cursan hoy', this.num(k.cursan), `de ${this.num(k.inscriptos)} inscriptos`)}
       ${tarjeta('Asistencia', this.fmt(k.asistencia), k.asisRegistros ? `${this.num(k.asisRegistros)} registros` : 'Sin registros', k.asisRegistros ? 'info' : 'aviso')}
-      ${tarjeta('Módulos aprobados', this.fmt(k.aprobModulos), k.modEval ? `de ${this.num(k.modEval)} evaluados` : 'Sin módulos evaluados', 'info')}
+      ${this.soloLectura ? '' : tarjeta('Módulos aprobados', this.fmt(k.aprobModulos), k.modEval ? `de ${this.num(k.modEval)} evaluados` : 'Sin módulos evaluados', 'info')}
       ${tarjeta('Bajas', this.num(k.bajas), this.fmt(k.desercion) + ' de los inscriptos', k.bajas ? 'mal' : 'ok')}
-      ${tarjeta('En riesgo', this.num(k.riesgo), k.riesgo ? 'Mirá Seguimiento' : 'Ninguno por ahora', k.riesgo ? 'aviso' : 'ok')}
+      ${this.soloLectura ? '' : tarjeta('En riesgo', this.num(k.riesgo), k.riesgo ? 'Mirá Seguimiento' : 'Ninguno por ahora', k.riesgo ? 'aviso' : 'ok')}
     </div>`;
 
     return `${kpis}
@@ -282,9 +286,9 @@ const DashboardIntel = {
     } else {
       item('ok', 'Va bien', 'Todavía no hay bajas en este ciclo.', 'Ni manuales ni automáticas.');
     }
-    if (k.riesgo > 0) item('aviso', 'Atención', `${k.riesgo} ${this.plural(k.riesgo, 'estudiante en riesgo', 'estudiantes en riesgo')}.`,
+    if (!this.soloLectura && k.riesgo > 0) item('aviso', 'Atención', `${k.riesgo} ${this.plural(k.riesgo, 'estudiante en riesgo', 'estudiantes en riesgo')}.`,
       'Asistencia menor a 70 %, promedio menor a 70 o sin entregas.', ir('Abrir Seguimiento', 'seguimiento'));
-    if (k.bajasPendientes > 0) item('aviso', 'Para registrar', `${k.bajasPendientes} ${this.plural(k.bajasPendientes, 'baja automática sin registrar', 'bajas automáticas sin registrar')}.`,
+    if (!this.soloLectura && k.bajasPendientes > 0) item('aviso', 'Para registrar', `${k.bajasPendientes} ${this.plural(k.bajasPendientes, 'baja automática sin registrar', 'bajas automáticas sin registrar')}.`,
       'La planilla de matrícula todavía las cuenta como matriculados.', ir('Registrar en Seguimiento', 'seguimiento'));
     const mejor = d.porTrayecto.filter(p => p.asisRegistros >= 10 && p.asis !== null).sort((a, b) => b.asis - a.asis)[0];
     if (mejor) item('ok', 'Va bien', `${this.esc(mejor.t.nombre)} tiene ${this.fmt(mejor.asis)} de asistencia.`, 'Es la más alta entre los trayectos con asistencia cargada.');
@@ -312,11 +316,11 @@ const DashboardIntel = {
     if (!filas.length) return '<p class="intel-vacio">No hay inscriptos en los trayectos de este ciclo.</p>';
     const barra = v => v === null ? '<span class="intel-nd">Sin datos</span>' : `<span class="intel-barra"><span style="width:${Math.min(100, Math.round(v))}%"></span></span><b>${Math.round(v)} %</b>`;
     return `<div class="intel-scroll"><table class="intel-tabla">
-      <thead><tr><th scope="col">Trayecto</th><th scope="col">Cursan</th><th scope="col">Asistencia</th><th scope="col">En riesgo</th><th scope="col">Deserción</th></tr></thead>
+      <thead><tr><th scope="col">Trayecto</th><th scope="col">Cursan</th><th scope="col">Asistencia</th>${this.soloLectura ? '' : '<th scope="col">En riesgo</th>'}<th scope="col">Deserción</th></tr></thead>
       <tbody>${filas.map(p => {
         const clase = (p.bajas >= 2 && g !== null && p.desercion > 1.5 * g) ? 'mal' : (g !== null && p.desercion > g ? 'aviso' : 'ok');
         return `<tr><th scope="row">${this.esc(p.t.nombre || 'Sin nombre')}</th><td>${this.num(p.matricula)} <small>de ${this.num(p.inscriptos)}</small></td>
-          <td class="intel-celda-barra">${barra(p.asis)}</td><td>${p.riesgo}</td>
+          <td class="intel-celda-barra">${barra(p.asis)}</td>${this.soloLectura ? '' : `<td>${p.riesgo}</td>`}
           <td><span class="intel-chip ${clase}">${this.fmt(p.desercion)}</span></td></tr>`;
       }).join('')}</tbody></table></div>`;
   },
@@ -328,12 +332,13 @@ const DashboardIntel = {
       <div><span class="intel-chip ${tipo}">${etiqueta}</span><b>${titulo}</b><span>${sub}</span></div>
       ${this.soloLectura ? '' : `<button type="button" class="btn ${tipo === 'aviso' ? 'btn-gold' : 'btn-secondary'}" onclick="UI.showTab('${tab}')">${boton}</button>`}</div>`;
     const items = [];
-    if (k.bajasPendientes) items.push(fila('aviso', 'Urgente', `${k.bajasPendientes} ${this.plural(k.bajasPendientes, 'baja automática sin registrar', 'bajas automáticas sin registrar')}`, 'La planilla de matrícula todavía las cuenta como matriculados.', 'Abrir Seguimiento', 'seguimiento'));
-    if (k.riesgo) items.push(fila('aviso', 'Urgente', `${k.riesgo} ${this.plural(k.riesgo, 'estudiante en riesgo', 'estudiantes en riesgo')} de baja`, 'Asistencia menor a 70 %, promedio menor a 70 o sin entregas.', 'Abrir Seguimiento', 'seguimiento'));
-    if (k.sinCorregir) items.push(fila('info', 'Pendiente', `${k.sinCorregir} ${this.plural(k.sinCorregir, 'entrega sin corregir', 'entregas sin corregir')}`, 'Sin nota, las actividades no entran en el promedio del módulo.', 'Ver entregas', 'seguimiento'));
+    const ro = this.soloLectura;
+    if (!ro && k.bajasPendientes) items.push(fila('aviso', 'Urgente', `${k.bajasPendientes} ${this.plural(k.bajasPendientes, 'baja automática sin registrar', 'bajas automáticas sin registrar')}`, 'La planilla de matrícula todavía las cuenta como matriculados.', 'Abrir Seguimiento', 'seguimiento'));
+    if (!ro && k.riesgo) items.push(fila('aviso', 'Urgente', `${k.riesgo} ${this.plural(k.riesgo, 'estudiante en riesgo', 'estudiantes en riesgo')} de baja`, 'Asistencia menor a 70 %, promedio menor a 70 o sin entregas.', 'Abrir Seguimiento', 'seguimiento'));
+    if (!ro && k.sinCorregir) items.push(fila('info', 'Pendiente', `${k.sinCorregir} ${this.plural(k.sinCorregir, 'entrega sin corregir', 'entregas sin corregir')}`, 'Sin nota, las actividades no entran en el promedio del módulo.', 'Ver entregas', 'seguimiento'));
     const sinAs = d.porTrayecto.filter(p => p.sinAsistencia);
     if (sinAs.length) items.push(fila('info', 'Pendiente', `${sinAs.length} ${this.plural(sinAs.length, 'trayecto sin asistencia cargada', 'trayectos sin asistencia cargada')}`, sinAs.slice(0, 3).map(p => this.esc(p.t.nombre)).join(' · ') + (sinAs.length > 3 ? ' · …' : ''), 'Ver trayectos', 'trayectos'));
-    const lista = items.length ? items.join('') : '<div class="intel-ok">No hay nada urgente en este momento.</div>';
+    const lista = items.length ? items.join('') : `<div class="intel-ok">${ro ? 'Todos los trayectos tienen asistencia cargada.' : 'No hay nada urgente en este momento.'}</div>`;
 
     const bm = d.bajasPorModulo, claves = Object.keys(bm).sort((a, b) => (a === 'otra') - (b === 'otra') || Number(a) - Number(b));
     const max = Math.max(1, ...Object.values(bm));
@@ -342,7 +347,7 @@ const DashboardIntel = {
       : '<p class="intel-vacio">Todavía no hay bajas para analizar.</p>';
 
     return `<div class="intel-dos">
-      <div class="intel-caja intel-grande"><h4>Para resolver primero</h4>${lista}</div>
+      <div class="intel-caja intel-grande"><h4>${ro ? 'Asistencia por cargar' : 'Para resolver primero'}</h4>${lista}</div>
       <div class="intel-caja"><h4>Dónde se van los estudiantes</h4>${donde}</div></div>`;
   },
 
@@ -377,7 +382,7 @@ const DashboardIntel = {
         ${etapa('Inscriptos', e.inscriptos, 'c1')}
         ${fuga(e.bajas, 'bajas durante el ciclo (manuales y automáticas)')}
         ${etapa('Siguen cursando', e.cursan, 'c2')}
-        ${etapa('Aprobaron un módulo o más', e.aprobaron, 'c3')}
+        ${this.soloLectura ? '' : etapa('Aprobaron un módulo o más', e.aprobaron, 'c3')}
         ${etapa('Egresados', e.egresados, 'c4')}
         <p class="intel-nota">Egresado: estudiante con número de egresado cargado. Quienes todavía cursan no se cuentan como pérdida.</p>
       </div>${comp || '<div class="intel-caja"><h4>Cómo vienen de asistencia</h4><p class="intel-vacio">Falta asistencia cargada para comparar.</p></div>'}</div>`;
