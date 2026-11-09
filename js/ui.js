@@ -508,6 +508,9 @@ const DashboardAdmin = {
       if (elCertificados) elCertificados.textContent = cantCertificados;
       if (elDesaprobados) elDesaprobados.textContent = cantDesaprobados;
 
+      // 4b. Inteligencia de datos (js/inteligencia.js) con el mismo ciclo lectivo
+      if (window.DashboardIntel) DashboardIntel.cargar(cicloSeleccionado);
+
       // 5. Renderizar la tabla de desglose por trayecto
       if (elDesglose) {
         if (trayectos.length === 0) {

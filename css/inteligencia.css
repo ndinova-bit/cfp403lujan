@@ -1,0 +1,130 @@
+/* ==========================================================================
+   INTELIGENCIA DE DATOS · Dashboard
+   Usa los tokens de css/tema-cfp.css (--cfp-*). Archivo: css/inteligencia.css
+   ========================================================================== */
+
+.intel { margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem; color: var(--cfp-ink); }
+.intel-head { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; justify-content: space-between; }
+.intel-head h3 { margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--cfp-ink); }
+.intel-head p { margin: .15rem 0 0; font-size: .85rem; font-weight: 500; color: var(--cfp-muted); }
+
+/* Pestañas */
+.intel-tabs { display: flex; flex-wrap: wrap; gap: .5rem; }
+.intel-tab {
+  min-height: 44px; padding: 0 1rem; border-radius: 999px; cursor: pointer;
+  background: #fff; color: var(--cfp-ink-2); border: 1px solid var(--cfp-line-2);
+  font-size: .85rem; font-weight: 600; font-family: inherit;
+}
+.intel-tab:hover { border-color: var(--cfp-celeste); }
+.intel-tab.activa { background: var(--cfp-navy); color: #fff; border-color: var(--cfp-navy); font-weight: 700; }
+.intel-tab:focus-visible, .intel-link:focus-visible { outline: 3px solid var(--cfp-celeste); outline-offset: 2px; }
+
+/* Cajas */
+.intel-caja {
+  background: #fff; border: 1px solid var(--cfp-line); border-radius: 16px;
+  padding: 1.25rem; box-shadow: var(--shadow-card); min-width: 0;
+}
+.intel-caja h4 { margin: 0 0 1rem; font-size: 1.05rem; font-weight: 800; color: var(--cfp-ink); }
+.intel-dos { display: flex; flex-wrap: wrap; gap: 1rem; align-items: stretch; }
+.intel-dos > .intel-caja { flex: 2 1 320px; }
+.intel-dos > .intel-grande { flex: 3 1 420px; }
+.intel-oscura { background: var(--cfp-navy-deep); border-color: var(--cfp-navy-deep); color: #fff; }
+.intel-oscura h4 { color: #fff; }
+
+.intel-vacio, .intel-ok { margin: 0; padding: .75rem 0; font-size: .9rem; font-weight: 600; color: var(--cfp-muted); line-height: 1.5; }
+.intel-ok { color: var(--cfp-ok); }
+.intel-nota { margin: .75rem 0 0; font-size: .8rem; font-weight: 600; color: var(--cfp-muted); line-height: 1.45; }
+.intel-oscura .intel-nota { color: #cfe2f5; }
+
+/* Indicadores */
+.intel-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr)); gap: 1rem; }
+.intel-kpi {
+  background: #fff; border: 1px solid var(--cfp-line); border-radius: 16px; padding: 1.1rem 1.25rem;
+  box-shadow: var(--shadow-card); display: flex; flex-direction: column; gap: .4rem; align-items: flex-start;
+}
+.intel-kpi-r { font-size: .75rem; font-weight: 700; color: var(--cfp-muted); }
+.intel-kpi-v { font-size: 1.75rem; font-weight: 800; line-height: 1.1; color: var(--cfp-ink); }
+
+/* Chips de estado: el color acompaña a la palabra, nunca va solo */
+.intel-chip { display: inline-block; font-size: .75rem; font-weight: 700; line-height: 1.3; padding: .15rem .55rem; border-radius: 999px; }
+.intel-chip.ok { background: var(--cfp-ok-soft); color: var(--cfp-ok); }
+.intel-chip.aviso { background: var(--cfp-yellow-soft); color: #7a5600; }
+.intel-chip.mal { background: var(--cfp-bad-soft); color: var(--cfp-bad); }
+.intel-chip.info { background: var(--cfp-celeste-soft); color: var(--cfp-blue); }
+
+/* Hallazgos (sobre fondo oscuro) */
+.intel-hallazgo { display: flex; flex-direction: column; align-items: flex-start; gap: .3rem; padding: .9rem 0; border-top: 1px solid #2b4a74; }
+.intel-hallazgo:first-of-type { border-top: 0; padding-top: 0; }
+.intel-hallazgo b { font-size: .95rem; font-weight: 700; line-height: 1.4; }
+.intel-hallazgo > span:not(.intel-chip) { font-size: .85rem; font-weight: 500; color: #cfe2f5; line-height: 1.45; }
+.intel-oscura .intel-chip.ok { background: var(--cfp-ok-soft); color: var(--cfp-ok); }
+.intel-oscura .intel-chip.aviso { background: var(--cfp-yellow); color: var(--cfp-navy-deep); }
+.intel-oscura .intel-chip.info { background: #123c73; color: #cfe2f5; }
+.intel-link {
+  background: none; border: 0; padding: .25rem 0; cursor: pointer; font-size: .85rem; font-weight: 700; font-family: inherit;
+  color: var(--cfp-yellow); text-decoration: underline; min-height: 32px;
+}
+
+/* Gráfico de línea */
+.intel-svg { width: 100%; height: auto; display: block; }
+.intel-grid { stroke: var(--cfp-line); stroke-width: 1; }
+.intel-eje { fill: var(--cfp-muted); font-size: 11px; font-weight: 600; }
+.intel-linea { fill: none; stroke: var(--cfp-blue); stroke-width: 3; stroke-linejoin: round; }
+.intel-punto { fill: var(--cfp-blue); }
+
+/* Tablas */
+.intel-scroll { overflow-x: auto; }
+.intel-tabla, .intel-heat { width: 100%; border-collapse: collapse; font-size: .85rem; min-width: 560px; }
+.intel-tabla th, .intel-tabla td { padding: .7rem .5rem; text-align: left; border-bottom: 1px solid var(--cfp-line); font-weight: 600; vertical-align: middle; }
+.intel-tabla thead th, .intel-heat thead th { font-size: .75rem; font-weight: 700; color: var(--cfp-muted); }
+.intel-tabla tbody th { font-weight: 700; color: var(--cfp-ink); }
+.intel-tabla small { color: var(--cfp-muted); font-weight: 600; }
+.intel-celda-barra { display: flex; align-items: center; gap: .5rem; min-width: 150px; }
+.intel-nd { font-size: .8rem; color: var(--cfp-muted); }
+
+/* Barras */
+.intel-barra { position: relative; display: block; flex: 1; height: 8px; background: #eef3f9; border-radius: 999px; min-width: 60px; }
+.intel-barra > span { display: block; height: 100%; background: var(--cfp-blue); border-radius: 999px; }
+.intel-barra.grande { height: 14px; }
+.intel-barra.pico > span { background: var(--cfp-navy); }
+.intel-barra.mal > span { background: var(--cfp-bad); }
+.intel-barras { display: flex; flex-direction: column; gap: .8rem; }
+.intel-barras > div { display: flex; align-items: center; gap: .75rem; font-size: .85rem; font-weight: 600; }
+.intel-barras > div > span:first-child { flex: 0 0 9.5rem; color: var(--cfp-ink-2); }
+.intel-barras > div > b { flex: 0 0 2.5rem; text-align: right; }
+
+/* Prioridades */
+.intel-prio { display: flex; flex-wrap: wrap; gap: .75rem 1rem; align-items: center; justify-content: space-between; padding: .9rem 0; border-top: 1px solid var(--cfp-line); }
+.intel-prio:first-of-type { border-top: 0; padding-top: 0; }
+.intel-prio > div { flex: 1 1 260px; display: flex; flex-direction: column; align-items: flex-start; gap: .25rem; }
+.intel-prio b { font-size: .95rem; font-weight: 700; }
+.intel-prio > div > span:not(.intel-chip) { font-size: .85rem; font-weight: 500; color: var(--cfp-ink-2); }
+.intel-prio .btn { min-height: 44px; }
+
+/* Mapa de riesgo */
+.intel-heat th, .intel-heat td { padding: .35rem; text-align: center; }
+.intel-heat tbody th { text-align: left; font-weight: 700; font-size: .85rem; padding-right: .75rem; }
+.intel-heat td { height: 52px; min-width: 56px; border-radius: 10px; font-size: 1.05rem; font-weight: 800; border: 3px solid #fff; }
+.h0 { background: #eef3f9; color: var(--cfp-ink); }
+.h1 { background: #bfe0f5; color: var(--cfp-ink); }
+.h2 { background: var(--cfp-celeste); color: var(--cfp-navy-deep); }
+.h3 { background: var(--cfp-blue); color: #fff; }
+.h4 { background: var(--cfp-navy); color: #fff; }
+.intel-heat .intel-total { background: transparent; color: var(--cfp-ink); }
+.intel-leyenda { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin-top: 1rem; font-size: .75rem; font-weight: 700; color: var(--cfp-ink-2); }
+.intel-leyenda i { font-style: normal; padding: .2rem .55rem; border-radius: 6px; }
+
+/* Recorrido */
+.intel-etapa { display: flex; align-items: center; gap: .75rem; padding: .35rem 0; font-size: .85rem; font-weight: 600; }
+.intel-etapa-r { flex: 0 0 10.5rem; color: var(--cfp-ink-2); font-weight: 700; }
+.intel-etapa b { flex: 0 0 3rem; text-align: right; font-size: 1.05rem; font-weight: 800; }
+.intel-etapa .c1 > span { background: #8fcbed; }
+.intel-etapa .c2 > span { background: var(--cfp-blue); }
+.intel-etapa .c3 > span { background: var(--cfp-navy); }
+.intel-etapa .c4 > span { background: var(--cfp-yellow); }
+.intel-fuga { display: flex; align-items: center; gap: .6rem; padding: .3rem 0 .3rem 10.5rem; font-size: .8rem; font-weight: 600; color: var(--cfp-ink-2); }
+
+@media (max-width: 640px) {
+  .intel-etapa-r, .intel-barras > div > span:first-child { flex-basis: 7rem; }
+  .intel-fuga { padding-left: 0; }
+}
