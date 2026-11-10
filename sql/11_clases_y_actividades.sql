@@ -35,7 +35,7 @@ alter table public.clases
 
 alter table public.clases drop constraint if exists clases_tipo_check;
 alter table public.clases add constraint clases_tipo_check
-  check (tipo in ('material','tp','practica','cuestionario','escrita','diagnostico','presupuesto','bitacora','encuesta'));
+  check (tipo in ('material','tp','practica','cuestionario','escrita','diagnostico','presupuesto'));
 alter table public.clases drop constraint if exists clases_contenido_tamano;
 alter table public.clases add constraint clases_contenido_tamano
   check (contenido is null or octet_length(contenido::text) <= 200000);
@@ -63,7 +63,7 @@ update public.clases c set tipo = 'tp'
  where c.tipo = 'material'
    and (c.url_actividad is not null
         or exists (select 1 from public.entregas_actividades e where e.clase_id = c.id));
-update public.clases set calificable = false where tipo in ('material','encuesta') and calificable;
+update public.clases set calificable = false where tipo = 'material' and calificable;
 
 -- 2. CLAVES (respuestas correctas) ----------------------------------------------
 create table if not exists public.claves_actividad (
@@ -115,7 +115,7 @@ returns boolean language sql stable security definer set search_path = public as
   select exists (
     select 1 from public.clases c
      where c.id = cid
-       and c.tipo in ('tp','escrita','presupuesto','bitacora','encuesta')
+       and c.tipo in ('tp','escrita','presupuesto')
        and (c.fecha_publicacion is null or c.fecha_publicacion <= public.hoy_ar())
        and (c.fecha_limite is null or now() <= c.fecha_limite)
   );

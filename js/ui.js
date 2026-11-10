@@ -74,6 +74,8 @@ const UI = {
     if (landing) landing.style.setProperty('display', 'none', 'important');
     if (login) login.style.setProperty('display', 'none', 'important');
     if (app) app.style.setProperty('display', 'flex', 'important');
+    // Estudiantes: aviso de la encuesta de cierre cuando su trayecto está por terminar
+    if (window.EncuestaCierre) setTimeout(() => EncuestaCierre.alIngresar(), 1800);
     document.body.classList.add('app-activa');
 
     const displayUsername = document.getElementById('display-username');

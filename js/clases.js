@@ -200,7 +200,7 @@ const ClasesModulo = {
             <div class="act-grid3">
               <label>📅 Se publica el<input type="date" id="clase-fecha" class="act-in"><small>Si lo dejás vacío, se publica ahora.</small></label>
               <label data-ocultar="material practica">⏰ Fecha y hora límite<input type="datetime-local" id="clase-limite" class="act-in"><small>Vacío: sin límite. Al alumno le avisa 2 días antes.</small></label>
-              <label class="act-check act-check-alto" data-ocultar="material encuesta"><input type="checkbox" id="clase-evaluacion"> 🎓 Es una evaluación</label>
+              <label class="act-check act-check-alto" data-ocultar="material"><input type="checkbox" id="clase-evaluacion"> 🎓 Es una evaluación</label>
             </div>
             <div id="act-editor"></div>
             <div class="act-form-pie">
@@ -525,8 +525,11 @@ const ClasesModulo = {
         return !c.fecha_publicacion || String(c.fecha_publicacion).slice(0, 10) <= hoy;
       });
 
+      // Encuesta de cierre institucional: se abre sola cerca del final del trayecto
+      const encuesta = window.EncuestaCierre ? await EncuestaCierre.tarjetaTrayecto(tid, esEstudiante) : '';
+
       if (!visibles.length) {
-        contenedor.innerHTML = `<p class="act-vacio">${esEstudiante ? 'Todavía no hay contenidos publicados en este trayecto.' : 'Todavía no publicaste contenidos. Usá “Nueva publicación” para cargar la primera clase.'}</p>`;
+        contenedor.innerHTML = `${encuesta}<p class="act-vacio">${esEstudiante ? 'Todavía no hay contenidos publicados en este trayecto.' : 'Todavía no publicaste contenidos. Usá “Nueva publicación” para cargar la primera clase.'}</p>`;
         return;
       }
 
@@ -541,7 +544,7 @@ const ClasesModulo = {
         grupos.push({ titulo: `Módulo ${i + 1} · ${m.nombre}`, clases: cs, bloqueado: !!(esEstudiante && !tieneExcepcion && ev && ev.bloqueado), nota: ev ? ev.nota : null, aprobado: ev ? ev.aprobado : false });
       });
 
-      let html = esEstudiante ? this.resumenAlumno(visibles, ctx, grupos) : '';
+      let html = encuesta + (esEstudiante ? this.resumenAlumno(visibles, ctx, grupos) : '');
       html += grupos.map(g => {
         const ordenadas = g.clases.slice().sort((a, b) => String(a.fecha_publicacion || '').localeCompare(String(b.fecha_publicacion || '')) || Number(a.id) - Number(b.id));
         return `<details class="act-grupo" ${g.bloqueado ? '' : 'open'}>
@@ -617,7 +620,7 @@ const ClasesModulo = {
     if (!ctx.esEstudiante && c.fecha_publicacion && String(c.fecha_publicacion).slice(0, 10) > ctx.hoy) chips.push(`<span class="act-chip prog">🗓️ Se publica el ${A.fechaDMY(c.fecha_publicacion)}</span>`);
     if (pl && (!ctx.esEstudiante || !ent)) chips.push(`<span class="act-chip ${pl.cls}">⏰ ${this.esc(pl.txt)}</span>`);
     if (ctx.esEstudiante && ent && A.tieneNota(ent)) chips.push(`<span class="act-chip ${parseFloat(ent.nota) >= 70 ? 'ok' : 'bad'}">Nota ${this.esc(ent.nota)}</span>`);
-    else if (ctx.esEstudiante && ent && c.tipo !== 'encuesta') chips.push('<span class="act-chip mid">✔ Entregada</span>');
+    else if (ctx.esEstudiante && ent) chips.push('<span class="act-chip mid">✔ Entregada</span>');
     else if (ctx.esEstudiante && ent) chips.push('<span class="act-chip ok">✔ Respondida</span>');
 
     const urlT = this.urlSegura(c.url_recurso);
@@ -673,15 +676,12 @@ const ClasesModulo = {
       if (!ent && vencida) botones += '<span class="act-res-linea bad">Venció el plazo: cuenta como 10.</span>';
     } else {
       const editable = !nota && !vencida;
-      if (c.tipo === 'bitacora') {
-        const n = ent && ent.respuestas && ent.respuestas.r && (ent.respuestas.r.entradas || []).length;
-        botones += editable ? `<button type="button" class="act-btn" onclick="Actividades.abrir(${id})">📓 Abrir mi bitácora${n ? ` (${n} entrada${n > 1 ? 's' : ''})` : ''}</button>` : `<button type="button" class="act-btn-sec" onclick="Actividades.verResultado(${id})">Ver mi bitácora</button>`;
-      } else if (editable) {
+      if (editable) {
         botones += `<button type="button" class="act-btn" onclick="Actividades.abrir(${id})">${ent ? 'Ver o modificar mi respuesta' : 'Responder'}</button>`;
       } else if (ent) {
         botones += `<button type="button" class="act-btn-sec" onclick="Actividades.verResultado(${id})">Ver ${nota ? 'resultado' : 'mi respuesta'}</button>`;
       } else {
-        botones += `<span class="act-res-linea bad">Venció el plazo${c.calificable !== false && c.tipo !== 'encuesta' ? ': cuenta como 10' : ''}.</span>`;
+        botones += `<span class="act-res-linea bad">Venció el plazo${c.calificable !== false ? ': cuenta como 10' : ''}.</span>`;
       }
     }
     return `<div class="act-accion act-accion-fila">${botones}</div>`;
@@ -694,14 +694,13 @@ const ClasesModulo = {
     const ents = ctx.entregas.filter(e => Number(e.clase_id) === id);
     const total = c.estudiante_user ? 1 : ctx.activos.size;
     const hechas = ents.filter(e => !c.estudiante_user ? ctx.activos.has(String(e.estudiante_user)) : String(e.estudiante_user) === String(c.estudiante_user)).length;
-    const porCorregir = c.tipo === 'encuesta' ? 0 : ents.filter(e => !A.tieneNota(e)).length;
-    const verbo = c.tipo === 'practica' ? 'calificados' : c.tipo === 'encuesta' ? 'respondieron' : 'entregaron';
+    const porCorregir = ents.filter(e => !A.tieneNota(e)).length;
+    const verbo = c.tipo === 'practica' ? 'calificados' : 'entregaron';
     const esPrec = this.rolGestor === 'preceptor';
     return `<div class="act-accion act-accion-fila act-docente">
       <span class="act-stat"><strong>${hechas}</strong> de ${total} ${verbo}${porCorregir ? ` · <strong class="mid">${porCorregir}</strong> para corregir` : ''}</span>
       ${esPrec ? '' : `<button type="button" class="act-btn-sec" onclick="Actividades.verRespuestas(${id})">📋 Respuestas${total - hechas > 0 ? ' y quién falta' : ''}</button>
       ${c.tipo === 'practica' ? `<button type="button" class="act-btn" onclick="Actividades.planillaTaller(${id})">🛠️ Planilla de taller</button>` : ''}
-      ${c.tipo === 'encuesta' ? `<button type="button" class="act-btn-sec" onclick="Actividades.resultadosEncuesta(${id})">📊 Resultados</button>` : ''}
       ${A.AUTO.includes(c.tipo) ? `<button type="button" class="act-btn-sec" onclick="Actividades.probar(${id})">👁️ Probar</button>` : ''}`}
     </div>`;
   },
@@ -911,7 +910,7 @@ const ClasesModulo = {
       contenido: sep.contenido,
       fecha_publicacion: fecha || null,
       fecha_limite: limite,
-      es_evaluacion: !['material', 'encuesta'].includes(tipo) && !!document.getElementById('clase-evaluacion')?.checked,
+      es_evaluacion: tipo !== 'material' && !!document.getElementById('clase-evaluacion')?.checked,
       calificable: sep.calificable
     };
 
@@ -1313,7 +1312,7 @@ const ClasesModulo = {
 
     try {
       const { data: clasesRaw } = await supabase.from('clases').select('*').eq('trayecto_id', Number(this.trayectoActualId));
-      const clases = (clasesRaw || []).map(c => this.normalizarClase(c)).filter(c => c.calificable !== false && !['material', 'encuesta'].includes(c.tipo));
+      const clases = (clasesRaw || []).map(c => this.normalizarClase(c)).filter(c => c.calificable !== false && c.tipo !== 'material');
       if (!clases.length) {
         contenedor.innerHTML = '<p class="act-vacio">No hay actividades con nota publicadas todavía.</p>';
         return;

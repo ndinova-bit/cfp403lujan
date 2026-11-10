@@ -102,7 +102,7 @@ const SeguimientoModulo = {
         if (c.baja) { bajas.push({ t, key, nombre: this.nombreDe(alumnos, key), ...c }); claveBaja.add(tid + '|' + key); }
       });
     });
-    const califIds = new Set(clases.filter(c => c.calificable !== false && c.tipo !== 'encuesta').map(c => Number(c.id)));
+    const califIds = new Set(clases.filter(c => c.calificable !== false).map(c => Number(c.id)));
     const pendientes = entregas.filter(e => this.sinNota(e) && califIds.has(Number(e.clase_id)));
 
     // ---- 1. Entregas por corregir
@@ -356,7 +356,7 @@ const SeguimientoModulo = {
       const ids = (tr || []).filter(t => String(t.ciclo_lectivo || anio) === anio).map(t => Number(t.id));
       if (!ids.length) return this.actualizarContador(0);
       const { data: cl } = await ReglasFP.selectClases('id', q => q.in('trayecto_id', ids));
-      const cids = (cl || []).filter(c => c.calificable !== false && c.tipo !== 'encuesta').map(c => c.id);
+      const cids = (cl || []).filter(c => c.calificable !== false).map(c => c.id);
       if (!cids.length) return this.actualizarContador(0);
       const { data: en } = await supabase.from('entregas_actividades').select('id, nota').in('clase_id', cids);
       this.actualizarContador((en || []).filter(e => this.sinNota(e)).length);

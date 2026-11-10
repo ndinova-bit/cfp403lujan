@@ -113,7 +113,9 @@ const EstadisticasModulo = {
           ${d.multi.map(m => `<tr><td class="sec-nombre">${this.esc(m.nombre)}<br><small>DNI ${this.esc(m.dni)}</small></td><td><b>${m.n}</b> trayectos</td>
             <td>${(m.detalle || []).map(x => `${this.esc(x.trayecto)} <small>(${this.esc(x.ciclo)} · ${this.esc(x.estado)})</small>`).join('<br>')}</td></tr>`).join('')}
         </tbody></table></div>` : '<div class="prog-vacio">Todavía no hay estudiantes con más de un trayecto.</div>'}
-      </section>`;
+      </section>
+      <div id="estadisticas-encuesta-cierre"></div>`;
+    if (window.EncuestaCierre) EncuestaCierre.panelDireccion('estadisticas-encuesta-cierre');
   },
 
   ordenar(k) { this.orden = k; this.dibujar(); },

@@ -926,7 +926,7 @@ textarea.act-in { resize: vertical; }
 .act-tarjeta { border: 1px solid var(--cfp-line); border-left: 4px solid var(--cfp-line-2); border-radius: 12px; padding: .8rem .95rem; background: #fff; display: flex; flex-direction: column; gap: .55rem; }
 .act-tarjeta.t-tp { border-left-color: var(--cfp-yellow); }
 .act-tarjeta.t-cuestionario, .act-tarjeta.t-diagnostico { border-left-color: var(--cfp-blue); }
-.act-tarjeta.t-practica, .act-tarjeta.t-presupuesto, .act-tarjeta.t-bitacora { border-left-color: var(--cfp-ok); }
+.act-tarjeta.t-practica, .act-tarjeta.t-presupuesto { border-left-color: var(--cfp-ok); }
 .act-tarjeta.t-escrita { border-left-color: var(--cfp-celeste); }
 .act-tarjeta-cab { display: flex; justify-content: space-between; gap: .6rem; align-items: flex-start; }
 .act-tarjeta h4 { margin: .3rem 0 0; font-size: .98rem; color: var(--cfp-ink); }
@@ -1009,10 +1009,6 @@ textarea.act-in { resize: vertical; }
 .act-decision { text-align: left; padding: .7rem .9rem; border: 1px solid var(--cfp-line-2); border-radius: 12px; background: #fff; font: inherit; font-size: .9rem; font-weight: 600; color: var(--cfp-ink); cursor: pointer; }
 .act-decision:hover { border-color: var(--cfp-blue); background: var(--cfp-celeste-soft); }
 .act-fin-caso { text-align: center; font-weight: 800; color: var(--cfp-ok); background: var(--cfp-ok-soft); border-radius: 12px; padding: .7rem; }
-.act-bitacora { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
-.act-bitacora li { border: 1px solid var(--cfp-line); border-left: 4px solid var(--cfp-ok); border-radius: 10px; padding: .55rem .8rem; font-size: .86rem; }
-.act-bitacora p { margin: .3rem 0; white-space: normal; }
-.act-bitacora a { color: var(--cfp-blue); font-weight: 700; font-size: .8rem; }
 .act-bit-cab { display: flex; justify-content: space-between; align-items: center; }
 
 /* Resultados y corrección */
@@ -1389,3 +1385,24 @@ details.seg-grupo > .seg-item { margin: .5rem .7rem; }
     overscroll-behavior: contain;
   }
 }
+
+/* ---------- Encuesta de cierre institucional (js/encuesta-cierre.js) ---------- */
+.enc-tarjeta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: 1rem; padding: .85rem 1rem; border: 1px solid var(--cfp-celeste); border-left: 5px solid var(--cfp-blue); border-radius: 14px; background: var(--cfp-celeste-soft); }
+.enc-tarjeta > div { display: flex; flex-direction: column; gap: .15rem; flex: 1 1 260px; min-width: 0; }
+.enc-tarjeta strong { color: var(--cfp-ink); font-size: .95rem; }
+.enc-tarjeta span { font-size: .82rem; color: var(--cfp-ink-2); line-height: 1.4; }
+.enc-tarjeta.ok { border-color: var(--cfp-line-2); border-left-color: var(--cfp-ok); background: #fff; }
+.enc-tarjeta.suave { border-color: var(--cfp-line); border-left-color: var(--cfp-line-2); background: #F8FAFD; }
+.enc-bloque { margin: .9rem 0 .2rem; font-size: .8rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: var(--cfp-blue); }
+.enc-falta { border-color: var(--cfp-bad, #C0392B) !important; }
+.enc-acciones { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .6rem; }
+.enc-acciones label { font-size: .8rem; font-weight: 700; color: var(--cfp-ink-2); display: flex; align-items: center; gap: .4rem; }
+.enc-acciones-pie { margin: .6rem 0 1rem; }
+.enc-alerta { color: var(--cfp-bad, #C0392B); font-weight: 700; }
+.enc-indicadores { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: .6rem; margin: .6rem 0; }
+.enc-indicadores > div { background: #fff; border: 1px solid var(--cfp-line); border-radius: 12px; padding: .7rem .8rem; display: flex; flex-direction: column; gap: .2rem; }
+.enc-indicadores b { font-size: 1.5rem; color: var(--cfp-navy); line-height: 1; }
+.enc-indicadores span { font-size: .78rem; color: var(--cfp-muted); line-height: 1.35; }
+.enc-ajustes { display: flex; flex-wrap: wrap; align-items: center; gap: .8rem 1.2rem; margin-bottom: .8rem; font-size: .85rem; }
+.enc-ajustes label { display: flex; align-items: center; gap: .4rem; }
+.enc-ajustes input[type="number"] { width: 4.5rem; }

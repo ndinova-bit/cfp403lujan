@@ -103,6 +103,45 @@ const AyudaModulo = {
       }
     },
 
+    encuesta: {
+      t: 'Encuesta de cierre', roles: ['estudiante', 'docente', 'regente', 'admin'],
+      corto: 'Una encuesta breve al terminar cada trayecto.',
+      que: 'Una encuesta / autoevaluación breve, igual para todos los trayectos del CFP. No lleva nota.',
+      pasos: [
+        'Te aparece sola cuando falta una semana para que termine tu trayecto: al entrar a la plataforma y arriba de todo dentro del trayecto.',
+        'Marcá una opción en cada pregunta. Los comentarios escritos son opcionales.',
+        'Podés cambiar tus respuestas mientras la encuesta siga abierta.'
+      ],
+      ojo: ['Tus respuestas se suman a las del grupo y se ven sin tu nombre.'],
+      porRol: {
+        docente: {
+          que: 'Una encuesta / autoevaluación institucional, igual para todos los trayectos. No la cargás vos: se abre sola.',
+          pasos: [
+            'A tus estudiantes activos les aparece una semana antes de la fecha de cierre del trayecto.',
+            'Dentro del trayecto, el botón «Resultados» de la encuesta de cierre muestra las respuestas de tu grupo, agrupadas y sin nombres.'
+          ],
+          ojo: ['No lleva nota ni cuenta para el promedio.', 'Si el trayecto no tiene fecha de cierre cargada, la encuesta no se abre: avisá a Dirección o Regencia.', 'Los comentarios escritos los lee la Dirección.']
+        },
+        regente: {
+          que: 'Una encuesta / autoevaluación institucional, igual para todos los trayectos. Se abre sola una semana antes del cierre de cada uno.',
+          pasos: [
+            'En «Estadísticas», abajo, está el resumen del ciclo: cuántos respondieron en cada trayecto y los promedios de toda la institución.',
+            'Con «Ver» abrís los resultados de un trayecto; con «Ver todas las respuestas del ciclo», los de todo el CFP.'
+          ],
+          ojo: ['Los resultados son siempre agrupados y sin nombres.', 'La encuesta se abre según la fecha de cierre del trayecto: conviene tenerla cargada en todos.']
+        },
+        admin: {
+          que: 'Una encuesta / autoevaluación institucional, igual para todos los trayectos. Se abre sola una semana antes del cierre de cada uno.',
+          pasos: [
+            'En «Estadísticas», abajo, está el resumen del ciclo: cuántos respondieron en cada trayecto y los promedios de toda la institución.',
+            'Con «Ver» abrís los resultados de un trayecto; con «Ver todas las respuestas del ciclo», los de todo el CFP.',
+            'Con «Editar preguntas» cambiás las preguntas, cuántos días antes se abre, o la desactivás.'
+          ],
+          ojo: ['Los resultados son siempre agrupados y sin nombres.', 'La encuesta se abre según la fecha de cierre del trayecto: conviene tenerla cargada en todos.']
+        }
+      }
+    },
+
     seguimiento: {
       t: 'Seguimiento', roles: ['docente', 'preceptor', 'regente', 'admin'],
       corto: 'Estudiantes en riesgo y bajas automáticas.',

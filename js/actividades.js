@@ -4,7 +4,10 @@
 
    Tipos: material · trabajo práctico (link) · práctica en taller (lista de cotejo)
    · cuestionario autocorregible · respuesta escrita · caso de diagnóstico
-   · presupuesto / cómputo · bitácora de taller · encuesta / autoevaluación.
+   · presupuesto / cómputo.
+
+   La encuesta / autoevaluación ya no es un tipo de publicación: es una sola,
+   institucional, y se abre sola al final del trayecto (js/encuesta-cierre.js).
 
    Las respuestas correctas se guardan en "claves_actividad", que los alumnos no
    pueden leer. Los cuestionarios y diagnósticos los corrige el servidor
@@ -19,9 +22,7 @@ const Actividades = {
     cuestionario: { ico: '✅', nombre: 'Cuestionario autocorregible', desc: 'Opción múltiple, V/F, cálculos con valores por alumno, ordenar, relacionar, completar, imagen.' },
     escrita:      { ico: '✍️', nombre: 'Respuesta escrita',         desc: 'El alumno escribe en la plataforma y corregís vos.' },
     diagnostico:  { ico: '🔎', nombre: 'Caso de diagnóstico',       desc: 'Una falla y decisiones paso a paso: cada elección lleva a otra situación.' },
-    presupuesto:  { ico: '🧮', nombre: 'Presupuesto / cómputo',     desc: 'Tabla de materiales con subtotales y total automáticos.' },
-    bitacora:     { ico: '📓', nombre: 'Bitácora de taller',        desc: 'Registro de lo hecho en cada clase, con link opcional a fotos.' },
-    encuesta:     { ico: '💬', nombre: 'Encuesta / autoevaluación',  desc: 'Sin nota. Ves los resultados agrupados.' }
+    presupuesto:  { ico: '🧮', nombre: 'Presupuesto / cómputo',     desc: 'Tabla de materiales con subtotales y total automáticos.' }
   },
   PREGUNTAS: {
     opcion:     { ico: '🔘', nombre: 'Opción múltiple' },
@@ -33,7 +34,7 @@ const Actividades = {
     imagen:     { ico: '🖼️', nombre: 'Identificar en imagen' }
   },
   AUTO: ['cuestionario', 'diagnostico'],                         // los corrige el servidor
-  RESPONDE_ALUMNO: ['tp', 'escrita', 'presupuesto', 'bitacora', 'encuesta', 'cuestionario', 'diagnostico'],
+  RESPONDE_ALUMNO: ['tp', 'escrita', 'presupuesto', 'cuestionario', 'diagnostico'],
   NIVELES: [{ v: 1, txt: 'Logrado', cls: 'ok' }, { v: 0.5, txt: 'Parcial', cls: 'mid' }, { v: 0, txt: 'No logrado', cls: 'bad' }],
   MAX_TEXTO: 2000,
 
@@ -133,9 +134,6 @@ const Actividades = {
       case 'criterio': return { id: u('c'), texto: '', peso: 1 };
       case 'consigna': return { id: u('p'), enunciado: '', max: 1000 };
       case 'item_presupuesto': return { id: u('i'), descripcion: '', unidad: 'u', precio: '' };
-      case 'encuesta_escala': return { id: u('p'), tipo: 'escala', enunciado: '' };
-      case 'encuesta_opcion': return { id: u('p'), tipo: 'opcion', enunciado: '', opcionesTxt: '' };
-      case 'encuesta_texto': return { id: u('p'), tipo: 'texto', enunciado: '' };
       case 'nodo': return { id: u('n'), texto: '', imagen: '', opciones: [] };
       case 'opcion_nodo': return { id: u('o'), texto: '', destino: 'fin', _k: { valor: 100, devolucion: '' } };
       default: return {};
@@ -151,9 +149,8 @@ const Actividades = {
       tipo,
       opciones: Object.assign({ intentos: 1, mezclar: true, devolucion: 'detalle' }, c.opciones || {}),
       cotejo: c.cotejo || [],
-      preguntas: [], consignas: [], encuesta: [], items: c.items || [], nodos: [],
-      permitirFilas: c.permitirFilas !== false,
-      anonima: !!c.anonima
+      preguntas: [], consignas: [], items: c.items || [], nodos: [],
+      permitirFilas: c.permitirFilas !== false
     };
     if (tipo === 'cuestionario') {
       ed.preguntas = (c.preguntas || []).map(p => {
@@ -198,7 +195,6 @@ const Actividades = {
       });
     }
     if (tipo === 'escrita') ed.consignas = c.preguntas || [];
-    if (tipo === 'encuesta') ed.encuesta = (c.preguntas || []).map(p => ({ ...p, opcionesTxt: (p.opciones || []).join('; ') }));
     if (tipo === 'diagnostico') {
       const ko = k.opciones || {};
       ed.nodos = (c.nodos || []).map(n => ({ ...n, opciones: (n.opciones || []).map(o => ({ ...o, _k: { valor: (ko[o.id] || {}).valor ?? 0, devolucion: (ko[o.id] || {}).devolucion || '' } })) }));
@@ -212,7 +208,7 @@ const Actividades = {
     const t = ed.tipo;
     const contenido = {};
     const clave = {};
-    if ((ed.cotejo || []).length && ['tp', 'practica', 'escrita', 'presupuesto', 'bitacora'].includes(t)) {
+    if ((ed.cotejo || []).length && ['tp', 'practica', 'escrita', 'presupuesto'].includes(t)) {
       contenido.cotejo = ed.cotejo.map(c => ({ id: c.id, texto: String(c.texto || '').trim(), peso: Number(c.peso) > 0 ? Number(c.peso) : 1 }));
     }
     if (t === 'cuestionario') {
@@ -291,16 +287,7 @@ const Actividades = {
       contenido.items = ed.items.map(i => ({ id: i.id, descripcion: String(i.descripcion || '').trim(), unidad: String(i.unidad || '').trim(), precio: String(i.precio ?? '').trim() }));
       contenido.permitirFilas = !!ed.permitirFilas;
     }
-    if (t === 'encuesta') {
-      contenido.anonima = !!ed.anonima;
-      contenido.preguntas = ed.encuesta.map(p => {
-        const q = { id: p.id, tipo: p.tipo, enunciado: String(p.enunciado || '').trim() };
-        if (p.tipo === 'opcion') q.opciones = String(p.opcionesTxt || '').split(';').map(s => s.trim()).filter(Boolean);
-        return q;
-      });
-    }
-    const calificable = !['material', 'encuesta'].includes(t) && !(t === 'bitacora' && ed.sinNota);
-    if (t === 'bitacora' && ed.sinNota) contenido.sinNota = true;
+    const calificable = t !== 'material';
     return { contenido: Object.keys(contenido).length ? contenido : null, clave: Object.keys(clave).length ? clave : null, calificable };
   },
 
@@ -350,14 +337,6 @@ const Actividades = {
     }
     if (t === 'escrita' && (!ed.consignas.length || ed.consignas.some(c => !String(c.enunciado || '').trim()))) return 'Escribí al menos una consigna (y completá las que agregaste).';
     if (t === 'presupuesto' && !ed.items.length && !ed.permitirFilas) return 'Agregá materiales a la tabla o permití que el alumno agregue filas.';
-    if (t === 'encuesta') {
-      if (!ed.encuesta.length) return 'Agregá al menos una pregunta a la encuesta.';
-      for (let i = 0; i < ed.encuesta.length; i++) {
-        const p = ed.encuesta[i];
-        if (!String(p.enunciado || '').trim()) return `${nro(i)} de la encuesta: falta el texto.`;
-        if (p.tipo === 'opcion' && String(p.opcionesTxt || '').split(';').map(s => s.trim()).filter(Boolean).length < 2) return `${nro(i)} de la encuesta: escribí al menos dos opciones separadas por punto y coma.`;
-      }
-    }
     if (t === 'diagnostico') {
       if (!ed.nodos.length) return 'Agregá la situación inicial del caso.';
       if (!(ed.nodos[0].opciones || []).length) return 'La situación inicial necesita al menos una decisión.';
@@ -379,11 +358,9 @@ const Actividades = {
     const cont = document.getElementById('act-editor');
     if (!cont) return;
     this.ed = this.unir(tipo, clase ? clase.contenido : null, clave);
-    if (tipo === 'bitacora' && clase && clase.contenido && clase.contenido.sinNota) this.ed.sinNota = true;
     if (!clase) {
       if (tipo === 'cuestionario') this.ed.preguntas = [this.nuevo('opcion')];
       if (tipo === 'escrita') this.ed.consignas = [this.nuevo('consigna')];
-      if (tipo === 'encuesta') this.ed.encuesta = [this.nuevo('encuesta_escala')];
       if (tipo === 'diagnostico') { const n = this.nuevo('nodo'); n.opciones = [this.nuevo('opcion_nodo'), this.nuevo('opcion_nodo')]; this.ed.nodos = [n]; }
       if (tipo === 'presupuesto') this.ed.items = [this.nuevo('item_presupuesto'), this.nuevo('item_presupuesto')];
       if (tipo === 'practica') this.ed.cotejo = [this.nuevo('criterio'), this.nuevo('criterio')];
@@ -506,10 +483,7 @@ const Actividades = {
     if (t === 'diagnostico') h += this.edOpciones(false) + this.edDiagnostico();
     if (t === 'escrita') h += this.edConsignas();
     if (t === 'presupuesto') h += this.edPresupuesto();
-    if (t === 'bitacora') h += `<div class="act-caja"><label class="act-check"><input type="checkbox" data-f="sinNota" data-redibujar="1" ${this.ed.sinNota ? 'checked' : ''}> Sin nota (solo registro: no cuenta para el promedio del módulo)</label>
-      <p class="act-ayuda">Cada alumno agrega entradas con la fecha, lo que hizo y, si quiere, un link a fotos (Google Fotos o Drive). No se suben archivos a la plataforma.</p></div>`;
-    if (t === 'encuesta') h += this.edEncuesta();
-    if (['tp', 'practica', 'escrita', 'presupuesto'].includes(t) || (t === 'bitacora' && !this.ed.sinNota)) h += this.edCotejo();
+    if (['tp', 'practica', 'escrita', 'presupuesto'].includes(t)) h += this.edCotejo();
     cont.innerHTML = h;
     cont.querySelectorAll('.act-ejemplo').forEach(el => { const q = this.ed.preguntas[Number(el.closest('.act-preg').dataset.i)]; if (q) el.innerHTML = this.textoEjemplo(q); });
   },
@@ -671,19 +645,6 @@ const Actividades = {
       </tbody></table>
       ${this.btn('add', '+ Material', 'data-p="items" data-n="item_presupuesto"')}
       <label class="act-check"><input type="checkbox" data-f="permitirFilas" ${this.ed.permitirFilas ? 'checked' : ''}> El alumno puede agregar materiales que no están en la lista</label></div>`;
-  },
-
-  edEncuesta() {
-    const ps = this.ed.encuesta;
-    return `<div class="act-caja"><h5>Preguntas de la encuesta</h5>
-      ${ps.map((q, j) => `<div class="act-preg"><div class="act-preg-cab"><strong>${j + 1}. ${q.tipo === 'escala' ? 'Escala del 1 al 5' : q.tipo === 'opcion' ? 'Opciones' : 'Respuesta libre'}</strong>${this.barraOrden('encuesta', j, ps.length)}</div>
-        ${this.campo(`encuesta.${j}.enunciado`, q.enunciado, q.tipo === 'escala' ? 'Ej.: ¿Qué tan seguro/a te sentís armando un tablero?' : 'Pregunta')}
-        ${q.tipo === 'opcion' ? `<label>Opciones (separadas por punto y coma) ${this.campo(`encuesta.${j}.opcionesTxt`, q.opcionesTxt, 'Ej.: Muy útil; Útil; Poco útil')}</label>` : ''}</div>`).join('')}
-      <div class="act-agregar"><span>Agregar:</span>
-        ${this.btn('add', '1 a 5', 'data-p="encuesta" data-n="encuesta_escala"', 'act-btn-sec')}
-        ${this.btn('add', 'Opciones', 'data-p="encuesta" data-n="encuesta_opcion"', 'act-btn-sec')}
-        ${this.btn('add', 'Respuesta libre', 'data-p="encuesta" data-n="encuesta_texto"', 'act-btn-sec')}</div>
-      <label class="act-check"><input type="checkbox" data-f="anonima" ${this.ed.anonima ? 'checked' : ''}> Mostrar los resultados sin nombres</label></div>`;
   },
 
   edDiagnostico() {
@@ -878,8 +839,6 @@ Object.assign(Actividades, {
     if (bloqueada) return this.verResultado(claseId);
     if (clase.tipo === 'escrita') return this.abrirEscrita(clase, entrega);
     if (clase.tipo === 'presupuesto') return this.abrirPresupuesto(clase, entrega);
-    if (clase.tipo === 'bitacora') return this.abrirBitacora(clase, entrega);
-    if (clase.tipo === 'encuesta') return this.abrirEncuesta(clase, entrega);
     return this.modal(titulo, '<p>Esta actividad no tiene nada para responder en la plataforma.</p>');
   },
 
@@ -1058,62 +1017,7 @@ Object.assign(Actividades, {
     pintar();
   },
 
-  /* ---------- Bitácora ---------- */
-  abrirBitacora(clase, entrega) {
-    const entradas = ((entrega && entrega.respuestas && entrega.respuestas.r && entrega.respuestas.r.entradas) || []).slice();
-    const hoy = this.hoyISO();
-    const lista = entradas.length ? `<ul class="act-bitacora">${entradas.map((en, i) => `<li><div class="act-bit-cab"><strong>${this.fechaDMY(en.f)}</strong><button type="button" class="act-mini act-quitar" data-quitar="${i}">Quitar</button></div><p>${this.textoConSaltos(en.t)}</p>${this.urlSegura(en.l) ? `<a href="${this.esc(this.urlSegura(en.l))}" target="_blank" rel="noopener noreferrer">📷 Ver fotos</a>` : ''}</li>`).join('')}</ul>` : '<p class="act-ayuda">Todavía no cargaste entradas.</p>';
-    const cuerpo = `${this.encabezadoActividad(clase, entrega)}${lista}
-      <div class="act-caja"><h5>Nueva entrada</h5>
-        <div class="act-fila"><label>Fecha <input type="date" class="act-in" id="bit-fecha" value="${hoy}" max="${hoy}"></label>
-        <label class="act-crece">Link a fotos (opcional) <input class="act-in" id="bit-link" placeholder="https://photos.app.goo.gl/…" maxlength="300"></label></div>
-        <label>¿Qué hiciste hoy? <textarea class="act-in" id="bit-texto" rows="4" maxlength="1500" placeholder="Tareas realizadas, herramientas usadas, dificultades, medidas tomadas…"></textarea></label>
-      </div>`;
-    const m = this.modal(`📓 ${this.esc(clase.titulo)}`, cuerpo, `<button type="button" class="act-btn-sec" onclick="Actividades.cerrarModal()">Cerrar</button><button type="button" class="act-btn" id="act-enviar">Agregar entrada</button>`);
-    m.querySelectorAll('[data-quitar]').forEach(b => {
-      b.onclick = async () => {
-        if (!confirm('¿Quitar esta entrada?')) return;
-        entradas.splice(Number(b.dataset.quitar), 1);
-        if (await this.guardarDirecto(clase, { entradas }, true)) this.abrirBitacora(clase, this.claseYEntrega(clase.id).entrega);
-      };
-    });
-    m.querySelector('#act-enviar').onclick = async () => {
-      const t = m.querySelector('#bit-texto').value.trim();
-      const l = m.querySelector('#bit-link').value.trim();
-      if (!t) return this.aviso('warning', 'Falta el texto', 'Contá qué hiciste en la clase.');
-      if (l && !this.urlSegura(l)) return this.aviso('warning', 'Link no válido', 'Tiene que empezar con https://');
-      if (entradas.length >= 30) return this.aviso('warning', 'Bitácora completa', 'Llegaste al máximo de 30 entradas.');
-      entradas.push({ f: m.querySelector('#bit-fecha').value || hoy, t: t.slice(0, 1500), l: l ? this.urlSegura(l) : '' });
-      if (await this.guardarDirecto(clase, { entradas }, true)) this.abrirBitacora(clase, this.claseYEntrega(clase.id).entrega);
-    };
-  },
-
-  /* ---------- Encuesta ---------- */
-  abrirEncuesta(clase, entrega) {
-    const r = (entrega && entrega.respuestas && entrega.respuestas.r) || {};
-    const ps = (clase.contenido && clase.contenido.preguntas) || [];
-    const cuerpo = `${this.encabezadoActividad(clase, entrega)}<form id="act-form-resp" class="act-form-resp" onsubmit="return false">
-      ${ps.map((p, i) => {
-        let campo = '';
-        if (p.tipo === 'escala') campo = `<div class="act-escala">${[1, 2, 3, 4, 5].map(v => `<label><input type="radio" name="${this.esc(p.id)}" value="${v}" ${Number(r[p.id]) === v ? 'checked' : ''}><span>${v}</span></label>`).join('')}</div><div class="act-escala-ref"><span>1 = muy poco</span><span>5 = mucho</span></div>`;
-        else if (p.tipo === 'opcion') campo = `<div class="act-ops">${(p.opciones || []).map(o => `<label class="act-op"><input type="radio" name="${this.esc(p.id)}" value="${this.esc(o)}" ${r[p.id] === o ? 'checked' : ''}> <span>${this.esc(o)}</span></label>`).join('')}</div>`;
-        else campo = `<textarea class="act-in" name="${this.esc(p.id)}" rows="3" maxlength="500">${this.esc(r[p.id] || '')}</textarea>`;
-        return `<div class="act-resp-preg"><div class="act-resp-enun"><span class="act-resp-n">${i + 1}</span><div>${this.textoConSaltos(p.enunciado)}</div></div>${campo}</div>`;
-      }).join('')}</form>
-      <p class="act-ayuda">Esta encuesta no lleva nota.${clase.contenido && clase.contenido.anonima ? ' El docente ve los resultados sin nombres.' : ''}</p>`;
-    const m = this.modal(`💬 ${this.esc(clase.titulo)}`, cuerpo, `<button type="button" class="act-btn-sec" onclick="Actividades.cerrarModal()">Cancelar</button><button type="button" class="act-btn" id="act-enviar">${entrega ? 'Guardar cambios' : 'Enviar'}</button>`);
-    m.querySelector('#act-enviar').onclick = async () => {
-      const out = {};
-      ps.forEach(p => {
-        if (p.tipo === 'texto') { const t = m.querySelector(`textarea[name="${CSS.escape(p.id)}"]`); if (t && t.value.trim()) out[p.id] = t.value.trim().slice(0, 500); }
-        else { const s = m.querySelector(`input[name="${CSS.escape(p.id)}"]:checked`); if (s) out[p.id] = p.tipo === 'escala' ? Number(s.value) : s.value; }
-      });
-      if (!Object.keys(out).length) return this.aviso('warning', 'Sin respuestas', 'Respondé al menos una pregunta.');
-      await this.guardarDirecto(clase, out);
-    };
-  },
-
-  /* ---------- Guardado directo (escrita, presupuesto, bitácora, encuesta) ---------- */
+  /* ---------- Guardado directo (escrita, presupuesto) ---------- */
   async guardarDirecto(clase, respuestas, quedarse = false) {
     const dni = this.miDni();
     try {
@@ -1131,7 +1035,7 @@ Object.assign(Actividades, {
         throw error;
       }
       if (window.ClasesModulo) await ClasesModulo.cargarListaClases(true);
-      if (!quedarse) { this.cerrarModal(); this.toast(clase.tipo === 'encuesta' ? '¡Gracias por responder!' : 'Respuesta enviada'); }
+      if (!quedarse) { this.cerrarModal(); this.toast('Respuesta enviada'); }
       else this.toast('Guardado');
       return true;
     } catch (e) {
@@ -1150,7 +1054,7 @@ Object.assign(Actividades, {
       const n = parseFloat(entrega.nota);
       h += `<div class="act-nota-grande ${n >= 70 ? 'ok' : 'bad'}"><span>${this.esc(entrega.nota)}</span><small>${n >= 70 ? 'Aprobado (70 o más)' : 'No alcanza 70'}</small></div>`;
     } else if (entrega) {
-      h += `<p class="act-centro">${clase.tipo === 'encuesta' ? '✔ Respondiste esta encuesta.' : '⏳ Entregado: falta la corrección del docente.'}</p>`;
+      h += `<p class="act-centro">⏳ Entregado: falta la corrección del docente.</p>`;
     } else {
       h += '<p class="act-centro">No entregaste esta actividad.</p>';
     }
@@ -1220,13 +1124,6 @@ Object.assign(Actividades, {
         ${filas.map((f, i) => `<tr><td>${this.esc(f.descripcion)}</td><td>${this.esc(f.unidad)}</td><td>${this.esc(f.cantidad)}</td><td>${this.esc(f.precio)}</td><td>${fmt(tot.subtotales[i])}</td></tr>`).join('')}
         </tbody><tfoot><tr><td colspan="4">TOTAL</td><td>${fmt(tot.total)}</td></tr></tfoot></table></div>`;
     }
-    if (clase.tipo === 'bitacora') {
-      const en = r.entradas || [];
-      return en.length ? `<ul class="act-bitacora">${en.map(e => `<li><strong>${this.fechaDMY(e.f)}</strong><p>${this.textoConSaltos(e.t)}</p>${this.urlSegura(e.l) ? `<a href="${this.esc(this.urlSegura(e.l))}" target="_blank" rel="noopener noreferrer">📷 Ver fotos</a>` : ''}</li>`).join('')}</ul>` : '<p class="act-ayuda">Sin entradas.</p>';
-    }
-    if (clase.tipo === 'encuesta') {
-      return `<div class="act-revision">${(c.preguntas || []).map((p, i) => `<div class="act-rev-preg"><div class="act-resp-enun"><span class="act-resp-n">${i + 1}</span><div>${this.esc(p.enunciado)}</div></div><div class="act-rev-texto">${r[p.id] !== undefined ? this.esc(r[p.id]) : '<em>Sin respuesta</em>'}</div></div>`).join('')}</div>`;
-    }
     return '';
   },
 
@@ -1285,7 +1182,7 @@ Object.assign(Actividades, {
 
 /* ==========================================================================
    DOCENTE: respuestas, corrección con lista de cotejo, planilla de taller,
-   resultados de encuestas, vista de prueba y banco de preguntas
+   vista de prueba y banco de preguntas
    ========================================================================== */
 Object.assign(Actividades, {
   async datosDocente(claseId) {
@@ -1316,9 +1213,8 @@ Object.assign(Actividades, {
   estadoEntrega(clase, a) {
     const e = a.entrega;
     const pl = this.plazo(clase);
-    if (!e) return { cls: pl && pl.vencida ? 'bad' : 'gris', txt: pl && pl.vencida ? (clase.calificable !== false && clase.tipo !== 'encuesta' ? 'No entregó (10)' : 'No respondió') : (clase.tipo === 'practica' ? 'Sin calificar' : 'Sin entregar') };
+    if (!e) return { cls: pl && pl.vencida ? 'bad' : 'gris', txt: pl && pl.vencida ? (clase.calificable !== false ? 'No entregó (10)' : 'No respondió') : (clase.tipo === 'practica' ? 'Sin calificar' : 'Sin entregar') };
     if (this.tieneNota(e)) return { cls: parseFloat(e.nota) >= 70 ? 'ok' : 'bad', txt: 'Corregida' };
-    if (clase.tipo === 'encuesta') return { cls: 'ok', txt: 'Respondió' };
     return { cls: 'mid', txt: 'Para corregir' };
   },
 
@@ -1332,34 +1228,31 @@ Object.assign(Actividades, {
       const T = this.TIPOS[clase.tipo] || {};
       const act = alumnos.filter(a => a.activo);
       const entregaron = act.filter(a => a.entrega).length;
-      const sinCorregir = act.filter(a => a.entrega && !this.tieneNota(a.entrega) && clase.tipo !== 'encuesta').length;
+      const sinCorregir = act.filter(a => a.entrega && !this.tieneNota(a.entrega)).length;
       const faltan = act.filter(a => !a.entrega);
       const pl = this.plazo(clase);
       let h = `<div class="act-resumen">
-          <div><strong>${entregaron}</strong><span>de ${act.length} ${clase.tipo === 'practica' ? 'calificados' : clase.tipo === 'encuesta' ? 'respondieron' : 'entregaron'}</span></div>
+          <div><strong>${entregaron}</strong><span>de ${act.length} ${clase.tipo === 'practica' ? 'calificados' : 'entregaron'}</span></div>
           ${clase.calificable !== false && clase.tipo !== 'practica' ? `<div><strong>${sinCorregir}</strong><span>para corregir</span></div>` : ''}
           <div><strong>${faltan.length}</strong><span>${clase.tipo === 'practica' ? 'sin calificar' : 'faltan'}</span></div>
           ${pl ? `<div class="act-resumen-plazo ${pl.cls}">⏰ ${this.esc(pl.txt)}</div>` : ''}
         </div>
         <div class="act-acciones-sup">
           ${clase.tipo === 'practica' ? `<button type="button" class="act-btn" onclick="Actividades.planillaTaller(${Number(clase.id)})">🛠️ Abrir planilla de taller</button>` : ''}
-          ${clase.tipo === 'encuesta' ? `<button type="button" class="act-btn" onclick="Actividades.resultadosEncuesta(${Number(clase.id)})">📊 Ver resultados</button>` : ''}
           ${this.AUTO.includes(clase.tipo) ? `<button type="button" class="act-btn-sec" onclick="Actividades.probar(${Number(clase.id)})">👁️ Probar como alumno</button>` : ''}
           ${faltan.length ? `<button type="button" class="act-btn-sec" id="act-copiar-faltan">📋 Copiar lista de quienes faltan</button>` : ''}
         </div>`;
-      const ocultarNombres = clase.tipo === 'encuesta' && clase.contenido && clase.contenido.anonima;
       h += `<div class="act-tabla-scroll"><table class="act-tabla act-lista-alumnos"><thead><tr><th>Estudiante</th><th>Estado</th><th>Nota</th>${this.AUTO.includes(clase.tipo) ? '<th>Intentos</th>' : ''}<th>Última actualización</th><th></th></tr></thead><tbody>
         ${alumnos.map((a, i) => {
           const est = this.estadoEntrega(clase, a);
           const e = a.entrega;
           const fecha = e ? (e.updated_at || e.created_at) : null;
-          const puedeVer = clase.tipo !== 'encuesta' || !ocultarNombres;
-          return `<tr class="${a.activo ? '' : 'fila-baja'}"><td>${ocultarNombres ? `Estudiante ${i + 1}` : this.esc(a.nombre)}${a.activo ? '' : ' <small>(baja)</small>'}</td>
+          return `<tr class="${a.activo ? '' : 'fila-baja'}"><td>${this.esc(a.nombre)}${a.activo ? '' : ' <small>(baja)</small>'}</td>
             <td><span class="act-estado ${est.cls}">${est.txt}</span></td>
             <td>${e && this.tieneNota(e) ? `<strong>${this.esc(e.nota)}</strong>` : '—'}</td>
             ${this.AUTO.includes(clase.tipo) ? `<td>${e ? Number(e.intentos) || 0 : 0}</td>` : ''}
             <td>${fecha ? new Date(fecha).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}</td>
-            <td>${puedeVer && (e || ['practica', 'tp', 'escrita', 'presupuesto', 'bitacora'].includes(clase.tipo)) && clase.tipo !== 'encuesta' ? `<button type="button" class="act-mini" onclick="Actividades.verEntrega(${Number(clase.id)}, '${this.esc(a.dni)}')">${e && !this.tieneNota(e) ? 'Corregir' : 'Ver'}</button>` : ''}</td></tr>`;
+            <td>${(e || ['practica', 'tp', 'escrita', 'presupuesto'].includes(clase.tipo)) ? `<button type="button" class="act-mini" onclick="Actividades.verEntrega(${Number(clase.id)}, '${this.esc(a.dni)}')">${e && !this.tieneNota(e) ? 'Corregir' : 'Ver'}</button>` : ''}</td></tr>`;
         }).join('')}
         </tbody></table></div>`;
       const m = this.modal(`${T.ico || ''} ${this.esc(clase.titulo)} · Respuestas`, h, '<button type="button" class="act-btn" onclick="Actividades.cerrarModal()">Cerrar</button>', 980);
@@ -1518,35 +1411,6 @@ Object.assign(Actividades, {
       };
     } catch (e) {
       this.aviso('error', 'No se pudo abrir la planilla', e.message);
-    }
-  },
-
-  /* ---------- Resultados de una encuesta ---------- */
-  async resultadosEncuesta(claseId) {
-    try {
-      const d = await this.datosDocente(claseId);
-      const { clase } = d;
-      const c = clase.contenido || {};
-      const resp = d.alumnos.filter(a => a.entrega && a.entrega.respuestas && a.entrega.respuestas.r).map(a => ({ nombre: a.nombre, r: a.entrega.respuestas.r }));
-      const anon = !!c.anonima;
-      let h = `<p class="act-ayuda">${resp.length} respuesta(s) de ${d.alumnos.filter(a => a.activo).length} estudiantes.</p>`;
-      (c.preguntas || []).forEach((p, i) => {
-        const vals = resp.filter(x => x.r[p.id] !== undefined && x.r[p.id] !== '');
-        h += `<div class="act-caja"><h5>${i + 1}. ${this.esc(p.enunciado)}</h5>`;
-        if (p.tipo === 'escala' || p.tipo === 'opcion') {
-          const ops = p.tipo === 'escala' ? ['1', '2', '3', '4', '5'] : (p.opciones || []);
-          const cuenta = ops.map(o => vals.filter(x => String(x.r[p.id]) === String(o)).length);
-          const max = Math.max(1, ...cuenta);
-          if (p.tipo === 'escala' && vals.length) h += `<p><strong>Promedio: ${(vals.reduce((s, x) => s + Number(x.r[p.id]), 0) / vals.length).toFixed(1).replace('.', ',')}</strong> sobre 5</p>`;
-          h += `<div class="act-barras">${ops.map((o, j) => `<div class="act-barra-fila"><span>${this.esc(o)}</span><div class="act-barra"><div style="width:${(cuenta[j] / max) * 100}%"></div></div><span>${cuenta[j]}</span></div>`).join('')}</div>`;
-        } else {
-          h += vals.length ? `<ul class="act-textos">${vals.map(x => `<li>${this.esc(x.r[p.id])}${anon ? '' : ` <small>— ${this.esc(x.nombre)}</small>`}</li>`).join('')}</ul>` : '<p class="act-ayuda">Sin respuestas.</p>';
-        }
-        h += '</div>';
-      });
-      this.modal(`📊 ${this.esc(clase.titulo)} · Resultados`, h, `<button type="button" class="act-btn-sec" onclick="Actividades.verRespuestas(${Number(clase.id)})">← Volver</button><button type="button" class="act-btn" onclick="Actividades.cerrarModal()">Cerrar</button>`);
-    } catch (e) {
-      this.aviso('error', 'No se pudieron cargar los resultados', e.message);
     }
   },
 

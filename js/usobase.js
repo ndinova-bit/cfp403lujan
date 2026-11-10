@@ -109,10 +109,9 @@ const CierreCiclo = {
     if (!r) return '';
     const c = (clase && clase.contenido) || {};
     try {
-      if (clase && ['escrita', 'encuesta'].includes(clase.tipo)) {
+      if (clase && clase.tipo === 'escrita') {
         return (c.preguntas || []).map((p, i) => `${i + 1}) ${p.enunciado}: ${r[p.id] ?? '—'}`).join('\n');
       }
-      if (clase && clase.tipo === 'bitacora') return (r.entradas || []).map(e => `${e.f}: ${e.t}${e.l ? ' (' + e.l + ')' : ''}`).join('\n');
       if (clase && clase.tipo === 'presupuesto') return (r.filas || []).map(f => `${f.descripcion || f.id}: ${f.cantidad} x ${f.precio ?? ''}`).join('\n');
     } catch (e) { /* formato libre */ }
     return JSON.stringify(r);

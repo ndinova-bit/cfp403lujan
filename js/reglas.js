@@ -11,8 +11,7 @@
      – Si el trayecto no computa asistencia (virtual) o no hay asistencia
        cargada, la nota es solo el promedio de actividades (nunca se promedia con 0).
      – Si no hay actividades calificadas pero sí asistencia, la nota es la asistencia.
-   • Solo cuentan las actividades con nota: no cuentan el material, las encuestas
-     ni las bitácoras marcadas "sin nota".
+   • Solo cuentan las actividades con nota: el material de clase no cuenta.
    • Una actividad no entregada cuenta con la nota mínima (10, como el 1 en las
      escuelas) cuando vence su plazo (o, si no tiene
      fecha límite, cuando cierra el módulo). Un recuperatorio es otra actividad más
@@ -64,8 +63,8 @@ const ReglasFP = {
   evaluar(datos) {
     const key = String(datos.key);
     const computa = datos.computaAsistencia !== false;
-    // Las encuestas, el material y las bitácoras sin nota no cuentan para el promedio
-    const clases = (datos.clases || []).filter(c => c.calificable !== false && c.tipo !== 'encuesta' && c.tipo !== 'material');
+    // El material de clase no cuenta para el promedio
+    const clases = (datos.clases || []).filter(c => c.calificable !== false && c.tipo !== 'material');
     const entregas = (datos.entregas || []).filter(e => String(e.estudiante_user) === key);
     const asis = (datos.asistencias || []).filter(a => String(a.estudiante_user) === key);
     const acred = (datos.acreditados || []).filter(a => String(a.estudiante_user) === key);
@@ -130,7 +129,7 @@ const ReglasFP = {
      Solo para actividades que el alumno entrega en la plataforma (no la práctica en
      taller, que la califica el docente) y que son para él (los recuperatorios
      personales no cuentan para el resto del grupo). */
-  TIPOS_CON_ENTREGA: ['tp', 'cuestionario', 'escrita', 'diagnostico', 'presupuesto', 'bitacora'],
+  TIPOS_CON_ENTREGA: ['tp', 'cuestionario', 'escrita', 'diagnostico', 'presupuesto'],
   venceSinEntrega(c, modulo, key, hoy) {
     if (!this.TIPOS_CON_ENTREGA.includes(c.tipo)) return false;
     if (c.estudiante_user && String(c.estudiante_user) !== String(key)) return false;

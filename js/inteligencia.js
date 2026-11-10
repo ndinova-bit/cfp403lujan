@@ -102,7 +102,7 @@ const DashboardIntel = {
     const entPorAlumno = grupo(entregas, e => String(e.estudiante_user));
     const asisPorAlumno = grupo(asis, a => Number(a.trayecto_id) + '|' + String(a.estudiante_user));
     const excSet = new Set(excepciones.filter(x => x.habilitado).map(x => Number(x.trayecto_id) + '|' + String(x.estudiante_user)));
-    const califIds = new Set(clases.filter(c => c.calificable !== false && c.tipo !== 'encuesta').map(c => Number(c.id)));
+    const califIds = new Set(clases.filter(c => c.calificable !== false).map(c => Number(c.id)));
 
     const filas = [];                // una por inscripción
     const porTrayecto = [];
