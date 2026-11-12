@@ -375,6 +375,9 @@
     <button id="btn-actas" class="nav-item-btn" style="display:none" onclick="UI.showTab('actas')">
     <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 11h6M9 15h6"/></svg></span> Fichas, Actas y Certificados
   </button>
+    <button id="btn-libro-matriz" class="nav-item-btn" style="display:none" onclick="UI.showTab('libro-matriz')">
+    <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5M9 8h6M9 12h6"/></svg></span> Libro matriz
+  </button>
     </div>
   </div>
   <div class="nav-grupo" id="grp-trayectos">
@@ -774,6 +777,19 @@
           </div>
         </section>
 
+        <!-- LIBRO MATRIZ: N.º de curso, N.º de egresado y trayectos realizados (solo lectura) -->
+        <section id="libro-matriz" class="section-tab" style="display: none;">
+          <div class="card-panel">
+            <div class="card-panel-header">
+              <h3 style="margin: 0; font-size: 1.25rem;">📒 Libro matriz</h3>
+              <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #94a3b8;">
+                Registro de N.º de curso, N.º de egresado y trayectos realizados. Se arma con lo que ya se carga en cada trayecto y en Fichas, Actas y Certificados: si cambiás un número allá, se actualiza acá.
+              </p>
+            </div>
+            <div id="libro-matriz-root" style="margin-top: 1.25rem;"></div>
+          </div>
+        </section>
+
         <!-- VISTA 5: GESTIÓN DE USUARIOS -->
         <section id="usuarios" class="section-tab admin-only" style="display: none;">
           <div class="card-panel">
@@ -1010,7 +1026,7 @@
   <script src="js/supabase-config.js?v=70007" defer></script>
   <script src="js/avisos.js?v=70008" defer></script>
   <script src="js/reglas.js?v=70105" defer></script>
-  <script src="js/ui.js?v=70105" defer></script>
+  <script src="js/ui.js?v=70111" defer></script>
   <script src="js/auth.js?v=70075" defer></script>
   <script src="js/trayectos.js?v=70096" defer></script>
   <script src="js/usuarios.js?v=70094" defer></script>
@@ -1047,6 +1063,7 @@
   <script src="js/constancias.js?v=70050" defer></script>
   <script src="js/fichacurso.js?v=70017" defer></script>
   <script src="js/certificados.js?v=70085" defer></script>
+  <script src="js/libro-matriz.js?v=70110" defer></script>
   <script src="js/libro-temas.js?v=70050" defer></script>
   <script src="js/planificacion.js?v=70050" defer></script>
 </body>

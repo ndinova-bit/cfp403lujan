@@ -111,6 +111,9 @@ const UI = {
     if (btnUsuarios) btnUsuarios.style.setProperty('display', isAdmin ? 'flex' : 'none', 'important');
     // Fichas, Actas y Certificados: dirección y regencia completo; Secretaría ve fichas y actas y asigna N.º de egresado; Preceptoría solo ve los N.º de egresado.
     if (btnActas) btnActas.style.setProperty('display', (isAdmin || esSecretaria || rolNorm === 'preceptor') ? 'flex' : 'none', 'important');
+    // Libro matriz (N.º de curso, N.º de egresado, trayectos realizados; solo lectura): dirección, regencia, Secretaría y preceptoría
+    const btnLibro = document.getElementById('btn-libro-matriz');
+    if (btnLibro) btnLibro.style.setProperty('display', (isAdmin || esSecretaria || rolNorm === 'preceptor') ? 'flex' : 'none', 'important');
 
     document.querySelectorAll('.admin-only').forEach(el => {
       el.style.setProperty('display', isAdmin ? (el.tagName === 'BUTTON' ? 'inline-flex' : 'block') : 'none', 'important');
@@ -226,7 +229,7 @@ const UI = {
     const isAdmin = Auth.esDireccion(perfil.rol);
     const rolPerfil = String(perfil.rol || '').toLowerCase().trim();
     if (tabId === 'cooperadora' && rolPerfil === 'estudiante') tabId = 'trayectos';
-    if (Auth.esSecretaria(rolPerfil) && !['secretaria', 'inteligencia', 'observaciones', 'cooperadora', 'actas', 'licencias', 'ayuda'].includes(tabId)) tabId = 'secretaria';
+    if (Auth.esSecretaria(rolPerfil) && !['secretaria', 'inteligencia', 'observaciones', 'cooperadora', 'actas', 'libro-matriz', 'licencias', 'ayuda'].includes(tabId)) tabId = 'secretaria';
     if (tabId === 'secretaria' && !(Auth.esSecretaria(rolPerfil) || isAdmin || rolPerfil === 'preceptor')) tabId = 'trayectos';
     if (tabId === 'estadisticas' && !isAdmin) tabId = 'trayectos';
     if (tabId === 'inteligencia' && !Auth.esSecretaria(rolPerfil)) tabId = isAdmin ? 'dashboard' : 'trayectos';
@@ -241,6 +244,7 @@ const UI = {
     if (tabId === 'novedades' && !(isAdmin || rolPerfil === 'docente' || rolPerfil === 'preceptor')) tabId = isAdmin ? 'dashboard' : 'trayectos';
     // Fichas / Actas de Examen: dirección edita; Secretaría solo ve e imprime (ver showTab de más abajo).
     if (tabId === 'actas' && !(isAdmin || Auth.esSecretaria(rolPerfil) || rolPerfil === 'preceptor')) tabId = isAdmin ? 'dashboard' : 'trayectos';
+    if (tabId === 'libro-matriz' && !(isAdmin || Auth.esSecretaria(rolPerfil) || rolPerfil === 'preceptor')) tabId = isAdmin ? 'dashboard' : 'trayectos';
     if (!isAdmin && (tabId === 'dashboard' || tabId === 'nuevo-trayecto' || tabId === 'usuarios' || tabId === 'backups' || tabId === 'auditoria')) {
       tabId = 'trayectos';
     }
@@ -285,6 +289,7 @@ const UI = {
         'novedades': 'Novedades y calendario',
         'trayectos': (isAdmin || rolActual === 'preceptor') ? 'Trayectos Formativos' : 'Mis Trayectos Formativos',
         'actas': 'Fichas, Actas y Certificados',
+        'libro-matriz': 'Libro matriz',
         'nuevo-trayecto': 'Cargar Trayecto',
         'usuarios': 'Usuarios y Roles',
         'backups': 'Base de Datos',
@@ -362,6 +367,10 @@ const UI = {
 
     if (tabId === 'actas' && window.ActasModulo) {
       window.ActasModulo.inicializar();
+    }
+
+    if (tabId === 'libro-matriz' && window.LibroMatrizModulo) {
+      window.LibroMatrizModulo.cargar();
     }
 
     if (tabId === 'trayectos') {
