@@ -218,7 +218,7 @@ const LicenciasModulo = {
         <label>Docente <select id="lic-r-dni" onchange="LicenciasModulo.calcularResumen()">${this.opcionesDocentes(f.dni, true)}</select></label>
         <button type="button" class="btn btn-outline" onclick="LicenciasModulo.hastaHoy()">Hasta hoy</button>
         <button type="button" class="btn btn-outline" onclick="LicenciasModulo.cicloCompleto()">Ciclo completo</button>
-        <button type="button" class="btn btn-outline" onclick="LicenciasModulo.descargarExcel()">⬇️ Excel</button>
+        <button type="button" class="btn btn-outline" onclick="LicenciasModulo.descargarExcel()">👁 Ver / Excel</button>
       </div>
       <div id="lic-resultado"></div>`;
   },
@@ -300,12 +300,10 @@ const LicenciasModulo = {
     lista.forEach(r => ws.addRow([this.nombreDocente(r.dni), r.habiles, r.trabajados, r.faltas, r.administrativa, r.medica, r.paro, r.habiles ? Math.round(1000 * r.trabajados / r.habiles) / 1000 : null]));
     ws.getColumn(8).numFmt = '0.0%';
     ws.columns.forEach((c, i) => { c.width = i === 0 ? 34 : 16; });
-    const buf = await wb.xlsx.writeBuffer();
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-    a.download = `licencias_docentes_${desde}_a_${hasta}.xlsx`;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    const archivo = `licencias_docentes_${desde}_a_${hasta}.xlsx`;
+    ws.pageSetup = { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
+    if (window.VistaPDF) await VistaPDF.mostrar(wb, { archivo, titulo: 'Licencias docentes' });
+    else { const buf = await wb.xlsx.writeBuffer(); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([buf])); a.download = archivo; document.body.appendChild(a); a.click(); a.remove(); }
   },
 
   /* ---- LICENCIAS ---- */

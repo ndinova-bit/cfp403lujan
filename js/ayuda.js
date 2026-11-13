@@ -170,7 +170,7 @@ const AyudaModulo = {
       que: 'Resumen de inscriptos y datos por trayecto para completar planillas y relevamientos.',
       pasos: [
         'Elegí el ciclo lectivo y revisá los totales por trayecto: inscriptos, bajas, clases, % de asistencia y asistencia media (promedio de presentes por clase).',
-        '«Descargar Excel» o «Copiar tabla» sacan los datos para pegarlos donde los necesites.',
+        '«Ver planilla» la muestra en PDF sin descargar nada (el botón «Descargar Excel» queda dentro de la vista, por si hay que modificarla); «Copiar tabla» saca los datos para pegarlos donde los necesites.',
         '«Matrícula escolar» arma los cuadros del Relevamiento Anual (alumnos por certificado, sexo y edad).',
         '«Planilla de matrícula (POF/POFA)» abre la planilla mensual lista para imprimir.'
       ]
@@ -229,7 +229,7 @@ const AyudaModulo = {
         'En los períodos de calificación anual, cargá las fechas y el total de días que fijan las Pautas de Orientación; ese total reemplaza al cálculo por calendario.',
         'Licencias y paros: cargá cada licencia con docente, tipo, fechas y observaciones. Se puede corregir o eliminar.',
         'Feriados: cargá los feriados, asuetos y recesos. Los de fecha fija se importan solos; los trasladables y los puentes se ingresan a mano.',
-        'El resumen se puede descargar en Excel.'
+        'El resumen se puede ver en PDF y, si hace falta modificarlo, descargar en Excel.'
       ],
       ojo: ['Los días se cuentan de lunes a viernes sin feriados, y un día con licencias superpuestas cuenta una sola vez.']
     },
@@ -289,8 +289,8 @@ const AyudaModulo = {
       corto: 'Fichas de curso, actas de examen y certificados.',
       que: 'Documentos de cierre de cada trayecto, en tres botones dentro de la misma pantalla.',
       pasos: [
-        'Fichas de curso: nómina de estudiantes con su situación (cursando o baja). «Ficha de Curso (Excel)» descarga la planilla.',
-        'Actas de examen: la nota de cada módulo sale de las actividades y la asistencia. Podés escribir otra nota en la casilla (queda en amarillo); borrala para volver a la calculada. «Descargar acta (Excel)» saca el acta oficial; EQ indica equivalencia.',
+        'Fichas de curso: nómina de estudiantes con su situación (cursando o baja). «Ficha de Curso» la muestra en PDF; si hay que modificarla, desde la vista se descarga en Excel.',
+        'Actas de examen: la nota de cada módulo sale de las actividades y la asistencia. Podés escribir otra nota en la casilla (queda en amarillo); borrala para volver a la calculada. «Ver acta (PDF / Excel)» muestra el acta oficial en PDF, y si hace falta modificarla se descarga en Excel desde la misma vista; EQ indica equivalencia.',
         'Certificados: lista de aprobados con su N.º de egresado. Revisá la «Vista previa» y descargá los frentes; después, los reversos (mismo orden alfabético, con las hojas vueltas a poner en la bandeja).'
       ],
       ojo: ['El N.º de egresado lo asignan solo Director, Regente y Secretaría; lo ven ellos y Preceptoría.'],

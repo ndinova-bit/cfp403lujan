@@ -250,7 +250,7 @@ const AsistenciasModulo = {
           <div class="asis-planilla">
             <label for="asis-mes" class="sr-only">Mes</label>
             <input type="month" id="asis-mes" class="form-control" value="${mesActual}">
-            <button type="button" class="btn btn-primary" onclick="AsistenciasModulo.descargarPlanilla()">Planilla del mes (Excel)</button>
+            <button type="button" class="btn btn-primary" onclick="AsistenciasModulo.descargarPlanilla()">Planilla del mes</button>
           </div>
         </div>
         <div id="asis-historial"></div>
@@ -627,11 +627,9 @@ const AsistenciasModulo = {
       nr.font = { italic: true, size: 9 };
     }
 
-    const buf = await wb.xlsx.writeBuffer();
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-    link.download = `Asistencia_${String(this.trayecto.nombre || 'trayecto').replace(/[^\wÁÉÍÓÚÑáéíóúñ]+/g, '_')}_${mes}.xlsx`;
-    link.click();
+    const archivo = `Asistencia_${String(this.trayecto.nombre || 'trayecto').replace(/[^\wÁÉÍÓÚÑáéíóúñ]+/g, '_')}_${mes}.xlsx`;
+    if (window.VistaPDF) await VistaPDF.mostrar(wb, { archivo, titulo: `Asistencia · ${this.trayecto.nombre || 'trayecto'} · ${mes}` });
+    else { const buf = await wb.xlsx.writeBuffer(); const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([buf])); link.download = archivo; link.click(); }
   }
 };
 

@@ -89,7 +89,7 @@ const LibroMatrizModulo = {
           <input id="lm-buscar" type="search" class="form-control" placeholder="${this.modo === 'cursos' ? 'N.º de curso, trayecto, resolución…' : 'N.º de egresado, apellido, DNI, trayecto…'}" value="${this.esc(this.filtro)}" oninput="LibroMatrizModulo.buscar(this.value)">
         </div>
         <button type="button" class="btn" onclick="LibroMatrizModulo.cargar()">↻ Actualizar</button>
-        <button type="button" class="btn btn-primary" onclick="LibroMatrizModulo.descargar()">⬇ Descargar Excel</button>
+        <button type="button" class="btn btn-primary" onclick="LibroMatrizModulo.descargar()">👁 Ver / descargar (PDF o Excel)</button>
       </div>
 
       <div class="acta-modos" role="tablist" aria-label="Qué registro ver">
@@ -166,12 +166,10 @@ const LibroMatrizModulo = {
     this.datos.egresados.forEach(e => we.addRow([e.num_egresado, this.nombreCompleto(e), e.dni, e.trayecto, e.nro_curso || '', e.ciclo || '', this.fecha(e.fecha_egreso), this.fecha(e.fecha_entrega)]));
     estilo(we, [16, 34, 14, 42, 14, 8, 15, 15]);
 
-    const buf = await wb.xlsx.writeBuffer();
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-    a.download = `Libro-matriz-CFP403${this.ciclo ? '-' + this.ciclo : ''}.xlsx`;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    const archivo = `Libro-matriz-CFP403${this.ciclo ? '-' + this.ciclo : ''}.xlsx`;
+    wb.worksheets.forEach(h => { h.pageSetup = { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 }; });
+    if (window.VistaPDF) await VistaPDF.mostrar(wb, { archivo, titulo: `Libro matriz CFP 403${this.ciclo ? ' · ' + this.ciclo : ''}` });
+    else { const buf = await wb.xlsx.writeBuffer(); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([buf])); a.download = archivo; document.body.appendChild(a); a.click(); a.remove(); }
   }
 };
 

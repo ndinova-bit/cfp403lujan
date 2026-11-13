@@ -137,7 +137,7 @@ const SecretariaModulo = {
           <button type="button" class="btn btn-outline" onclick="PlanillaMatricula.descargar(SecretariaModulo.ciclo)">📑 Planilla de matrícula (POF/POFA)</button>
           <button type="button" class="btn btn-outline" onclick="MatriculaEscolar.abrir()">🏫 Matrícula escolar</button>
           <button type="button" class="btn btn-outline" onclick="SecretariaModulo.copiar()">📋 Copiar tabla</button>
-          <button type="button" class="btn btn-gold" onclick="SecretariaModulo.excel()" ${this.filas.length ? '' : 'disabled'}>📊 Descargar Excel</button>
+          <button type="button" class="btn btn-gold" onclick="SecretariaModulo.excel()" ${this.filas.length ? '' : 'disabled'}>📊 Ver planilla (PDF / Excel)</button>
         </div>
       </div>
 
@@ -203,7 +203,7 @@ const SecretariaModulo = {
       await navigator.clipboard.writeText(texto);
       if (typeof Swal !== 'undefined') Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Tabla copiada: pegala en tu planilla', showConfirmButton: false, timer: 2200 });
     } catch (e) {
-      alert('No se pudo copiar. Usá "Descargar Excel".');
+      alert('No se pudo copiar. Usá «Ver planilla».');
     }
   },
 
@@ -230,12 +230,11 @@ const SecretariaModulo = {
     for (let c = 3; c <= cab.length; c++) ws.getColumn(c).width = 12;
     const borde = { style: 'thin', color: { argb: 'FFBFC8D6' } };
     for (let r = 3; r <= ws.rowCount; r++) for (let c = 1; c <= cab.length; c++) ws.getCell(r, c).border = { top: borde, left: borde, bottom: borde, right: borde };
-    const buf = await wb.xlsx.writeBuffer();
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-    a.download = `Cifras_por_trayecto_${this.ciclo}.xlsx`;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    const archivo = `Cifras_por_trayecto_${this.ciclo}.xlsx`;
+    ws.pageSetup = { paperSize: 9, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
+    ws.views = [{ state: 'frozen', ySplit: 3 }];
+    if (window.VistaPDF) await VistaPDF.mostrar(wb, { archivo, titulo: `Cifras por trayecto · Ciclo ${this.ciclo}` });
+    else { const buf = await wb.xlsx.writeBuffer(); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([buf])); a.download = archivo; document.body.appendChild(a); a.click(); a.remove(); }
   }
 };
 

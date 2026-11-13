@@ -91,7 +91,7 @@ const MatriculaEscolar = {
         <div><h3>Matrícula escolar · Relevamiento Anual ${this.esc(ciclo)}</h3>
           <p class="acta-ayuda">Alumnos por certificado/constancia, por sexo y por edad en años cumplidos al 30 de junio de ${this.esc(ciclo)} · ${activos ? 'sin bajas' : 'con bajas'} · mismo orden de columnas que el cuadro 1.1 del formulario.</p></div>
         <div class="sec-acciones">
-          <button type="button" class="btn btn-gold" onclick="MatriculaEscolar.excel()" ${filas.length ? '' : 'disabled'}>📊 Descargar Excel</button>
+          <button type="button" class="btn btn-gold" onclick="MatriculaEscolar.excel()" ${filas.length ? '' : 'disabled'}>📊 Ver planilla (PDF / Excel)</button>
           <button type="button" class="btn btn-outline" onclick="MatriculaEscolar.cerrar()">Cerrar</button>
         </div>
       </div>
@@ -194,12 +194,9 @@ const MatriculaEscolar = {
       w2.columns.forEach(c => { c.width = 18; });
       [h2, h3].forEach(h => { h.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; });
     }
-    const buf = await wb.xlsx.writeBuffer();
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-    a.download = `Matricula_escolar_${ciclo}.xlsx`;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    const archivo = `Matricula_escolar_${ciclo}.xlsx`;
+    if (window.VistaPDF) await VistaPDF.mostrar(wb, { archivo, titulo: `Matrícula escolar · Ciclo ${ciclo}` });
+    else { const buf = await wb.xlsx.writeBuffer(); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([buf])); a.download = archivo; document.body.appendChild(a); a.click(); a.remove(); }
   }
 };
 

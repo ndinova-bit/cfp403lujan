@@ -226,7 +226,7 @@ const ClasesModulo = {
                 📥 Importar Nómina de Alumnos (Excel o CSV)
               </label>
               <input type="file" id="input-importar-csv" accept=".csv,.xlsx" style="display:none;" onchange="ClasesModulo.importarEstudiantesCSV(this.files[0])">
-              <button type="button" class="btn btn-secondary" style="padding:0.4rem 0.8rem; font-size:0.8rem;" onclick="FichaCurso.descargar(ClasesModulo.trayectoActualId)">📄 Ficha de Curso (Excel)</button>` : ''}
+              <button type="button" class="btn btn-secondary" style="padding:0.4rem 0.8rem; font-size:0.8rem;" onclick="FichaCurso.descargar(ClasesModulo.trayectoActualId)">📄 Ficha de Curso</button>` : ''}
             </div>
             <button type="button" onclick="ReportesModulo.exportarExcelTabla('tabla-sabana-notas', 'Sabana_Notas.csv')" style="padding:0.4rem 0.8rem; background:#10b981; color:#fff; border:none; border-radius:6px; font-weight:600; font-size:0.8rem; cursor:pointer;">
               📊 Exportar Sábana a Excel

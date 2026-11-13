@@ -27,7 +27,7 @@ const PlanillaMatricula = {
         <select id="plm-ciclo" class="swal2-select" style="width:100%;margin:0">
           ${[anio + 1, anio, anio - 1, anio - 2].map(c => `<option value="${c}" ${c === anio ? 'selected' : ''}>${c}</option>`).join('')}
         </select>`,
-      showCancelButton: true, confirmButtonText: 'Descargar Excel', cancelButtonText: 'Cancelar', focusConfirm: false,
+      showCancelButton: true, confirmButtonText: 'Ver planilla', cancelButtonText: 'Cancelar', focusConfirm: false,
       preConfirm: () => Number(document.getElementById('plm-ciclo').value)
     });
     if (r.isConfirmed) this.descargar(r.value);
@@ -85,17 +85,15 @@ const PlanillaMatricula = {
           icon: 'warning', title: 'Faltan datos de género',
           html: `<p style="font-size:.9rem">Hay <b>${sg.n}</b> estudiante(s) en ${sg.trayectos} trayecto(s) sin el género cargado. En la planilla no figuran en V / M / +.</p>
                  <p style="font-size:.85rem;color:#555">Se completa en la ficha del estudiante o con la columna <i>género</i> del CSV.</p>`,
-          showCancelButton: true, confirmButtonText: 'Descargar igual', cancelButtonText: 'Cancelar'
+          showCancelButton: true, confirmButtonText: 'Ver igual', cancelButtonText: 'Cancelar'
         });
         if (!r.isConfirmed) return;
       }
 
-      const buf = await this.armarExcel(ciclo, filas);
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-      a.download = `${ciclo}_POF_POFA_MATRICULA.xlsx`;
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      const wb = await this.armarExcel(ciclo, filas);
+      const archivo = `${ciclo}_POF_POFA_MATRICULA.xlsx`;
+      if (window.VistaPDF) await VistaPDF.mostrar(wb, { archivo, titulo: `Planilla de matrícula POF / POFA · Ciclo ${ciclo}` });
+      else { const buf = await wb.xlsx.writeBuffer(); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([buf])); a.download = archivo; document.body.appendChild(a); a.click(); a.remove(); }
     } catch (err) {
       if (typeof Swal !== 'undefined') Swal.close();
       console.error('Planilla de matrícula:', err);
@@ -208,7 +206,7 @@ const PlanillaMatricula = {
     ws.getCell(rt + 2, 2).value = `Ciclo lectivo ${ciclo} · CFP N.º 403 «Oscar Smith» · generada desde la plataforma el ${new Date().toLocaleDateString('es-AR')}`;
     ws.getCell(rt + 2, 2).font = { name: 'Arial', size: 8, italic: true, color: { argb: 'FF555555' } };
 
-    return await wb.xlsx.writeBuffer();
+    return wb;
   }
 };
 

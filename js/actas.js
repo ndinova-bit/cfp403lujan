@@ -133,7 +133,7 @@ const ActasModulo = {
         </table>
       </div>
       <div class="acta-acciones">
-        <button type="button" class="btn btn-secondary" onclick="FichaCurso.descargar(${Number(trayecto.id)})">Ficha de Curso (Excel)</button>
+        <button type="button" class="btn btn-secondary" onclick="FichaCurso.descargar(${Number(trayecto.id)})">Ficha de Curso</button>
       </div>`;
   },
 
@@ -318,7 +318,7 @@ const ActasModulo = {
 
       <div class="acta-acciones">
         ${this.soloLectura ? '' : `<button type="button" class="btn btn-outline" onclick="ActasModulo.guardarDatos()">Guardar datos y ajustes</button>`}
-        <button type="button" class="btn btn-gold" onclick="ActasModulo.generarExcelOficialDesdePlantilla()" ${alumnos.length ? '' : 'disabled'}>Descargar acta (Excel)</button>
+        <button type="button" class="btn btn-gold" onclick="ActasModulo.generarExcelOficialDesdePlantilla()" ${alumnos.length ? '' : 'disabled'}>Ver acta (PDF / Excel)</button>
       </div>`;
   },
 
@@ -650,11 +650,9 @@ const ActasModulo = {
     ws.pageSetup.fitToPage = false;
     ws.pageSetup.scale = Math.max(40, Math.min(100, escala));
 
-    const buffer = await wb.xlsx.writeBuffer();
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-    link.download = `Acta_Examen_${String(trayecto.nombre || 'trayecto').replace(/[^\wÁÉÍÓÚÑáéíóúñ]+/g, '_')}.xlsx`;
-    link.click();
+    const archivo = `Acta_Examen_${String(trayecto.nombre || 'trayecto').replace(/[^\wÁÉÍÓÚÑáéíóúñ]+/g, '_')}.xlsx`;
+    if (window.VistaPDF) await VistaPDF.mostrar(wb, { archivo, titulo: `Acta de examen · ${trayecto.nombre || 'trayecto'}` });
+    else { const buffer = await wb.xlsx.writeBuffer(); const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([buffer])); link.download = archivo; link.click(); }
   }
 };
 

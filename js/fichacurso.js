@@ -181,16 +181,12 @@ const FichaCurso = {
       for (let k = 1; k < r0; k++) altoPt += (ws.getRow(k).height || 15);
       ws.pageSetup.scale = Math.max(40, Math.min(100, Math.floor(Math.min(965 / anchoPt, 555 / (altoPt / paginas + 8)) * 92)));
 
-      const buf = await wb.xlsx.writeBuffer();
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-      link.download = `CFP_403_-_${String(t.nombre || 'Trayecto').replace(/[^\wÁÉÍÓÚÑáéíóúñ]+/g, '_')}_-_Ficha_de_Curso.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      setTimeout(() => link.remove(), 3000);
+      const archivo = `CFP_403_-_${String(t.nombre || 'Trayecto').replace(/[^\wÁÉÍÓÚÑáéíóúñ]+/g, '_')}_-_Ficha_de_Curso.xlsx`;
+      if (window.VistaPDF) await VistaPDF.mostrar(wb, { archivo, titulo: `Ficha de Curso · ${t.nombre || 'Trayecto'}` });
+      else { const buf = await wb.xlsx.writeBuffer(); const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([buf])); link.download = archivo; document.body.appendChild(link); link.click(); setTimeout(() => link.remove(), 3000); }
       const sinDatos = alumnos.filter(a => !a.d || !a.d.fecha_nacimiento).length;
       if (sinDatos && typeof Swal !== 'undefined') {
-        Swal.fire({ icon: 'info', title: 'Ficha de Curso descargada', html: `${sinDatos} estudiante(s) no tienen cargados sus datos personales.<br>Se completan desde la <b>ficha del alumno</b> (Datos personales) o importando un CSV con esas columnas.` });
+        Swal.fire({ icon: 'info', title: 'Ficha de Curso lista', html: `${sinDatos} estudiante(s) no tienen cargados sus datos personales.<br>Se completan desde la <b>ficha del alumno</b> (Datos personales) o importando un CSV con esas columnas.` });
       }
     } catch (err) {
       console.error('Ficha de curso:', err);
