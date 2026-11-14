@@ -57,3 +57,6 @@ Los docentes entran con la contraseña inicial pero **no pueden usar la platafor
 
 ## 10. Controles antes de publicar
 `bash scripts/verificar.sh` revisa la sintaxis de los .js, que se hayan subido los `?v=` de `index.html` y `VERSION` de `sw.js`, que existan los archivos referenciados, la huella de la ficha PDF y que no haya claves secretas en el repositorio. GitHub Actions (`.github/workflows/verificar.yml`) lo corre solo después de cada publicación y avisa por correo si falla.
+
+## 11. Librerías externas con versión fija e integridad
+Los scripts de CDN de `index.html` y `preinscripcion.html` llevan versión exacta y el atributo `integrity` (SHA-384): si alguien alterara el archivo en el CDN, el navegador no lo ejecuta. **Para actualizar una librería** hay que cambiar la versión y recalcular su huella (por ejemplo con `openssl dgst -sha384 -binary archivo.js | openssl base64 -A`, anteponiendo `sha384-`); si la huella no coincide la plataforma deja de cargar esa librería.
