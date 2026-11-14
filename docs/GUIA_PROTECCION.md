@@ -46,3 +46,14 @@ Los títulos, comentarios y nombres que se escriben en la plataforma ahora se mu
 
 ## 7. Tablas viejas (archivo)
 `sql/13_revision_y_limpieza.sql` mueve las tablas que la plataforma ya no usa (`usuarios_legacy`, `profiles_respaldo_20261021`, `notas_modulares`, `contenidos`, `entregas`, `actividades`, `excepciones_modulos`) a un esquema aparte llamado **archivo**: no se borran, pero dejan de estar al alcance de internet. Al final muestra una lista de controles de seguridad que tienen que decir **OK**. Para volver a traer una tabla: `alter table archivo.NOMBRE set schema public;`.
+
+## 8. Contraseña provisoria de docentes (obligatoria)
+Los docentes entran con la contraseña inicial pero **no pueden usar la plataforma hasta cambiarla**: al ingresar se les pide una contraseña nueva y, mientras no lo hagan, la base de datos no les reconoce los permisos de docente (no es solo una pantalla). Si se restablece la clave de un docente, vuelve a quedar con el cambio pendiente. Se controla con `profiles.debe_cambiar_clave` (`sql/65_…`).
+
+## 9. Verificación en 2 pasos del administrador
+- Activación: menú lateral → **Verificación en 2 pasos** → escanear el QR con una app autenticadora (Google/Microsoft Authenticator, Authy) → escribir el código.
+- Hasta que se active nada cambia (no hay riesgo de quedar afuera). Una vez activa, solo una sesión confirmada con el código cuenta como administrador: lo exige la base de datos y las funciones `eliminar-usuario` e `importar-estudiantes`.
+- **Si se pierde el celular**: desde el SQL Editor de Supabase, `delete from auth.mfa_factors where user_id = (select id from public.profiles where dni = 'TU_DNI');` y volver a activarla. Conviene guardar la «clave manual» que muestra al activarla.
+
+## 10. Controles antes de publicar
+`bash scripts/verificar.sh` revisa la sintaxis de los .js, que se hayan subido los `?v=` de `index.html` y `VERSION` de `sw.js`, que existan los archivos referenciados, la huella de la ficha PDF y que no haya claves secretas en el repositorio. GitHub Actions (`.github/workflows/verificar.yml`) lo corre solo después de cada publicación y avisa por correo si falla.

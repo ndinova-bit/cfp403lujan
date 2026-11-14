@@ -471,6 +471,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  // 2b. Verificación en 2 pasos y cambio obligatorio de contraseña provisoria
+  if (!(await Auth.controlesPostLogin(perfilValido))) return;
+
   // 3. Renderizar plataforma con el perfil validado por la base de datos
   const rolNorm = perfilValido.rol;
   UI.mostrarDashboard(perfilValido);

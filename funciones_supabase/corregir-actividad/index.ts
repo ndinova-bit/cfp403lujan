@@ -423,12 +423,20 @@ Deno.serve(async (req) => {
       updated_at: new Date().toISOString(),
     };
 
+    // Bloqueo optimista: si dos envíos llegan a la vez, solo el primero se guarda (el otro ve que cambió el contador)
+    const CONFLICTO = 'Tu respuesta anterior todavía se estaba guardando. Esperá unos segundos y revisá tu nota.';
     if (entrega) {
-      const { error } = await admin.from('entregas_actividades').update(fila).eq('id', entrega.id);
+      let q = admin.from('entregas_actividades').update(fila).eq('id', entrega.id);
+      q = entrega.intentos === null || entrega.intentos === undefined ? q.is('intentos', null) : q.eq('intentos', entrega.intentos);
+      const { data: tocadas, error } = await q.select('id');
       if (error) throw error;
+      if (!tocadas || tocadas.length === 0) return json({ error: CONFLICTO }, 409);
     } else {
       const { error } = await admin.from('entregas_actividades').insert([{ clase_id: claseId, estudiante_user: dni, ...fila }]);
-      if (error) throw error;
+      if (error) {
+        if ((error as any).code === '23505') return json({ error: CONFLICTO }, 409);
+        throw error;
+      }
     }
 
     return json({

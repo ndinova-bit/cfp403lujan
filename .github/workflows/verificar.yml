@@ -1,0 +1,20 @@
+name: Verificar plataforma
+
+# Corre después de cada publicación y también a mano. Si algo falla, GitHub avisa por correo.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Controles
+        run: BASE=HEAD~1 bash scripts/verificar.sh

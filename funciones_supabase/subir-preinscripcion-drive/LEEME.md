@@ -20,8 +20,12 @@ Archivos: `index.ts` (función de Supabase) y `puente-drive.gs` (script de Googl
    Copiá la **URL de la aplicación web**.
 5. **Supabase → Edge Functions → Secrets**: `APPS_SCRIPT_URL` (la URL del paso 4), `APPS_SCRIPT_SECRET` (la clave del paso 3),
    y opcional `SITE_URL`.
-6. **Desplegar** la función `subir-preinscripcion-drive` pegando `index.ts`, con **Verify JWT desactivado**.
-7. Ejecutar `sql/47_preinscripciones_drive.sql`.
+6. **Desplegar** la función `subir-preinscripcion-drive` pegando `index.ts`, con **Verify JWT desactivado** (la función se autentica sola).
+7. Ejecutar `sql/47_preinscripciones_drive.sql` y después `sql/64_secreto_interno_funciones.sql` (crea la clave interna con la que la base llama a la función).
 
 Seguridad: la URL del puente es «pública», pero sin la clave `SECRETO` no hace nada.
 Si se cambia el código del script, hay que crear una **nueva implementación** (o editar la existente → Versión nueva).
+
+## Autenticación y huella del generador de PDF
+- La función solo acepta: (a) el encabezado `x-internal-secret` que manda la base (clave guardada en Vault, función `public.secreto_interno()`), o (b) la sesión de una persona de admin, regencia o preceptoría activa. Todo lo demás recibe 401.
+- El generador de PDF (`js/ficha_inscripcion.js`) se baja del sitio, pero **solo se ejecuta si su huella SHA-256 coincide** con la constante `FICHA_SHA256` de `index.ts`. Si cambiás ese archivo: `node scripts/huella-ficha.js`, pegá la huella nueva en `index.ts` y volvé a desplegar la función (`scripts/verificar.sh` te avisa si te olvidás).

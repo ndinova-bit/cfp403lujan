@@ -57,6 +57,14 @@ Deno.serve(async (req: Request) => {
       return json({ error: 'No autorizado' }, 403);
     }
 
+    // Verificación en 2 pasos: si el administrador la tiene activada, la sesión tiene que estar confirmada (aal2)
+    if (['admin', 'administrador'].includes(rolLlama)) {
+      let aal: string | null = null;
+      try { aal = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).aal || null; } catch (_) { /* nada */ }
+      const { data: tiene } = await admin.rpc('tiene_segundo_paso', { p_user: quien.user.id });
+      if (tiene && aal !== 'aal2') return json({ error: 'Confirmá la verificación en 2 pasos: cerrá sesión y volvé a ingresar.' }, 403);
+    }
+
     // 2. Datos
     const body = await req.json();
     const userId = String(body.user_id || '');

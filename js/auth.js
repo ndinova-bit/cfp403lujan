@@ -222,6 +222,9 @@ const Auth = {
         return;
       }
 
+      // 3b. Verificación en 2 pasos (si la cuenta la tiene) y cambio obligatorio de contraseña provisoria
+      if (!(await this.controlesPostLogin(perfil))) return;
+
       // 4. El rol sale SIEMPRE de la base de datos (el selector del login es solo decorativo)
       this.guardarPerfil(perfil);
 
@@ -251,64 +254,200 @@ const Auth = {
 
   /* ---------- cambio de contraseña (cualquier usuario con sesión) ---------- */
 
-  async cambiarMiClave() {
+  // opciones.obligatorio: no se puede cancelar (solo «Cerrar sesión»). Devuelve true si la clave quedó cambiada.
+  async cambiarMiClave(opciones = {}) {
     if (typeof Swal === 'undefined') {
       this.avisar('No se pudo abrir el formulario. Recargá la página e intentá de nuevo.');
-      return;
+      return false;
     }
+    const obligatorio = !!opciones.obligatorio;
 
-    const { value: datos } = await Swal.fire({
-      title: 'Cambiar mi contraseña',
-      html: `
-        <input id="clave-actual" type="password" class="swal2-input" placeholder="Contraseña actual" autocomplete="current-password">
-        <input id="clave-nueva" type="password" class="swal2-input" placeholder="Contraseña nueva (mínimo 8 caracteres)" autocomplete="new-password">
-        <input id="clave-repetir" type="password" class="swal2-input" placeholder="Repetir la contraseña nueva" autocomplete="new-password">
-      `,
-      focusConfirm: false,
+    for (;;) {
+      const { value: datos } = await Swal.fire({
+        title: obligatorio ? 'Tenés que cambiar tu contraseña' : 'Cambiar mi contraseña',
+        text: obligatorio ? 'Por seguridad, antes de seguir elegí una contraseña personal (la actual es provisoria).' : undefined,
+        html: `
+          <input id="clave-actual" type="password" class="swal2-input" placeholder="Contraseña actual" autocomplete="current-password">
+          <input id="clave-nueva" type="password" class="swal2-input" placeholder="Contraseña nueva (mínimo 8 caracteres)" autocomplete="new-password">
+          <input id="clave-repetir" type="password" class="swal2-input" placeholder="Repetir la contraseña nueva" autocomplete="new-password">
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        allowOutsideClick: !obligatorio,
+        allowEscapeKey: !obligatorio,
+        confirmButtonText: 'Guardar',
+        cancelButtonText: obligatorio ? 'Cerrar sesión' : 'Cancelar',
+        didOpen: (popup) => Auth.activarOjitos(popup),
+        preConfirm: () => {
+          const actual = document.getElementById('clave-actual').value;
+          const nueva = document.getElementById('clave-nueva').value;
+          const repetir = document.getElementById('clave-repetir').value;
+          if (!actual || !nueva || !repetir) { Swal.showValidationMessage('Completá los tres campos.'); return false; }
+          if (nueva.length < 8) { Swal.showValidationMessage('La contraseña nueva debe tener al menos 8 caracteres.'); return false; }
+          if (nueva !== repetir) { Swal.showValidationMessage('Las contraseñas nuevas no coinciden.'); return false; }
+          if (nueva === actual) { Swal.showValidationMessage('La contraseña nueva debe ser distinta de la actual.'); return false; }
+          return { actual, nueva };
+        }
+      });
+
+      if (!datos) return false;
+
+      try {
+        const { data: u } = await supabase.auth.getUser();
+        const email = u?.user?.email;
+        if (!email) {
+          this.avisar('Tu sesión venció. Volvé a ingresar.');
+          return false;
+        }
+
+        // Se verifica la contraseña actual antes de cambiarla
+        const { error: errActual } = await supabase.auth.signInWithPassword({ email, password: datos.actual });
+        if (errActual) {
+          this.avisar('La contraseña actual no es correcta.');
+          if (obligatorio) continue;
+          return false;
+        }
+        // Volver a ingresar baja el nivel de la sesión: quien tiene verificación en 2 pasos la confirma de nuevo
+        if (!(await this.exigirSegundoPaso())) { await this.cerrarSesionForzada(); return false; }
+
+        const { error } = await supabase.auth.updateUser({ password: datos.nueva, current_password: datos.actual });
+        if (error) {
+          this.avisar('No se pudo cambiar la contraseña: ' + error.message);
+          if (obligatorio) continue;
+          return false;
+        }
+
+        if (obligatorio) {
+          // La base verifica que ya no sea la clave provisoria y levanta la obligación
+          const { error: errConf } = await supabase.rpc('confirmar_cambio_clave');
+          if (errConf) {
+            this.avisar(/provisoria|inicial|igual/i.test(errConf.message) ? 'Elegí una contraseña distinta de la provisoria (no uses tu DNI).' : 'No se pudo confirmar el cambio: ' + errConf.message);
+            continue;
+          }
+          if (this.usuarioActual) { this.usuarioActual.debe_cambiar_clave = false; this.guardarPerfil(this.usuarioActual); }
+        }
+
+        if (typeof alertSuccess === 'function') await alertSuccess('Contraseña actualizada', 'La próxima vez que ingreses usá tu contraseña nueva.');
+        else alert('Contraseña actualizada.');
+        return true;
+      } catch (err) {
+        console.error('Error al cambiar la contraseña:', err);
+        this.avisar('No se pudo conectar. Intentá de nuevo en unos minutos.');
+        if (!obligatorio) return false;
+      }
+    }
+  },
+
+  /* ---------- controles después de ingresar (en el login y al reabrir la app con sesión) ---------- */
+
+  // Cierra sesión sin preguntar nada (se usa cuando no se cumple un requisito de ingreso)
+  async cerrarSesionForzada() {
+    this.limpiarPerfil();
+    try { await supabase.auth.signOut(); } catch (e) { /* nada */ }
+    if (typeof UI !== 'undefined' && typeof UI.showLoginScreen === 'function') UI.showLoginScreen();
+    else window.location.reload();
+  },
+
+  // Verificación en 2 pasos: solo se pide si la cuenta tiene un autenticador activado. Devuelve true si quedó confirmada.
+  async exigirSegundoPaso() {
+    let aal;
+    try {
+      const r = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      aal = r.data;
+    } catch (e) { return true; }
+    if (!aal || aal.nextLevel !== 'aal2' || aal.currentLevel === 'aal2') return true;
+
+    let factorId = null;
+    try {
+      const { data } = await supabase.auth.mfa.listFactors();
+      factorId = (data?.totp || [])[0]?.id || null;
+    } catch (e) { /* sin señal */ }
+    if (!factorId) return !navigator.onLine;     // sin señal no se puede verificar: la base igual no deja operar como administrador
+
+    const { value } = await Swal.fire({
+      title: 'Verificación en 2 pasos',
+      text: 'Ingresá el código de 6 dígitos de tu aplicación autenticadora.',
+      input: 'text',
+      inputAttributes: { inputmode: 'numeric', maxlength: 6, autocomplete: 'one-time-code', placeholder: '000000' },
       showCancelButton: true,
-      confirmButtonText: 'Guardar',
-      cancelButtonText: 'Cancelar',
-      didOpen: (popup) => Auth.activarOjitos(popup),
-      preConfirm: () => {
-        const actual = document.getElementById('clave-actual').value;
-        const nueva = document.getElementById('clave-nueva').value;
-        const repetir = document.getElementById('clave-repetir').value;
-        if (!actual || !nueva || !repetir) { Swal.showValidationMessage('Completá los tres campos.'); return false; }
-        if (nueva.length < 8) { Swal.showValidationMessage('La contraseña nueva debe tener al menos 8 caracteres.'); return false; }
-        if (nueva !== repetir) { Swal.showValidationMessage('Las contraseñas nuevas no coinciden.'); return false; }
-        if (nueva === actual) { Swal.showValidationMessage('La contraseña nueva debe ser distinta de la actual.'); return false; }
-        return { actual, nueva };
+      cancelButtonText: 'Cerrar sesión',
+      confirmButtonText: 'Verificar',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      preConfirm: async (codigo) => {
+        const c = String(codigo || '').replace(/\D/g, '');
+        if (c.length !== 6) { Swal.showValidationMessage('El código tiene 6 números.'); return false; }
+        const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId, code: c });
+        if (error) { Swal.showValidationMessage('Código incorrecto o vencido. Probá con el siguiente que muestre la aplicación.'); return false; }
+        return true;
       }
     });
+    return !!value;
+  },
 
-    if (!datos) return;
+  // Devuelve true si se puede entrar a la plataforma
+  async controlesPostLogin(perfil) {
+    if (typeof Swal === 'undefined' || !perfil) return true;
+    if (!(await this.exigirSegundoPaso())) { await this.cerrarSesionForzada(); return false; }
+    // Contraseña provisoria: los docentes deben cambiarla antes de usar la plataforma
+    if (perfil.rol === 'docente' && perfil.debe_cambiar_clave) {
+      this.guardarPerfil(perfil);
+      const ok = await this.cambiarMiClave({ obligatorio: true });
+      if (!ok) { await this.cerrarSesionForzada(); return false; }
+      perfil.debe_cambiar_clave = false;
+    }
+    return true;
+  },
 
+  /* ---------- verificación en 2 pasos (administrador): activar / desactivar ---------- */
+
+  async configurarSegundoPaso() {
+    if (typeof Swal === 'undefined') return;
     try {
-      const { data: u } = await supabase.auth.getUser();
-      const email = u?.user?.email;
-      if (!email) {
-        this.avisar('Tu sesión venció. Volvé a ingresar.');
+      const { data, error } = await supabase.auth.mfa.listFactors();
+      if (error) throw error;
+      const activo = (data?.totp || [])[0];
+      if (activo) {
+        const r = await Swal.fire({
+          title: 'Verificación en 2 pasos activada',
+          html: 'Tu cuenta pide un código de la aplicación autenticadora al ingresar.<br><br>Si cambiás de celular, desactivala acá (con el celular viejo) y activala de nuevo con el nuevo.',
+          icon: 'success', showCancelButton: true, confirmButtonText: 'Cerrar', cancelButtonText: 'Desactivar', reverseButtons: true
+        });
+        if (r.dismiss === Swal.DismissReason.cancel) {
+          const c = await Swal.fire({ title: '¿Desactivar la verificación en 2 pasos?', text: 'Tu cuenta quedará protegida solo por la contraseña.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, desactivar', cancelButtonText: 'No' });
+          if (!c.isConfirmed) return;
+          const { error: eu } = await supabase.auth.mfa.unenroll({ factorId: activo.id });
+          if (eu) { this.avisar('No se pudo desactivar: ' + eu.message); return; }
+          this.avisar('Verificación en 2 pasos desactivada.');
+        }
         return;
       }
 
-      // Se verifica la contraseña actual antes de cambiarla
-      const { error: errActual } = await supabase.auth.signInWithPassword({ email, password: datos.actual });
-      if (errActual) {
-        this.avisar('La contraseña actual no es correcta.');
-        return;
-      }
-
-      const { error } = await supabase.auth.updateUser({ password: datos.nueva, current_password: datos.actual });
-      if (error) {
-        this.avisar('No se pudo cambiar la contraseña: ' + error.message);
-        return;
-      }
-
-      if (typeof alertSuccess === 'function') alertSuccess('Contraseña actualizada', 'La próxima vez que ingreses usá tu contraseña nueva.');
-      else alert('Contraseña actualizada.');
+      // Alta: se limpian intentos viejos sin terminar
+      for (const f of (data?.all || [])) { if (f.status !== 'verified') { try { await supabase.auth.mfa.unenroll({ factorId: f.id }); } catch (e) { /* nada */ } } }
+      const { data: alta, error: ea } = await supabase.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'CFP403 ' + new Date().toISOString().slice(0, 10) });
+      if (ea) throw ea;
+      const { value } = await Swal.fire({
+        title: 'Activar verificación en 2 pasos',
+        html: `<p style="margin:0 0 .5rem">1. Instalá una app autenticadora (Google Authenticator, Microsoft Authenticator, Authy…).<br>2. Escaneá este código QR (o cargá la clave a mano).<br>3. Escribí el código de 6 dígitos que muestra.</p>
+               <img src="${alta.totp.qr_code}" alt="Código QR" style="width:190px;height:190px;background:#fff;padding:6px;border-radius:6px">
+               <p style="font-size:.8rem;word-break:break-all;margin:.4rem 0">Clave manual: <code>${alta.totp.secret}</code></p>`,
+        input: 'text',
+        inputAttributes: { inputmode: 'numeric', maxlength: 6, autocomplete: 'one-time-code', placeholder: '000000' },
+        showCancelButton: true, confirmButtonText: 'Activar', cancelButtonText: 'Cancelar',
+        preConfirm: async (codigo) => {
+          const c = String(codigo || '').replace(/\D/g, '');
+          if (c.length !== 6) { Swal.showValidationMessage('El código tiene 6 números.'); return false; }
+          const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: alta.id, code: c });
+          if (error) { Swal.showValidationMessage('Código incorrecto. Probá con el siguiente que muestre la aplicación.'); return false; }
+          return true;
+        }
+      });
+      if (!value) { try { await supabase.auth.mfa.unenroll({ factorId: alta.id }); } catch (e) { /* nada */ } return; }
+      await Swal.fire({ icon: 'success', title: 'Activada', text: 'Desde ahora, al ingresar como administrador se pide el código. Guardá la clave manual en un lugar seguro: si perdés el celular hay que desactivar la verificación desde la base de datos.' });
     } catch (err) {
-      console.error('Error al cambiar la contraseña:', err);
-      this.avisar('No se pudo conectar. Intentá de nuevo en unos minutos.');
+      console.error('Verificación en 2 pasos:', err);
+      this.avisar('No se pudo configurar la verificación en 2 pasos: ' + (err.message || err));
     }
   },
 
