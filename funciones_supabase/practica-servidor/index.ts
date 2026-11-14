@@ -44,10 +44,18 @@ async function guardar(s: A): Promise<boolean> {
   if (Array.isArray(j) && j.length === 1) { s.version++; return true; }
   return false;
 }
+const CACHE = new Map<string, { t: number; v: A }>();
 async function claves(trayecto: string, practica: number) {
+  const ck = trayecto + '/' + practica, c = CACHE.get(ck);
+  if (c && Date.now() - c.t < 600000) return c.v;
   const r = await db('practica_claves?select=claves&trayecto=eq.' + trayecto + '&practica=eq.' + practica);
   const f = (await r.json())[0];
+  if (f) CACHE.set(ck, { t: Date.now(), v: f.claves });
   return f ? f.claves : null;
+}
+async function sesionPorId(id: string) {
+  if (!/^[0-9a-f-]{36}$/i.test(String(id))) return null;
+  return (await (await db('practica_sesiones?select=*&id=eq.' + id)).json())[0] || null;
 }
 
 // Puntos y máximo de una misión según lo que ya registró el servidor (comp: lo que informó el navegador, con tope)
@@ -75,16 +83,25 @@ Deno.serve(async (req) => {
     const token = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
     if (!token) return resp(401, { error: 'Falta ingresar' });
     const body: A = await req.json().catch(() => ({}));
-    const ur = await fetch(URL_ + '/auth/v1/user', { headers: { apikey: ANON, Authorization: 'Bearer ' + token } });
-    if (!ur.ok) return resp(401, { error: 'La sesión venció. Volvé a ingresar.' });
-    const user = await ur.json();
-    const pr = (await (await db('profiles?select=id,dni,rol,estado&id=eq.' + encodeURIComponent(user.id))).json())[0];
-    if (!pr || !pr.dni) return resp(403, { error: 'No encontramos tu perfil.' });
-    const rol = String(pr.rol || '').toLowerCase().trim();
-    const esAdmin = rol === 'admin' || rol === 'administrador';
-    if (String(pr.estado || 'ACTIVO').toUpperCase() !== 'ACTIVO') return resp(403, { error: 'Tu cuenta no está activa.' });
-    const dni = String(pr.dni);
     const accion = String(body.accion || '');
+    const rapida = accion === 'verificar' || accion === 'revelar';
+    const [ur, sRapida] = await Promise.all([
+      fetch(URL_ + '/auth/v1/user', { headers: { apikey: ANON, Authorization: 'Bearer ' + token } }),
+      rapida ? sesionPorId(body.sesion) : Promise.resolve(null)]);
+    if (!ur.ok) return resp(401, { error: 'La sesi\u00f3n venci\u00f3. Volv\u00e9 a ingresar.' });
+    const user = await ur.json();
+    // Camino r\u00e1pido: la sesi\u00f3n guarda de qui\u00e9n es (uid); si coincide con quien llama, no hace falta volver a buscar el perfil
+    const sOk = !!(sRapida && sRapida.estado && sRapida.estado.uid === user.id);
+    let dni = '', esAdmin = false;
+    if (sOk) dni = String(sRapida.dni);
+    else {
+      const pr = (await (await db('profiles?select=id,dni,rol,estado&id=eq.' + encodeURIComponent(user.id))).json())[0];
+      if (!pr || !pr.dni) return resp(403, { error: 'No encontramos tu perfil.' });
+      const rol = String(pr.rol || '').toLowerCase().trim();
+      esAdmin = rol === 'admin' || rol === 'administrador';
+      if (String(pr.estado || 'ACTIVO').toUpperCase() !== 'ACTIVO') return resp(403, { error: 'Tu cuenta no est\u00e1 activa.' });
+      dni = String(pr.dni);
+    }
 
     // ---------- iniciar ----------
     if (accion === 'iniciar') {
@@ -102,7 +119,7 @@ Deno.serve(async (req) => {
         const r = await db('practica_sesiones?select=id&modo=eq.nota&dni=eq.' + encodeURIComponent(dni) + '&trayecto=eq.' + trayecto + '&practica=eq.' + practica + '&creada=gte.' + desde);
         if ((await r.json()).length >= MAX_SESIONES_NOTA_24H) return resp(429, { error: 'Empezaste esta práctica demasiadas veces hoy. Probá mañana o hablá con tu docente.' });
       }
-      const ins = await db('practica_sesiones', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ dni, trayecto, practica, modo, estado: { n: 0, m: {} } }) });
+      const ins = await db('practica_sesiones', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ dni, trayecto, practica, modo, estado: { n: 0, m: {}, uid: user.id } }) });
       const fila = (await ins.json())[0];
       if (!fila) return resp(500, { error: 'No se pudo iniciar' });
       return resp(200, { sesion: fila.id, estado: e || null });
@@ -124,7 +141,7 @@ Deno.serve(async (req) => {
     }
 
     // ---------- verificar / revelar / terminar: necesitan la sesión ----------
-    const s = await cargarSesion(body.sesion, dni);
+    const s = sOk ? sRapida : await cargarSesion(body.sesion, dni);
     if (!s) return resp(404, { error: 'No encontramos esa práctica en curso. Empezala de nuevo.' });
     if (s.terminada) return resp(409, { error: 'Esta práctica ya terminó.' });
     if (Date.now() - new Date(s.creada).getTime() > VIDA_SESION_MS) return resp(410, { error: 'Pasó mucho tiempo. Empezá la práctica de nuevo.' });
