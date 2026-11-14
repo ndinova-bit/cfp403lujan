@@ -42,6 +42,12 @@ const Trayectos = {
     const selectDocente = document.getElementById('trayecto-docente');
     if (!selectDocente) return;
 
+    // Sin sesión (web pública) no hay lista de docentes que cargar
+    try {
+      const { data: ses } = await supabase.auth.getSession();
+      if (!ses?.session) return;
+    } catch (e) { return; }
+
     try {
       const { data: docentes, error } = await supabase
         .from('profiles')
