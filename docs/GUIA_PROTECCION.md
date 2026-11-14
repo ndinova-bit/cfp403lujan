@@ -60,3 +60,11 @@ Los docentes entran con la contraseña inicial pero **no pueden usar la platafor
 
 ## 11. Librerías externas con versión fija e integridad
 Los scripts de CDN de `index.html` y `preinscripcion.html` llevan versión exacta y el atributo `integrity` (SHA-384): si alguien alterara el archivo en el CDN, el navegador no lo ejecuta. **Para actualizar una librería** hay que cambiar la versión y recalcular su huella (por ejemplo con `openssl dgst -sha384 -binary archivo.js | openssl base64 -A`, anteponiendo `sha384-`); si la huella no coincide la plataforma deja de cargar esa librería.
+
+## 12. Notas de práctica corregidas en el servidor (Seguridad Informática)
+Antes el navegador mandaba el puntaje y la plataforma lo aceptaba. Ahora, en Seguridad Informática, las respuestas correctas están en la tabla privada `practica_claves` y la función `practica-servidor` corrige, calcula el puntaje y carga la nota (`sql/70`). `registrar_nota_practica` responde `solo_servidor` si el trayecto tiene claves cargadas.
+- **Se verifica en el servidor:** preguntas de opción, ordenar en cajas, detectives (buscar), ordenar pasos.
+- **Sigue informado por el navegador (con tope y peso fijo):** simuladores, terminal, configuración de router/celular, listas y tareas autodeclaradas. Según la práctica, entre el 0 % y el 67 % del puntaje cae en este grupo.
+- Límites: 4 intentos con nota por práctica cada 24 h; 700 respuestas por sesión.
+- Las respuestas ya publicadas antes siguen visibles en el historial de Git del repositorio público de prácticas.
+- Las claves se cargan con `scripts/separar-claves.js` (repo de prácticas); no se suben a ningún repositorio.
