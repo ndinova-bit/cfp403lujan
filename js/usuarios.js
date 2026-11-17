@@ -212,7 +212,7 @@ const UsuariosAdmin = {
       contenedor.innerHTML = trayectos.map(t => `
         <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #cbd5e1; cursor: pointer; margin-bottom: 0.4rem;">
           <input type="checkbox" name="trayectos_seleccionados" value="${t.id}">
-          <span>${t.nombre}</span>
+          <span>${Trayectos.esc(t.nombre)}</span>
         </label>
       `).join('');
     } catch (err) {

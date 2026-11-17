@@ -53,7 +53,7 @@ const AppCFP = {
   vigilarActualizaciones(reg) {
     const avisar = (sw) => {
       if (!sw || !navigator.serviceWorker.controller) return;
-      this.barra('app-actualizar', '🔄 Hay una versión nueva de la plataforma.', 'Actualizar', () => sw.postMessage('actualizar'));
+      this.barra('app-actualizar', '🔄 Hay una versión nueva de la plataforma.', 'Actualizar', () => sw.postMessage('actualizar'), () => {});
     };
     if (reg.waiting) avisar(reg.waiting);
     reg.addEventListener('updatefound', () => {
@@ -135,7 +135,7 @@ const AppCFP = {
   },
   quitar(id) { const el = document.getElementById(id); if (el) el.remove(); this.apilar(); },
   apilar() {
-    let abajo = 16;
+    let abajo = (document.body.classList.contains('app-activa') && window.matchMedia('(max-width: 900px)').matches) ? 78 : 16;
     document.querySelectorAll('.app-barra').forEach((el) => { el.style.bottom = abajo + 'px'; abajo += el.offsetHeight + 8; });
   },
   toast(t) {

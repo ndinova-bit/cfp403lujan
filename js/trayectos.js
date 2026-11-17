@@ -305,9 +305,9 @@ const Trayectos = {
                 <h3 style="color: #f8fafc; margin: 0; font-size: 1.2rem; font-weight: 600;">${Trayectos.esc(trayecto.nombre)}</h3>
                 ${cicloBadge}${supBadge}
               </div>
-              <p class="pub-desc" style="color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.75rem; line-height: 1.4;">
-                ${Trayectos.esc(trayecto.descripcion || 'Sin descripción disponible.')}
-              </p>
+              ${trayecto.descripcion ? `<p class="pub-desc" style="color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.75rem; line-height: 1.4;">
+                ${Trayectos.esc(trayecto.descripcion)}
+              </p>` : ''}
             </div>
             ${accionesAdmin}
           `;

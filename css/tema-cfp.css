@@ -81,7 +81,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   --text-main: #FFFFFF;
   --text-muted: #9CC3EA;
 }
-.main-header .header-title-lg { color: #fff !important; }
+.main-header .header-title-lg { color: #fff !important; margin: 0; }
 .main-header .nav-link { color: #CFE2F5 !important; font-weight: 600; }
 .main-header .nav-link:hover { color: var(--cfp-yellow) !important; }
 .btn-header-login {

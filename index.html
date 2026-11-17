@@ -4,6 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>CFP N° 403 - Plataforma</title>
+  <meta name="description" content="CFP N.º 403 «Oscar Smith» de Luján: formación profesional gratuita con certificados oficiales de la DGCyE. Conocé los cursos e inscribite.">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="es_AR">
+  <meta property="og:site_name" content="CFP N° 403 Luján">
+  <meta property="og:title" content="CFP N° 403 «Oscar Smith» · Formación profesional gratuita">
+  <meta property="og:description" content="Cursos de formación profesional con certificados oficiales de la DGCyE. Conocé la oferta e inscribite.">
+  <meta property="og:url" content="https://cfp403lujan.com.ar/">
+  <meta property="og:image" content="https://cfp403lujan.com.ar/logo.png">
+  <meta name="twitter:card" content="summary">
 
   <!-- Soporte App Móvil PWA -->
   <link rel="manifest" href="manifest.json">
@@ -51,7 +60,7 @@
   <!-- 4. CSS Panel de Administración -->
   <link rel="stylesheet" href="css/admin-dashboard.css?v=60005">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/tema-cfp.css?v=70105">
+  <link rel="stylesheet" href="css/tema-cfp.css?v=70106">
   <link rel="stylesheet" href="css/inteligencia.css?v=70001">
   <link rel="stylesheet" href="css/ficha-inscripcion.css?v=70065">
   <link rel="stylesheet" href="css/ayuda.css?v=70079">
@@ -72,7 +81,7 @@
         <div class="header-top-brand">
           <img src="logo.png" alt="CFP N° 403 Logo" class="header-logo-xl">
           <div>
-            <h1 class="header-title-lg">CFP N° 403 "OSCAR SMITH"</h1>
+            <p class="header-title-lg">CFP N° 403 "OSCAR SMITH"</p>
             <span style="font-size: 0.85rem; color: var(--text-muted);">LUJÁN, BUENOS AIRES</span>
           </div>
         </div>
@@ -589,7 +598,7 @@
             </div>
             <div style="display: flex; gap: 0.75rem; align-items: center;">
               <!-- FILTRO POR CICLO LECTIVO -->
-              <select id="filtro-ciclo-lectivo" class="form-control custom-select" style="width: auto; padding: 0.4rem 0.8rem;" onchange="Trayectos.cargarTrayectos()">
+              <select id="filtro-ciclo-lectivo" aria-label="Filtrar por ciclo lectivo" class="form-control custom-select" style="width: auto; padding: 0.4rem 0.8rem;" onchange="Trayectos.cargarTrayectos()">
                 <option value="2026" selected>Ciclo Lectivo 2026</option>
                 <option value="2027">Ciclo Lectivo 2027</option>
                 <option value="TODOS">Todos los Ciclos</option>
@@ -729,11 +738,11 @@
                   <div class="form-grid-2" style="margin-top: 0.75rem;">
                     <div>
                       <label style="font-size: 0.75rem;">Fecha Inicio</label>
-                      <input type="date" class="mod-inicio form-control">
+                      <input type="date" class="mod-inicio form-control" aria-label="Fecha de inicio del módulo">
                     </div>
                     <div>
                       <label style="font-size: 0.75rem;">Fecha Fin</label>
-                      <input type="date" class="mod-fin form-control">
+                      <input type="date" class="mod-fin form-control" aria-label="Fecha de fin del módulo">
                     </div>
                   </div>
                 </div>
@@ -974,7 +983,7 @@
           </div>
           <div class="form-group">
             <label for="usr-alta-fecha">Fecha de Nacimiento</label>
-            <input type="date" id="usr-alta-fecha" class="form-control">
+            <input type="date" id="usr-alta-fecha" class="form-control" aria-label="Fecha">
           </div>
         </div>
 
@@ -1024,15 +1033,15 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js" integrity="sha384-P7KKlGD3Ng66Ds7oTliLzTnol6DbK+k7PafNYXIBDQ4b5eFWtmqctplDVOxslglR" crossorigin="anonymous"></script>
   
   <!-- Lógica Interna (Sin caracteres sueltos y con versión actualizada) -->
-  <script src="js/app.js?v=70024" defer></script>
+  <script src="js/app.js?v=70025" defer></script>
   <script src="js/entorno-prueba.js?v=70007" defer></script>
   <script src="js/supabase-config.js?v=70007" defer></script>
   <script src="js/avisos.js?v=70008" defer></script>
   <script src="js/reglas.js?v=70105" defer></script>
   <script src="js/ui.js?v=70112" defer></script>
   <script src="js/auth.js?v=70076" defer></script>
-  <script src="js/trayectos.js?v=70097" defer></script>
-  <script src="js/usuarios.js?v=70094" defer></script>
+  <script src="js/trayectos.js?v=70098" defer></script>
+  <script src="js/usuarios.js?v=70095" defer></script>
   <script src="js/auditoria.js?v=70027" defer></script>
   <script src="js/progreso.js?v=70022" defer></script>
   <script src="js/seguimiento.js?v=70105" defer></script>
