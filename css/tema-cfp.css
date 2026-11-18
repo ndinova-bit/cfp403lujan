@@ -1457,3 +1457,7 @@ details.seg-grupo > .seg-item { margin: .5rem .7rem; }
   .pronto-acciones { width: 100%; }
   .pronto-acciones .btn { flex: 1 1 100%; justify-content: center; }
 }
+
+/* Pie de página (fondo oscuro): el dorado del tema es marrón para fondos claros, acá hace falta el claro */
+.main-footer .btn-email { color: #fde68a !important; border-color: rgba(253, 230, 138, .45) !important; }
+.main-footer .btn-email:hover { color: #0f172a !important; }
