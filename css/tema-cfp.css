@@ -185,7 +185,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 .prop-title, .step-title, .news-title, .empty-state-title { color: var(--cfp-ink) !important; }
 .prop-desc, .step-desc, .news-desc, .empty-state-text { color: var(--cfp-muted) !important; }
-.step-number { color: var(--cfp-celeste) !important; }
+.step-number { color: #1b72a8 !important; }
 .btn-inscripcion-gold {
   background: var(--cfp-yellow) !important;
   color: var(--cfp-navy-deep) !important;
