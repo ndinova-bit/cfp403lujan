@@ -1408,17 +1408,24 @@ details.seg-grupo > .seg-item { margin: .5rem .7rem; }
 .enc-ajustes input[type="number"] { width: 4.5rem; }
 
 /* ── Cartel "Muy pronto: trayectos del próximo ciclo" (oferta pública) ── */
-.pronto-card {
+.pronto-card,
+.features-grid > .pronto-card {
   grid-column: 1 / -1;
-  display: flex; align-items: center; gap: 1.5rem;
-  padding: 2rem 2.25rem;
-  border-radius: 18px;
+  display: flex !important; flex-direction: row !important; align-items: center; gap: 1.5rem !important;
+  padding: 2rem 2.25rem !important;
+  border-radius: 18px !important;
   color: #fff;
   background:
     radial-gradient(circle at 92% 8%, rgba(251, 191, 36, .28) 0, rgba(251, 191, 36, 0) 42%),
-    linear-gradient(135deg, #10284a 0%, #1b4478 100%);
-  border: 1px solid rgba(251, 191, 36, .55);
-  box-shadow: 0 14px 34px -14px rgba(16, 40, 74, .65), 0 0 0 4px rgba(251, 191, 36, .12);
+    linear-gradient(135deg, #10284a 0%, #1b4478 100%) !important;
+  border: 1px solid rgba(251, 191, 36, .55) !important;
+  border-top: 6px solid #fbbf24 !important;
+  box-shadow: 0 14px 34px -14px rgba(16, 40, 74, .65), 0 0 0 4px rgba(251, 191, 36, .12) !important;
+}
+.features-grid > .pronto-card:hover, .features-grid > .pronto-card:active {
+  transform: none !important; letter-spacing: normal !important;
+  border-color: rgba(251, 191, 36, .55) !important; border-top-color: #fbbf24 !important;
+  box-shadow: 0 14px 34px -14px rgba(16, 40, 74, .65), 0 0 0 4px rgba(251, 191, 36, .12) !important;
 }
 .pronto-icono {
   flex: 0 0 auto; width: 72px; height: 72px; border-radius: 50%;
@@ -1444,7 +1451,7 @@ details.seg-grupo > .seg-item { margin: .5rem .7rem; }
   @keyframes pronto-latido { 0%, 100% { box-shadow: 0 0 0 8px rgba(251, 191, 36, .22); } 50% { box-shadow: 0 0 0 15px rgba(251, 191, 36, .08); } }
 }
 @media (max-width: 640px) {
-  .pronto-card { flex-direction: column; align-items: flex-start; padding: 1.5rem 1.25rem; gap: 1rem; }
+  .pronto-card, .features-grid > .pronto-card { flex-direction: column !important; align-items: flex-start; padding: 1.5rem 1.25rem !important; gap: 1rem !important; }
   .pronto-icono { width: 60px; height: 60px; }
   .pronto-titulo { font-size: 1.3rem; }
   .pronto-acciones { width: 100%; }
