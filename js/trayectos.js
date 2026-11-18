@@ -13,6 +13,26 @@ const Trayectos = {
     ));
   },
 
+  // Cartel de la oferta pública cuando todavía no hay trayectos publicados para el ciclo
+  cartelProximamente() {
+    const anio = this.cicloVigente() + 1;
+    return `
+      <div class="pronto-card fade-in" role="status">
+        <div class="pronto-icono" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M9 15.2l2 2 4-4.4"/></svg>
+        </div>
+        <div class="pronto-texto">
+          <span class="pronto-etiqueta">Ciclo lectivo ${anio}</span>
+          <h3 class="pronto-titulo">Muy pronto: los trayectos ${anio}</h3>
+          <p class="pronto-desc">Estamos preparando la nueva oferta de Formación Profesional. A partir del <strong>1 de febrero de ${anio}</strong> vas a encontrar acá todos los trayectos publicados para elegir el tuyo.</p>
+          <div class="pronto-acciones">
+            <a href="#inscripcion" class="btn btn-gold">¿Cómo me inscribo?</a>
+            <a href="#contacto" class="btn btn-outline">Consultanos</a>
+          </div>
+        </div>
+      </div>`;
+  },
+
   // Ciclo lectivo vigente = año calendario actual
   cicloVigente() {
     return new Date().getFullYear();
@@ -133,7 +153,7 @@ const Trayectos = {
         query = query.in('id', ids);
       } else {
         // Web pública: solo el ciclo vigente
-        query = query.eq('ciclo_lectivo', this.cicloVigente());
+        query = query.eq('ciclo_lectivo', this.cicloVigente()).eq('visible_publico', true);
       }
 
       const { data, error } = await query;
@@ -218,6 +238,11 @@ const Trayectos = {
 
       const esVistaPublica = contenedor.id === 'lista-trayectos-cards' || contenedor.id === 'contenedor-trayectos';
 
+      if (this.listaTrayectos.length === 0 && esVistaPublica) {
+        contenedor.innerHTML = this.cartelProximamente();
+        return;
+      }
+
       if (this.listaTrayectos.length === 0) {
         contenedor.innerHTML = `
           <div class="empty-state-card fade-in" style="text-align: center; padding: 3rem; background: rgba(30,41,59,0.5); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); grid-column: 1 / -1;">
@@ -262,6 +287,8 @@ const Trayectos = {
           </span>
         `;
 
+        const ocultoBadge = (!esVistaPublica && trayecto.visible_publico === false)
+          ? '<span title="No aparece en la oferta de la web pública" style="font-size:.7rem;background:rgba(148,163,184,.18);color:#cbd5e1;border:1px solid rgba(148,163,184,.4);padding:.1rem .45rem;border-radius:4px;font-weight:600;">Oculto en la web</span>' : '';
         const sup = !esVistaPublica && esDocente && this.suplencias ? this.suplencias[trayecto.id] : null;
         const supBadge = sup ? `<span class="sup-badge">Suplencia${sup.hasta ? ' hasta el ' + String(sup.hasta).slice(0, 10).split('-').reverse().join('/') : ''}</span>` : '';
 
@@ -303,7 +330,7 @@ const Trayectos = {
             <div>
               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
                 <h3 style="color: #f8fafc; margin: 0; font-size: 1.2rem; font-weight: 600;">${Trayectos.esc(trayecto.nombre)}</h3>
-                ${cicloBadge}${supBadge}
+                ${cicloBadge}${supBadge}${ocultoBadge}
               </div>
               ${trayecto.descripcion ? `<p class="pub-desc" style="color: #94a3b8; font-size: 0.875rem; margin-bottom: 0.75rem; line-height: 1.4;">
                 ${Trayectos.esc(trayecto.descripcion)}
@@ -332,7 +359,7 @@ const Trayectos = {
                 <div>
                   <h3 style="color: #f8fafc; margin: 0; font-size: 1.2rem; font-weight: 600;">${Trayectos.esc(trayecto.nombre)}</h3>
                 </div>
-                ${cicloBadge}${supBadge}
+                ${cicloBadge}${supBadge}${ocultoBadge}
               </div>
 
               <div class="trayecto-ficha">
@@ -415,6 +442,8 @@ const Trayectos = {
     if (elDocente) elDocente.value = trayecto.docente_user || '';
     const elComputa = document.getElementById('trayecto-computa-asistencia');
     if (elComputa) elComputa.checked = trayecto.computa_asistencia !== false;
+    const elVisible = document.getElementById('trayecto-visible-publico');
+    if (elVisible) elVisible.checked = trayecto.visible_publico !== false;
     const elHoras = document.getElementById('trayecto-horas');
     if (elHoras) elHoras.value = trayecto.horas || '';
     // Datos de la planilla de matrícula (sql/15)
@@ -476,6 +505,8 @@ const Trayectos = {
       };
       const elComputa = document.getElementById('trayecto-computa-asistencia');
       if (elComputa) datosTrayecto.computa_asistencia = elComputa.checked;
+      const elVisible = document.getElementById('trayecto-visible-publico');
+      if (elVisible) datosTrayecto.visible_publico = elVisible.checked;
       const elHoras = document.getElementById('trayecto-horas');
       if (elHoras) datosTrayecto.horas = elHoras.value ? Number(elHoras.value) : null;
       // Datos de la Ficha de Curso (sql/09)
