@@ -427,10 +427,15 @@ const Auth = {
       for (const f of (data?.all || [])) { if (f.status !== 'verified') { try { await supabase.auth.mfa.unenroll({ factorId: f.id }); } catch (e) { /* nada */ } } }
       const { data: alta, error: ea } = await supabase.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'CFP403 ' + new Date().toISOString().slice(0, 10) });
       if (ea) throw ea;
+      // El QR llega como SVG con comillas adentro: se codifica para que no rompa el atributo src
+      const qrCrudo = String(alta.totp.qr_code || '');
+      const qrSrc = /^data:image\/svg\+xml/i.test(qrCrudo)
+        ? 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(qrCrudo.slice(qrCrudo.indexOf(',') + 1))
+        : qrCrudo;
       const { value } = await Swal.fire({
         title: 'Activar verificación en 2 pasos',
         html: `<p style="margin:0 0 .5rem">1. Instalá una app autenticadora (Google Authenticator, Microsoft Authenticator, Authy…).<br>2. Escaneá este código QR (o cargá la clave a mano).<br>3. Escribí el código de 6 dígitos que muestra.</p>
-               <img src="${alta.totp.qr_code}" alt="Código QR" style="width:190px;height:190px;background:#fff;padding:6px;border-radius:6px">
+               <img src="${qrSrc}" alt="Código QR" style="width:190px;height:190px;background:#fff;padding:6px;border-radius:6px">
                <p style="font-size:.8rem;word-break:break-all;margin:.4rem 0">Clave manual: <code>${alta.totp.secret}</code></p>`,
         input: 'text',
         inputAttributes: { inputmode: 'numeric', maxlength: 6, autocomplete: 'one-time-code', placeholder: '000000' },
